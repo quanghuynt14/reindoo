@@ -42,7 +42,7 @@ echo ""
 echo "→ Waiting for API to start..."
 sleep 5
 
-if curl -sf http://localhost:3210/ > /dev/null 2>&1; then
+if curl -sf http://localhost:3210/health > /dev/null 2>&1; then
     echo "  ✓ API is healthy!"
 else
     echo "  ⚠️  API not responding yet. Check logs:"
