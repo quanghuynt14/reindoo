@@ -1,3 +1,7 @@
+# Le nom du projet ne suit pas celui du dossier : les volumes et le réseau
+# gardent leur nom où que le dépôt soit cloné.
+name: practice
+
 services:
   # ── Fastify API Server ───────────────────────────────────────
   api:
