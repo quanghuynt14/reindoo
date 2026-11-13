@@ -1,0 +1,8 @@
+node_modules
+dist
+.output
+.env
+deploy/.env.production
+tmp/
+*.tsbuildinfo
+*.deb

@@ -1,0 +1,657 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+body {
+  @apply m-0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.21 0.006 285.885);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.871 0.006 286.286);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  /* L'accent en or des étiquettes de Dictionary.app. Le seul accent coloré de
+     la page d'accueil : tout le reste est de l'encre sur du papier.
+     La clarté n'est pas libre : à L 0.58 l'or donnait 4.36:1 sur blanc, et le
+     surtitre du hero est du texte de 14 px. 0.54 monte à 5.16:1. */
+  --brand: oklch(0.54 0.11 75);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.21 0.006 285.885);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.871 0.006 286.286);
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.141 0.005 285.823);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.274 0.006 286.033);
+  --input: oklch(0.274 0.006 286.033);
+  --ring: oklch(0.442 0.017 285.786);
+  /* 10.5:1 sur le fond sombre. */
+  --brand: oklch(0.80 0.12 82);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.274 0.006 286.033);
+  --sidebar-ring: oklch(0.442 0.017 285.786);
+}
+
+@theme inline {
+  /* Deux faces, et le partage n'est pas décoratif : l'empattement sépare « î »
+     de « ï » dans un mot français ; la face système est la seule qui rende
+     « hòa », « hoà », « họa » lisibles d'un coup d'œil. Jamais un mot français
+     ou anglais dans la face UI, jamais de vietnamien dans la serif. */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Palatino LT STD',
+    Georgia, 'Times New Roman', serif;
+  --color-brand: var(--brand);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Aurora background animation - Enhanced for realistic northern lights */
+@keyframes aurora-flow-1 {
+  0%, 100% {
+    transform: translateY(0%) translateX(-5%) scaleY(1) scaleX(1);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translateY(-8%) translateX(8%) scaleY(1.15) scaleX(1.05);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-3%) translateX(12%) scaleY(1.1) scaleX(1.08);
+    opacity: 0.95;
+  }
+  75% {
+    transform: translateY(-12%) translateX(-3%) scaleY(1.08) scaleX(0.98);
+    opacity: 0.8;
+  }
+}
+
+@keyframes aurora-flow-2 {
+  0%, 100% {
+    transform: translateY(-5%) translateX(10%) scaleY(1) scaleX(1);
+    opacity: 0.6;
+  }
+  20% {
+    transform: translateY(-2%) translateX(-8%) scaleY(1.12) scaleX(1.1);
+    opacity: 0.75;
+  }
+  40% {
+    transform: translateY(-15%) translateX(-15%) scaleY(1.18) scaleX(1.05);
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateY(-8%) translateX(5%) scaleY(1.05) scaleX(1.12);
+    opacity: 0.85;
+  }
+  80% {
+    transform: translateY(-10%) translateX(15%) scaleY(1.1) scaleX(0.95);
+    opacity: 0.7;
+  }
+}
+
+@keyframes aurora-flow-3 {
+  0%, 100% {
+    transform: translateY(-10%) translateX(-10%) scaleY(1) scaleX(1);
+    opacity: 0.65;
+  }
+  33% {
+    transform: translateY(-5%) translateX(15%) scaleY(1.2) scaleX(1.08);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translateY(-18%) translateX(-5%) scaleY(1.15) scaleX(1.12);
+    opacity: 0.9;
+  }
+}
+
+@keyframes aurora-flow-4 {
+  0%, 100% {
+    transform: translateY(-3%) translateX(5%) scaleY(1) scaleX(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-12%) translateX(-12%) scaleY(1.25) scaleX(1.15);
+    opacity: 0.75;
+  }
+}
+
+@keyframes aurora-shimmer-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    filter: brightness(0.9);
+  }
+  25% {
+    opacity: 0.7;
+    filter: brightness(1.05);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.15);
+  }
+  75% {
+    opacity: 0.65;
+    filter: brightness(1);
+  }
+}
+
+:root {
+  /* Aurora gradient positioning and dimensions */
+  --aurora-ellipse-1: 65% 120% at 50% -20%;
+  --aurora-ellipse-2: 55% 110% at 35% -15%;
+  --aurora-ellipse-3: 50% 100% at 65% -10%;
+  --aurora-ellipse-4: 40% 80% at 45% -5%;
+  
+  /* Main green aurora ribbon with vertical curtain effect */
+  --aurora-gradient-1: radial-gradient(
+    ellipse var(--aurora-ellipse-1),
+    rgba(0, 255, 150, 0.6) 0%,
+    rgba(10, 245, 140, 0.5) 10%,
+    rgba(20, 230, 130, 0.4) 20%,
+    rgba(30, 210, 120, 0.25) 35%,
+    rgba(40, 180, 110, 0.12) 50%,
+    rgba(50, 150, 100, 0.05) 65%,
+    transparent 80%
+  );
+  /* Secondary green layer with slight teal shift */
+  --aurora-gradient-2: radial-gradient(
+    ellipse var(--aurora-ellipse-2),
+    rgba(15, 255, 160, 0.55) 0%,
+    rgba(25, 240, 155, 0.45) 12%,
+    rgba(35, 220, 145, 0.35) 25%,
+    rgba(45, 190, 135, 0.2) 40%,
+    rgba(55, 160, 125, 0.08) 58%,
+    transparent 75%
+  );
+  /* Accent layer with hints of blue-purple at higher altitude */
+  --aurora-gradient-3: radial-gradient(
+    ellipse var(--aurora-ellipse-3),
+    rgba(100, 210, 255, 0.35) 0%,
+    rgba(90, 200, 240, 0.28) 15%,
+    rgba(70, 180, 220, 0.2) 30%,
+    rgba(50, 160, 190, 0.12) 48%,
+    rgba(30, 140, 160, 0.05) 65%,
+    transparent 80%
+  );
+  /* Subtle red-purple accent at top (higher altitude) */
+  --aurora-gradient-4: radial-gradient(
+    ellipse var(--aurora-ellipse-4),
+    rgba(200, 100, 255, 0.25) 0%,
+    rgba(180, 90, 230, 0.18) 18%,
+    rgba(160, 80, 200, 0.12) 35%,
+    rgba(140, 70, 170, 0.06) 55%,
+    transparent 75%
+  );
+}
+
+.dark {
+  /* Main green aurora ribbon with vertical curtain effect - darker theme */
+  --aurora-gradient-1: radial-gradient(
+    ellipse var(--aurora-ellipse-1),
+    rgba(0, 255, 150, 0.5) 0%,
+    rgba(10, 245, 140, 0.42) 10%,
+    rgba(20, 230, 130, 0.32) 20%,
+    rgba(30, 210, 120, 0.2) 35%,
+    rgba(40, 180, 110, 0.1) 50%,
+    rgba(50, 150, 100, 0.04) 65%,
+    transparent 80%
+  );
+  /* Secondary green layer with slight teal shift - darker theme */
+  --aurora-gradient-2: radial-gradient(
+    ellipse var(--aurora-ellipse-2),
+    rgba(15, 255, 160, 0.48) 0%,
+    rgba(25, 240, 155, 0.38) 12%,
+    rgba(35, 220, 145, 0.28) 25%,
+    rgba(45, 190, 135, 0.18) 40%,
+    rgba(55, 160, 125, 0.06) 58%,
+    transparent 75%
+  );
+  /* Accent layer with hints of blue-purple at higher altitude - darker theme */
+  --aurora-gradient-3: radial-gradient(
+    ellipse var(--aurora-ellipse-3),
+    rgba(100, 210, 255, 0.3) 0%,
+    rgba(90, 200, 240, 0.24) 15%,
+    rgba(70, 180, 220, 0.18) 30%,
+    rgba(50, 160, 190, 0.1) 48%,
+    rgba(30, 140, 160, 0.04) 65%,
+    transparent 80%
+  );
+  /* Subtle red-purple accent at top (higher altitude) - darker theme */
+  --aurora-gradient-4: radial-gradient(
+    ellipse var(--aurora-ellipse-4),
+    rgba(200, 100, 255, 0.22) 0%,
+    rgba(180, 90, 230, 0.15) 18%,
+    rgba(160, 80, 200, 0.1) 35%,
+    rgba(140, 70, 170, 0.05) 55%,
+    transparent 75%
+  );
+}
+
+.aurora-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: -2;
+  pointer-events: none;
+  background: radial-gradient(ellipse at top, rgba(5, 10, 25, 0.7) 0%, rgba(0, 0, 5, 0.9) 100%);
+}
+
+/* Hide aurora in Light mode - the effect is designed for dark backgrounds */
+:root:not(.dark) .aurora-background {
+  display: none;
+}
+
+.aurora-background::before,
+.aurora-background::after,
+.aurora-background .aurora-layer {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+}
+
+.aurora-background::before,
+.aurora-background::after {
+  content: '';
+}
+
+.aurora-background::before {
+  background: var(--aurora-gradient-1);
+  filter: blur(60px);
+  animation: aurora-flow-1 28s ease-in-out infinite;
+}
+
+.aurora-background::after {
+  background: var(--aurora-gradient-2);
+  filter: blur(65px);
+  animation: aurora-flow-2 35s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+.aurora-background .aurora-layer {
+  background: var(--aurora-gradient-3);
+  filter: blur(55px);
+  animation: aurora-flow-3 42s ease-in-out infinite;
+  animation-delay: -15s;
+}
+
+.aurora-background .aurora-layer::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--aurora-gradient-4);
+  filter: blur(50px);
+  animation: aurora-flow-4 38s ease-in-out infinite, aurora-shimmer-pulse 6s ease-in-out infinite;
+  animation-delay: -20s, -2s;
+}
+
+/* Respect user's motion preferences for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-background::before,
+  .aurora-background::after,
+  .aurora-background .aurora-layer {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* ============================================
+   SNOWFALL EFFECT
+   A lightweight CSS-based snowfall animation that complements the Northern Lights.
+   Features:
+   - Multiple snowflakes with varying sizes and fall speeds
+   - Gentle lateral drift for natural movement
+   - GPU-accelerated transforms for optimal performance
+   - Respects prefers-reduced-motion for accessibility
+   ============================================ */
+
+/* Snowfall animation keyframes - vertical fall with subtle horizontal drift */
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+@keyframes snowfall-left {
+  0% {
+    transform: translateY(-10vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(-20px);
+    opacity: 0;
+  }
+}
+
+/* Snowfall container - positioned to overlay the aurora background */
+.snowfall-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Hide snowfall in Light mode */
+:root:not(.dark) .snowfall-container {
+  display: none;
+}
+
+/* Individual snowflake styling */
+.snowflake {
+  position: absolute;
+  top: -10vh;
+  color: rgb(255, 255, 255);
+  font-size: 1em;
+  user-select: none;
+  will-change: transform;
+  animation: snowfall linear infinite;
+  opacity: 0.8;
+}
+
+/* Generate multiple snowflakes with varied properties for natural effect */
+/* Using nth-child selectors to create diversity without JavaScript */
+
+/* Small snowflakes - faster fall */
+.snowflake:nth-child(1) { left: 5%; font-size: 0.6em; animation-duration: 12s; animation-delay: 0s; }
+.snowflake:nth-child(2) { left: 15%; font-size: 0.7em; animation-duration: 14s; animation-delay: 2s; }
+.snowflake:nth-child(3) { left: 25%; font-size: 0.5em; animation-duration: 11s; animation-delay: 4s; }
+.snowflake:nth-child(4) { left: 35%; font-size: 0.8em; animation-duration: 13s; animation-delay: 1s; }
+.snowflake:nth-child(5) { left: 45%; font-size: 0.6em; animation-duration: 15s; animation-delay: 3s; }
+
+/* Medium snowflakes - moderate fall speed */
+.snowflake:nth-child(6) { left: 55%; font-size: 0.9em; animation-duration: 16s; animation-delay: 0s; opacity: 0.7; }
+.snowflake:nth-child(7) { left: 65%; font-size: 0.8em; animation-duration: 17s; animation-delay: 2s; opacity: 0.8; }
+.snowflake:nth-child(8) { left: 75%; font-size: 0.7em; animation-duration: 15s; animation-delay: 5s; opacity: 0.7; }
+.snowflake:nth-child(9) { left: 85%; font-size: 0.9em; animation-duration: 18s; animation-delay: 1s; opacity: 0.8; }
+.snowflake:nth-child(10) { left: 95%; font-size: 0.6em; animation-duration: 14s; animation-delay: 4s; opacity: 0.7; }
+
+/* Larger snowflakes - slower fall for depth perception */
+.snowflake:nth-child(11) { left: 10%; font-size: 1.1em; animation-duration: 20s; animation-delay: 3s; opacity: 0.6; }
+.snowflake:nth-child(12) { left: 20%; font-size: 1.2em; animation-duration: 22s; animation-delay: 1s; opacity: 0.6; }
+.snowflake:nth-child(13) { left: 30%; font-size: 1em; animation-duration: 19s; animation-delay: 5s; opacity: 0.7; }
+.snowflake:nth-child(14) { left: 40%; font-size: 1.1em; animation-duration: 21s; animation-delay: 2s; opacity: 0.6; }
+.snowflake:nth-child(15) { left: 50%; font-size: 0.9em; animation-duration: 18s; animation-delay: 0s; opacity: 0.7; }
+
+/* Additional snowflakes for fullness */
+.snowflake:nth-child(16) { left: 60%; font-size: 0.7em; animation-duration: 16s; animation-delay: 4s; opacity: 0.8; }
+.snowflake:nth-child(17) { left: 70%; font-size: 1em; animation-duration: 19s; animation-delay: 1s; opacity: 0.7; }
+.snowflake:nth-child(18) { left: 80%; font-size: 0.8em; animation-duration: 17s; animation-delay: 3s; opacity: 0.8; }
+.snowflake:nth-child(19) { left: 90%; font-size: 0.6em; animation-duration: 15s; animation-delay: 5s; opacity: 0.7; }
+.snowflake:nth-child(20) { left: 3%; font-size: 1.1em; animation-duration: 20s; animation-delay: 2s; opacity: 0.6; }
+
+/* Dynamic snowflakes (21+) - for shake-to-increase-snow feature */
+/* These snowflakes use explicit nth-child selectors for positioning */
+
+/* Distribute the extra snowflakes across the screen using nth-child patterns */
+.snowflake:nth-child(21) { left: 8%; font-size: 0.65em; animation-duration: 11s; }
+.snowflake:nth-child(22) { left: 18%; font-size: 0.75em; animation-duration: 13s; }
+.snowflake:nth-child(23) { left: 28%; font-size: 0.55em; animation-duration: 12s; }
+.snowflake:nth-child(24) { left: 38%; font-size: 0.85em; animation-duration: 14s; }
+.snowflake:nth-child(25) { left: 48%; font-size: 0.7em; animation-duration: 15s; }
+.snowflake:nth-child(26) { left: 58%; font-size: 0.6em; animation-duration: 11s; }
+.snowflake:nth-child(27) { left: 68%; font-size: 0.8em; animation-duration: 16s; }
+.snowflake:nth-child(28) { left: 78%; font-size: 0.65em; animation-duration: 13s; }
+.snowflake:nth-child(29) { left: 88%; font-size: 0.7em; animation-duration: 14s; }
+.snowflake:nth-child(30) { left: 98%; font-size: 0.55em; animation-duration: 12s; }
+.snowflake:nth-child(31) { left: 12%; font-size: 0.9em; animation-duration: 17s; opacity: 0.7; }
+.snowflake:nth-child(32) { left: 22%; font-size: 0.75em; animation-duration: 15s; opacity: 0.8; }
+.snowflake:nth-child(33) { left: 32%; font-size: 0.8em; animation-duration: 16s; opacity: 0.75; }
+.snowflake:nth-child(34) { left: 42%; font-size: 0.65em; animation-duration: 14s; opacity: 0.8; }
+.snowflake:nth-child(35) { left: 52%; font-size: 0.95em; animation-duration: 18s; opacity: 0.7; }
+.snowflake:nth-child(36) { left: 62%; font-size: 0.7em; animation-duration: 15s; opacity: 0.75; }
+.snowflake:nth-child(37) { left: 72%; font-size: 0.85em; animation-duration: 17s; opacity: 0.8; }
+.snowflake:nth-child(38) { left: 82%; font-size: 0.75em; animation-duration: 16s; opacity: 0.75; }
+.snowflake:nth-child(39) { left: 92%; font-size: 0.6em; animation-duration: 14s; opacity: 0.8; }
+.snowflake:nth-child(40) { left: 2%; font-size: 0.95em; animation-duration: 19s; opacity: 0.7; }
+
+/* Continue pattern for remaining snowflakes with varied durations for shake effect */
+.snowflake:nth-child(n+41):nth-child(-n+60) {
+  animation-duration: 10s;
+  font-size: 0.6em;
+  opacity: 0.75;
+}
+
+.snowflake:nth-child(n+61):nth-child(-n+80) {
+  animation-duration: 9s;
+  font-size: 0.55em;
+  opacity: 0.7;
+}
+
+.snowflake:nth-child(n+81):nth-child(-n+100) {
+  animation-duration: 8s;
+  font-size: 0.5em;
+  opacity: 0.65;
+}
+
+/* Set varied horizontal positions for snowflakes 41-100 using distributed percentage offsets */
+.snowflake:nth-child(41) { left: 7%; }
+.snowflake:nth-child(42) { left: 13%; }
+.snowflake:nth-child(43) { left: 19%; }
+.snowflake:nth-child(44) { left: 23%; }
+.snowflake:nth-child(45) { left: 29%; }
+.snowflake:nth-child(46) { left: 31%; }
+.snowflake:nth-child(47) { left: 37%; }
+.snowflake:nth-child(48) { left: 41%; }
+.snowflake:nth-child(49) { left: 43%; }
+.snowflake:nth-child(50) { left: 47%; }
+.snowflake:nth-child(51) { left: 53%; }
+.snowflake:nth-child(52) { left: 59%; }
+.snowflake:nth-child(53) { left: 61%; }
+.snowflake:nth-child(54) { left: 67%; }
+.snowflake:nth-child(55) { left: 71%; }
+.snowflake:nth-child(56) { left: 73%; }
+.snowflake:nth-child(57) { left: 79%; }
+.snowflake:nth-child(58) { left: 83%; }
+.snowflake:nth-child(59) { left: 89%; }
+.snowflake:nth-child(60) { left: 97%; }
+.snowflake:nth-child(61) { left: 4%; }
+.snowflake:nth-child(62) { left: 11%; }
+.snowflake:nth-child(63) { left: 14%; }
+.snowflake:nth-child(64) { left: 17%; }
+.snowflake:nth-child(65) { left: 21%; }
+.snowflake:nth-child(66) { left: 24%; }
+.snowflake:nth-child(67) { left: 27%; }
+.snowflake:nth-child(68) { left: 33%; }
+.snowflake:nth-child(69) { left: 36%; }
+.snowflake:nth-child(70) { left: 39%; }
+.snowflake:nth-child(71) { left: 44%; }
+.snowflake:nth-child(72) { left: 49%; }
+.snowflake:nth-child(73) { left: 51%; }
+.snowflake:nth-child(74) { left: 54%; }
+.snowflake:nth-child(75) { left: 56%; }
+.snowflake:nth-child(76) { left: 63%; }
+.snowflake:nth-child(77) { left: 66%; }
+.snowflake:nth-child(78) { left: 69%; }
+.snowflake:nth-child(79) { left: 74%; }
+.snowflake:nth-child(80) { left: 76%; }
+.snowflake:nth-child(81) { left: 81%; }
+.snowflake:nth-child(82) { left: 84%; }
+.snowflake:nth-child(83) { left: 86%; }
+.snowflake:nth-child(84) { left: 91%; }
+.snowflake:nth-child(85) { left: 93%; }
+.snowflake:nth-child(86) { left: 94%; }
+.snowflake:nth-child(87) { left: 96%; }
+.snowflake:nth-child(88) { left: 6%; }
+.snowflake:nth-child(89) { left: 9%; }
+.snowflake:nth-child(90) { left: 16%; }
+.snowflake:nth-child(91) { left: 26%; }
+.snowflake:nth-child(92) { left: 34%; }
+.snowflake:nth-child(93) { left: 46%; }
+.snowflake:nth-child(94) { left: 57%; }
+.snowflake:nth-child(95) { left: 64%; }
+.snowflake:nth-child(96) { left: 77%; }
+.snowflake:nth-child(97) { left: 87%; }
+.snowflake:nth-child(98) { left: 99%; }
+.snowflake:nth-child(99) { left: 1%; }
+.snowflake:nth-child(100) { left: 50%; }
+
+/* Add subtle horizontal drift to some snowflakes by alternating animation */
+.snowflake:nth-child(2n) {
+  animation-name: snowfall-left;
+}
+
+/* Accessibility: Disable snowfall animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .snowfall-container {
+    display: none;
+  }
+}
+
+/* Shake debug feedback - displays "Shaking..." message during shake detection */
+.shake-debug-feedback {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  pointer-events: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+

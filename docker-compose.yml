@@ -1,0 +1,72 @@
+services:
+  # ── Fastify API Server ───────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: practice-api
+    restart: unless-stopped
+    ports:
+      - "3210:3210"
+    env_file:
+      - ./deploy/.env.production
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3210/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - practice-net
+
+  # ── BullMQ Worker ────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: practice-worker
+    restart: unless-stopped
+    command: ["node", "packages/server/dist/worker.js"]
+    env_file:
+      - ./deploy/.env.production
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - practice-net
+
+  # ── Redis (for BullMQ) ──────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: practice-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme} --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - practice-net
+
+volumes:
+  redis-data:
+
+networks:
+  practice-net:
+    driver: bridge

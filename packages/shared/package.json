@@ -1,0 +1,23 @@
+{
+  "name": "@practice/shared",
+  "type": "module",
+  "version": "1.0.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build ./tsconfig.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@practice/eslint-config": "workspace:*",
+    "@types/node": "catalog:ts",
+    "typescript": "catalog:ts"
+  }
+}

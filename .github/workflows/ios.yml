@@ -1,0 +1,246 @@
+name: iOS
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+    # Une étiquette `ios-v0.1.0` envoie cette version sur TestFlight.
+    tags: ["ios-v*"]
+  workflow_dispatch:
+    inputs:
+      screenshots:
+        description: Construire l'app sur macOS et capturer les écrans
+        type: boolean
+        default: true
+
+jobs:
+  # Rapide et bon marché : tourne à chaque push.
+  core:
+    runs-on: ubuntu-24.04
+    container: swift:6.4.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core n'importe aucune interface
+        run: "! grep -rnE '^import (SwiftUI|UIKit)' ios/Core/Sources/ReindooCore"
+      - name: Tests de comportement
+        run: swift test --package-path ios/Core
+
+  # Le vrai lexique : les mêmes sources, épinglées, que le site et Dictionary.app.
+  # Trop gros pour git et pour le VPS ; fabriqué ici, puis gardé en cache.
+  lexicon:
+    if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]') || startsWith(github.ref, 'refs/tags/ios-v')
+    runs-on: ubuntu-24.04
+    env:
+      DICTIONNAIRE_REF: 9793f7ad6acc1eed77ae70997a187ac729c9a8ca
+    steps:
+      - uses: actions/checkout@v4
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: lexicon.sqlite
+          key: lexicon-${{ env.DICTIONNAIRE_REF }}-${{ hashFiles('ios/Core/Sources/ReindooCore/Lexicon.swift', 'ios/Core/Sources/ReindooCore/Packed.swift', 'ios/Core/Sources/ReindooCore/Models.swift', 'ios/Core/Sources/ReindooCore/Text.swift') }}
+      - name: Sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/quanghuynt14/dictionnaire.git work/dictionnaire
+          git -C work/dictionnaire checkout -q "$DICTIONNAIRE_REF"
+          # fetch.py prend Lexique et Verbiste dans le dépôt voisin `conjugaison`.
+          dir=work/conjugaison/data/sources
+          mkdir -p "$dir"
+          curl -fsSL -o "$dir/Lexique383.tsv" http://www.lexique.org/databases/Lexique383/Lexique383.tsv
+          curl -fsSL -o "$dir/verbs-fr.xml" https://raw.githubusercontent.com/bretttolbert/verbecc/8afdd68679b18e2fd58edf5324ca24ca68bfabdb/src/verbecc/data/xml/verbs/verbs-fr.xml
+          curl -fsSL -o "$dir/conjugations-fr.xml" https://raw.githubusercontent.com/bretttolbert/verbecc/8afdd68679b18e2fd58edf5324ca24ca68bfabdb/src/verbecc/data/xml/conjugations/conjugations-fr.xml
+          # Les empreintes que le dépôt a notées : une source qui a bougé arrête le job.
+          python3 - "$dir" work/dictionnaire/data/sources.lock <<'PY'
+          import hashlib, json, sys
+          directory, lock = sys.argv[1], json.load(open(sys.argv[2]))
+          expected = {"Lexique383.tsv": lock["lexique"]["sha256"], "verbs-fr.xml": lock["verbiste"]["verbs"], "conjugations-fr.xml": lock["verbiste"]["conjugations"]}
+          for name, want in expected.items():
+              got = hashlib.sha256(open(f"{directory}/{name}", "rb").read()).hexdigest()
+              print("ok   " if got == want else "::error::empreinte différente de sources.lock : ", name, got)
+              bad = got != want or locals().get("bad", False)
+          sys.exit(1 if bad else 0)
+          PY
+      - name: NDJSON
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: work/dictionnaire
+        run: |
+          python3 scripts/fetch.py
+          make mongo LANG=fr
+          make mongo LANG=en
+          ls -la build
+      - name: SQLite
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w swift:6.4.2-noble \
+            swift run --package-path ios/Core -c release reindoo-cli build-lexicon \
+            lexicon.sqlite work/dictionnaire/build/mongo-fr.ndjson work/dictionnaire/build/mongo-en.ndjson
+          ls -la lexicon.sqlite
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lexicon
+          path: lexicon.sqlite
+          compression-level: 9
+
+  # Les minutes macOS coûtent dix fois plus : à la demande seulement.
+  app:
+    # À la main, ou par un commit dont le message contient [shots].
+    if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]')
+    needs: [core, lexicon]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lexicon
+          path: ios/App/Resources
+      - run: brew install xcodegen
+      - name: Générer et construire
+        working-directory: ios
+        run: |
+          xcodegen generate
+          xcodebuild -project Reindoo.xcodeproj -scheme Reindoo \
+            -sdk iphonesimulator -configuration Debug \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Capturer les écrans
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          device=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" build/Build/Products/Debug-iphonesimulator/Reindoo.app
+          mkdir -p shots
+          # L'interface suit la langue du système : on la fixe à chaque lancement.
+          ui=vi
+          looks="light dark"
+          shoot() {
+            name=$1; shift
+            for look in $looks; do
+              xcrun simctl ui "$device" appearance "$look"
+              xcrun simctl terminate "$device" com.reindoo.app 2>/dev/null || true
+              xcrun simctl launch "$device" com.reindoo.app "$@" -AppleLanguages "($ui)"
+              sleep 4
+              xcrun simctl io "$device" screenshot "shots/$name-$look.png"
+            done
+          }
+          shoot search-empty    -fixture sample
+          shoot search-recents  -fixture returning
+          shoot search-typing   -fixture sample -query all
+          shoot entry-found     -fixture returning -open allions
+          shoot entry-missing   -fixture sample -open alller
+          shoot entry-elsewhere -fixture sample -open goes
+          shoot reel-word       -fixture returning -tab review
+          shoot review-empty    -fixture sample -tab review
+          shoot history         -fixture returning -tab history
+          shoot history-empty   -fixture sample -tab history
+          # Les deux autres langues de l'interface, en clair seulement.
+          looks="light"
+          for ui in en fr; do
+            shoot $ui-search   -fixture returning
+            shoot $ui-missing  -fixture sample -open alller
+            shoot $ui-review   -fixture returning -tab review -do reveal
+            shoot $ui-history  -fixture returning -tab history
+          done
+          ui=vi
+          looks="light dark"
+          # Le vrai lexique, sans fixture. L'historique s'y accumule d'un
+          # lancement à l'autre : la révision vient en dernier.
+          shoot real-typing    -query mang
+          shoot real-entry     -open allions
+          shoot real-long      -open prendre
+          shoot real-english   -open went
+          shoot real-review    -tab review -do reveal
+          ls -la build/Build/Products/Debug-iphonesimulator/Reindoo.app/lexicon.sqlite
+      - name: Essayer les gestes
+        if: always()
+        working-directory: ios
+        run: |
+          device=$(xcrun simctl list devices booted -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in d for x in d[k] if x['state']=='Booted'))")
+          status=0
+          xcodebuild test -project Reindoo.xcodeproj -scheme Reindoo \
+            -destination "platform=iOS Simulator,id=$device" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || status=$?
+          grep -E "Test Case|error:|failed|passed|Executed|\*\* TEST" uitest.log | tail -60
+          # Les tests de geste photographient ce qu'on n'atteint qu'en
+          # glissant : les cartes loin dans le reel.
+          mkdir -p shots && cp /tmp/reindoo-shots/*.png shots/ 2>/dev/null || true
+          # Un plantage laisse un rapport : on en montre l'essentiel.
+          python3 - <<'PY'
+          import glob, json, os
+          for path in sorted(glob.glob(os.path.expanduser('~/Library/Logs/DiagnosticReports/Reindoo-*.ips')))[-3:]:
+              head, _, body = open(path).read().partition('\n')
+              report = json.loads(body)
+              print('=== CRASH', os.path.basename(path))
+              print('exception:', json.dumps(report.get('exception')), '| termination:', json.dumps(report.get('termination')))
+              print('asi:', json.dumps(report.get('asi')))
+              images = report.get('usedImages', [])
+              for thread in report.get('threads', []):
+                  if not thread.get('triggered'): continue
+                  print('queue:', thread.get('queue'))
+                  for frame in thread.get('frames', [])[:45]:
+                      image = images[frame['imageIndex']].get('name', '?') if frame.get('imageIndex', -1) < len(images) else '?'
+                      print('  ', image, frame.get('symbol', hex(frame.get('imageOffset', 0))), frame.get('sourceFile', ''), frame.get('sourceLine', ''))
+          PY
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: ios/shots
+
+  # Une étiquette `ios-vX.Y.Z` : archiver, signer, envoyer sur TestFlight.
+  # La signature est automatique, avec une clé d'API App Store Connect : aucun
+  # certificat n'est gardé dans le dépôt ni dans les secrets.
+  testflight:
+    if: startsWith(github.ref, 'refs/tags/ios-v')
+    needs: [core, lexicon]
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lexicon
+          path: ios/App/Resources
+      - run: brew install xcodegen
+      - name: Archiver et envoyer
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || { echo "::error::secret $name manquant"; exit 1; }
+          done
+          version=${GITHUB_REF_NAME#ios-v}
+          key="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s' "$ASC_KEY_P8" > "$key"
+          auth=(-allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+
+          xcodegen generate
+          # L'archive n'est pas signée : la signer ici demanderait un profil de
+          # développement, donc un appareil inscrit, et l'équipe n'en a aucun.
+          # L'export la signe pour la distribution, ce qui n'en demande pas.
+          xcodebuild archive -project Reindoo.xcodeproj -scheme Reindoo -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/Reindoo.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+
+          cat > build/export.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/Reindoo.xcarchive \
+            -exportOptionsPlist build/export.plist -exportPath build/export "${auth[@]}"
+          rm -f "$key"

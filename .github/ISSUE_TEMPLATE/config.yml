@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Wrong or missing dictionary entry
+    url: https://github.com/quanghuynt14/dictionnaire/issues
+    about: The entries are compiled in the dictionnaire project. Report a wrong meaning or a missing word there.

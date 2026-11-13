@@ -1,0 +1,18 @@
+{
+  "name": "@practice/eslint-config",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs"
+  ],
+  "dependencies": {
+    "@antfu/eslint-config": "^5.4.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-check-file": "^3.3.1",
+    "globals": "^17.1.0"
+  }
+}

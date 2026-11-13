@@ -1,0 +1,48 @@
+# XcodeGen. Le .xcodeproj est généré (`xcodegen generate`), jamais commité.
+name: Reindoo
+options:
+  bundleIdPrefix: com.reindoo
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+packages:
+  ReindooCore:
+    path: Core
+targets:
+  Reindoo:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: ReindooCore
+        product: ReindooCore
+    scheme:
+      testTargets:
+        - ReindooUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.reindoo.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleDisplayName: Reindoo
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+  # Les gestes : glisser pour revenir, changer de carte. Tourne sur simulateur.
+  ReindooUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Reindoo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.reindoo.app.uitests
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES

@@ -1,0 +1,5 @@
+.build/
+*.xcodeproj
+DerivedData/
+build/
+App/Resources/lexicon.sqlite

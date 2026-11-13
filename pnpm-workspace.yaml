@@ -1,0 +1,18 @@
+packages:
+  - packages/*
+
+catalog:
+  "pino-pretty": "13.1.2"
+  "lerna": "9.0.0"
+
+catalogs:
+  ts:
+    "@types/node": "24.10.0"
+    "typescript": "5.9.3"
+
+  fastify:
+    "fastify": "5.6.1"
+    "fastify-plugin": "5.1.0"
+
+  mongodb:
+    "mongodb": "6.21.0"
