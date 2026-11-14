@@ -202,6 +202,9 @@ public struct Attributes: Sendable {
     public var clip: String?
     public var mask: String?
     public var blend: BlendMode = .normal
+    /// La longueur que le chemin dit avoir (`pathLength`) : ses tirets et leur
+    /// décalage se comptent dans cette unité.
+    public var pathLength: Double?
     public init() {}
 }
 

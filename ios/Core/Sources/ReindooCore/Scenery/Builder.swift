@@ -56,6 +56,7 @@ extension Node {
 
     public func strokeWidth(_ value: Double) -> Node { with { $0.style.strokeWidth = value } }
     public func lineCap(_ cap: LineCap) -> Node { with { $0.style.lineCap = cap } }
+    public func pathLength(_ length: Double) -> Node { with { $0.pathLength = length } }
     public func strokeOpacity(_ value: Double) -> Node { with { $0.style.strokeOpacity = value } }
 
     public func dash(_ pattern: [Double], offset: Double = 0) -> Node {

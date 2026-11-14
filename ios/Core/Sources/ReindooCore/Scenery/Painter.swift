@@ -123,7 +123,7 @@ extension Scene {
         case .use(let name):
             if case .symbol(let symbol)? = defs[name] { paint(symbol, style, at: time, into: &painter) }
         case .path(let path):
-            draw(path, style, into: &painter)
+            draw(path, style, pathLength: attributes.pathLength, into: &painter)
         case .glyphs(let glyphs):
             if let paint = resolve(style.fill, opacity: style.fillOpacity, bounds: nil, mask: style.inMask) {
                 painter.glyphs(glyphs, paint, size: style.fontSize, weight: style.fontWeight)
@@ -146,13 +146,19 @@ extension Scene {
         if !plain { painter.pop() }
     }
 
-    private func draw<P: ScenePainter>(_ path: PathData, _ style: Inherited, into painter: inout P) {
+    private func draw<P: ScenePainter>(_ path: PathData, _ style: Inherited, pathLength: Double?, into painter: inout P) {
         let bounds = path.bounds
         if let paint = resolve(style.fill, opacity: style.fillOpacity, bounds: bounds, mask: style.inMask) {
             painter.fill(path, paint, evenOdd: style.evenOdd)
         }
         if style.strokeWidth > 0, let paint = resolve(style.stroke, opacity: style.strokeOpacity, bounds: bounds, mask: style.inMask) {
-            painter.stroke(path, paint, StrokeStyle(width: style.strokeWidth, cap: style.lineCap, dash: style.dash, dashOffset: style.dashOffset))
+            var dash = style.dash, offset = style.dashOffset
+            if let pathLength, pathLength > 0, !dash.isEmpty {
+                let scale = path.length / pathLength
+                dash = dash.map { $0 * scale }
+                offset *= scale
+            }
+            painter.stroke(path, paint, StrokeStyle(width: style.strokeWidth, cap: style.lineCap, dash: dash, dashOffset: offset))
         }
     }
 
