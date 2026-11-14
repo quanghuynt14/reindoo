@@ -30,7 +30,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
 
     /// Certains décors ont des sujets trop grands pour un téléphone : on les
     /// dessine plus serrés.
-    static let densities: [String: Double] = ["koi-mosaic": 2, "night-reef": 2.4, "dither-dunes": 1.7, "dither-dunes-night": 1.7, "paper-garden": 2.2, "paper-garden-kraft": 2.2, "blueprint": 2]
+    static let densities: [String: Double] = ["koi-mosaic": 2, "night-reef": 2.4, "dither-dunes": 1.7, "dither-dunes-night": 1.7, "paper-garden": 2.2, "paper-garden-kraft": 2.2, "blueprint": 2, "vector-range": 1.6]
 
     /// Construit le décor pour un écran de `width` sur `height` points.
     public func scene(width: Double, height: Double) -> Scene {
@@ -55,6 +55,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
 
     /// Les décors, dans l'ordre où on les propose.
     public static let all: [SceneTheme] = [
+        theme("aurora-snow", "Aurora Snow", .dark, blur: 18, tint: "#14123a", opacity: 0.3),
         theme("aurora", "Aurora", .dark, blur: 18, tint: "#14123a", opacity: 0.3),
         theme("snow-pines", "Snow Pines", .dark, blur: 16, tint: "#14143a", opacity: 0.5),
         theme("honu-lagoon", "Honu Lagoon", .light, blur: 7, tint: "#e6fbff", opacity: 0.42),
@@ -77,7 +78,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         theme("ember", "Ember", .dark, blur: 12, tint: "#2a0d12", opacity: 0.3),
     ]
 
-    /// Les décors déjà portés. Ceux qui manquent donnent un fond vide.
+    /// Les vingt décors de theme-examples, et l'aurore sous la neige du site.
     static let builders: [String: @Sendable (Double, Double) -> Scene] = [
         "aurora": Classic.aurora,
         "deep-water": Classic.deepWater,
@@ -98,6 +99,8 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "paper-garden": PaperGarden.build(0),
         "paper-garden-kraft": PaperGarden.build(1),
         "blueprint": Blueprint.build,
+        "vector-range": VectorRange.build,
+        "aurora-snow": AuroraSnow.build,
     ]
 
     static let originals: [String: @Sendable () -> Scene] = [
@@ -120,5 +123,6 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "paper-garden": PaperGarden.original(0),
         "paper-garden-kraft": PaperGarden.original(1),
         "blueprint": Blueprint.original,
+        "vector-range": VectorRange.original,
     ]
 }
