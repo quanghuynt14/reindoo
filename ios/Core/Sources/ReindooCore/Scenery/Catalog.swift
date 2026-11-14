@@ -30,7 +30,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
 
     /// Certains décors ont des sujets trop grands pour un téléphone : on les
     /// dessine plus serrés.
-    static let densities: [String: Double] = ["koi-mosaic": 2]
+    static let densities: [String: Double] = ["koi-mosaic": 2, "night-reef": 2.4]
 
     /// Construit le décor pour un écran de `width` sur `height` points.
     public func scene(width: Double, height: Double) -> Scene {
@@ -85,6 +85,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "snow-pines": SnowPines.build,
         "honu-lagoon": HonuLagoon.build,
         "koi-mosaic": KoiMosaic.build,
+        "night-reef": NightReef.build,
     ]
 
     static let originals: [String: @Sendable () -> Scene] = [
@@ -94,5 +95,6 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "snow-pines": SnowPines.original,
         "honu-lagoon": HonuLagoon.original,
         "koi-mosaic": KoiMosaic.original,
+        "night-reef": NightReef.original,
     ]
 }
