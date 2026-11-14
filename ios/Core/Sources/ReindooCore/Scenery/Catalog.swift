@@ -91,6 +91,8 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "departure-board": DepartureBoard.build,
         "dither-dunes": DitherDunes.build(DitherDunes.day),
         "dither-dunes-night": DitherDunes.build(DitherDunes.night),
+        "halftone-dawn": Halftone.build(Halftone.dawn),
+        "halftone-dusk": Halftone.build(Halftone.dusk),
     ]
 
     static let originals: [String: @Sendable () -> Scene] = [
@@ -106,5 +108,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "departure-board": DepartureBoard.original,
         "dither-dunes": DitherDunes.original(DitherDunes.day),
         "dither-dunes-night": DitherDunes.original(DitherDunes.night),
+        "halftone-dawn": Halftone.original(Halftone.dawn),
+        "halftone-dusk": Halftone.original(Halftone.dusk),
     ]
 }
