@@ -48,8 +48,20 @@ struct ReviewView: View {
         }
         .background {
             if let current {
-                ReelBackdrop(hue: current.hue).ignoresSafeArea()
+                if let name = current.scene, let theme = SceneTheme.named(name) {
+                    ZStack {
+                        SceneBackdrop(theme: theme)
+                        SceneVeil(glass: theme.glass)
+                    }
+                    .ignoresSafeArea()
+                } else {
+                    ReelBackdrop(hue: current.hue).ignoresSafeArea()
+                }
             }
+        }
+        // Le décor de la carte suivante se prépare pendant qu'on lit celle-ci.
+        .task(id: upcoming(state)?.scene) {
+            if let name = upcoming(state)?.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepareNext(theme) }
         }
         .overlay {
             if let message = state.emptyMessage {
@@ -63,7 +75,7 @@ struct ReviewView: View {
         .navigationTitle(current == nil ? state.title : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(current == nil ? nil : .dark, for: .navigationBar)
+        .toolbarColorScheme(current == nil ? nil : current!.isLight ? .light : .dark, for: .navigationBar)
         .toolbar {
             // Les rennes suivent : un saut par carte, une pirouette toutes les dix.
             HerdToolbarItem(hops: state.position, tricks: state.position / 10)
@@ -79,6 +91,15 @@ struct ReviewView: View {
                             Text(option.label).tag(option.name)
                         }
                     }
+                    Picker(state.sceneTitle, selection: Binding(
+                        get: { state.scene },
+                        set: { model.send(.setScene($0)) }
+                    )) {
+                        ForEach(state.scenes, id: \.name) { option in
+                            Text(option.label).tag(option.name)
+                        }
+                    }
+                    .pickerStyle(.menu)
                     Picker(state.sortTitle, selection: Binding(
                         get: { state.sort.rawValue },
                         set: { name in
@@ -91,11 +112,12 @@ struct ReviewView: View {
                     }
                     Toggle(state.readAloudLabel, systemImage: "speaker.wave.2", isOn: $readAloud)
                 } label: {
+                    let ink = current.map(Self.ink) ?? Color.primary
                     Image(systemName: "slider.horizontal.3")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(current == nil ? Color.primary : .white)
+                        .foregroundStyle(ink)
                         .frame(width: 40, height: 40)
-                        .background((current == nil ? Color.primary : .white).opacity(0.16), in: .circle)
+                        .background(ink.opacity(0.16), in: .circle)
                 }
                 .accessibilityLabel(state.optionsLabel)
             }
@@ -113,6 +135,38 @@ struct ReviewView: View {
             try? await Task.sleep(for: .seconds(Self.revealAfter))
             if !Task.isCancelled { model.send(.unveil(current.id)) }
         }
+    }
+}
+
+extension ReviewView {
+    /// La couleur du texte : sombre sur un décor clair, blanche partout ailleurs.
+    static func ink(_ card: ReviewViewModel.Card) -> Color {
+        card.isLight ? Color(white: 0.11) : .white
+    }
+
+    /// La carte d'après celle à l'écran, s'il y en a une.
+    func upcoming(_ state: ReviewViewModel.State) -> ReviewViewModel.Card? {
+        state.cards.indices.contains(state.position + 1) ? state.cards[state.position + 1] : nil
+    }
+}
+
+/// Le voile du décor : sa teinte, posée là où le texte se lit, et rien en haut
+/// ni en bas, où le décor vit.
+private struct SceneVeil: View {
+    let glass: SceneTheme.Glass
+
+    var body: some View {
+        let tint = glass.tint.color
+        LinearGradient(
+            stops: [
+                .init(color: tint.opacity(0), location: 0.06),
+                .init(color: tint.opacity(glass.opacity), location: 0.24),
+                .init(color: tint.opacity(glass.opacity), location: 0.66),
+                .init(color: tint.opacity(0), location: 0.84),
+            ],
+            startPoint: .top, endPoint: .bottom
+        )
+        .allowsHitTesting(false)
     }
 }
 
@@ -197,7 +251,7 @@ private struct ReelCard: View {
             // Seule la carte à l'écran le porte : celui de la suivante se
             // verrait sous la barre d'onglets.
             if hasMeaning, isCurrent, !card.isRevealed {
-                ProgressLine(running: isCurrent, duration: revealAfter)
+                ProgressLine(running: isCurrent, duration: revealAfter, ink: ReviewView.ink(card))
                     .padding(.horizontal, Theme.margin)
                     .padding(.top, 6)
                     .transition(.opacity)
@@ -212,7 +266,7 @@ private struct ReelCard: View {
                     .animation(.easeOut(duration: 0.2), value: isCurrent)
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(ReviewView.ink(card))
         .contentShape(.rect)
         .onTapGesture(count: 2) { doubleTap() }
         .onTapGesture { if hasMeaning { reveal() } }
@@ -299,20 +353,21 @@ private struct ReelCard: View {
             .textCase(.uppercase)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(.white.opacity(0.18), in: .capsule)
+            .background(ReviewView.ink(card).opacity(0.18), in: .capsule)
     }
 
     private var actions: some View {
         HStack(spacing: 34) {
+            let ink = ReviewView.ink(card)
             ReelButton(
                 image: card.isLiked ? "heart.fill" : "heart", label: likeLabel,
-                tint: card.isLiked ? Color(red: 1, green: 0.36, blue: 0.42) : .white,
+                tint: card.isLiked ? Color(red: 1, green: 0.36, blue: 0.42) : ink, ink: ink,
                 bounce: card.isLiked, action: like
             )
-            ReelButton(image: "speaker.wave.2.fill", label: listenLabel) {
+            ReelButton(image: "speaker.wave.2.fill", label: listenLabel, tint: ink, ink: ink) {
                 Speaker.shared.say(card.word, in: card.language, asked: true)
             }
-            ReelButton(image: "book", label: openLabel, action: open)
+            ReelButton(image: "book", label: openLabel, tint: ink, ink: ink, action: open)
         }
         .padding(.bottom, Theme.section)
     }
@@ -356,10 +411,10 @@ private struct ReelCard: View {
     /// Avant la réponse, tous les choix se valent. Après : le bon en vert, et
     /// celui qu'on a pris à tort en rouge.
     private func colour(of choice: ReviewViewModel.Choice, at index: Int) -> Color {
-        guard let picked = card.picked else { return .white.opacity(0.18) }
+        guard let picked = card.picked else { return ReviewView.ink(card).opacity(0.18) }
         if choice.isCorrect { return Color(red: 0.16, green: 0.62, blue: 0.36) }
         if index == picked { return Color(red: 0.80, green: 0.22, blue: 0.22) }
-        return .white.opacity(0.08)
+        return ReviewView.ink(card).opacity(0.08)
     }
 
     // MARK: La série
@@ -389,6 +444,8 @@ private struct ReelButton: View {
     let image: String
     let label: String
     var tint: Color = .white
+    /// La couleur du rond : celle du texte de la carte.
+    var ink: Color = .white
     var bounce = false
     let action: () -> Void
 
@@ -399,7 +456,7 @@ private struct ReelButton: View {
                 .foregroundStyle(tint)
                 .symbolEffect(.bounce, value: bounce)
                 .frame(width: 54, height: 54)
-                .background(.white.opacity(0.16), in: .circle)
+                .background(ink.opacity(0.16), in: .circle)
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
@@ -411,16 +468,17 @@ private struct ReelButton: View {
 private struct ProgressLine: View {
     let running: Bool
     let duration: Double
+    var ink: Color = .white
 
     @State private var fill: CGFloat = 0
 
     var body: some View {
         Capsule()
-            .fill(.white.opacity(0.25))
+            .fill(ink.opacity(0.25))
             .frame(height: 3)
             .overlay {
                 Capsule()
-                    .fill(.white)
+                    .fill(ink)
                     .scaleEffect(x: fill, y: 1, anchor: .leading)
             }
             .onChange(of: running, initial: true) { _, now in

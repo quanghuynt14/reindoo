@@ -48,6 +48,8 @@ struct Launch {
         if let tab = argument("-tab") { try? session.perform("selectTab", input: json(["name": tab])) }
         if let query = argument("-query") { try? session.perform("setQuery", input: json(["text": query])) }
         if let word = argument("-open") { try? session.perform("open", input: json(["word": word])) }
+        // `-scene snow-pines` : le décor du reel, pour le photographier.
+        if let scene = argument("-scene") { try? session.perform("setScene", input: json(["name": scene])) }
         // `-position 5` : fait défiler le reel carte par carte, comme un doigt.
         if let action = argument("-do") { try? session.perform(action, input: nil) }
         #endif

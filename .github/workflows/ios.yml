@@ -144,6 +144,13 @@ jobs:
             shoot $ui-history  -fixture returning -tab history
           done
           ui=vi
+          # Chaque décor du reel, une fois : ils ne suivent pas l'apparence.
+          looks="light"
+          for scene in aurora-snow aurora snow-pines honu-lagoon koi-mosaic halftone-dawn halftone-dusk \
+            plotter-tide plotter-tide-night dither-dunes dither-dunes-night paper-garden paper-garden-kraft \
+            night-reef braille-stars teletext-clouds vector-range departure-board blueprint deep-water ember; do
+            shoot scene-$scene -fixture returning -tab review -scene $scene -do reveal
+          done
           looks="light dark"
           # Le vrai lexique, sans fixture. L'historique s'y accumule d'un
           # lancement à l'autre : la révision vient en dernier.
