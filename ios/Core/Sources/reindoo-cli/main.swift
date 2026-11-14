@@ -102,8 +102,11 @@ if arguments.first == "plan" {
 // vivantes d'un décor, en moyenne sur 120 images.
 if arguments.first == "bench" {
     for theme in SceneTheme.all where arguments.count < 2 || arguments[1] == theme.id {
+        let cold = Date()
         let scene = theme.scene(width: 390, height: 844)
+        let built = Date()
         let plan = scene.plan(motion: true)
+        let planned = Date()
         let start = Date()
         var ops = 0
         for frame in 0..<120 {
@@ -112,7 +115,7 @@ if arguments.first == "bench" {
             }
         }
         let ms = Date().timeIntervalSince(start) * 1000 / 120
-        print("\(theme.id): \(String(format: "%.2f", ms)) ms par image")
+        print("\(theme.id): construit \(String(format: "%.1f", built.timeIntervalSince(cold) * 1000)) ms, planifié \(String(format: "%.1f", planned.timeIntervalSince(built) * 1000)) ms, \(String(format: "%.2f", ms)) ms par image")
     }
     exit(0)
 }

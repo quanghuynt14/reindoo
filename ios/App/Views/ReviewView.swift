@@ -68,7 +68,7 @@ struct ReviewView: View {
         // celle-ci : revenir en arrière est aussi rapide qu'avancer.
         .task(id: neighbours(state).compactMap(\.scene)) {
             for card in neighbours(state) {
-                if let name = card.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepareNext(theme) }
+                if let name = card.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepare(theme) }
             }
         }
         .overlay {

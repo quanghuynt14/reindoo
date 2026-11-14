@@ -1,10 +1,13 @@
 import ReindooCore
 import SwiftUI
+import UIKit
 
 /// Trois onglets, chacun avec sa pile. La vue ne décide de rien : elle lit
 /// l'état de Core et lui renvoie des actions.
 struct RootView: View {
     let app: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         TabView(selection: Binding(
@@ -21,11 +24,14 @@ struct RootView: View {
                 stack(.history) { HistoryView(model: app.history) }
             }
         }
-        // Le décor de la première carte du reel se prépare dès le lancement :
-        // ouvrir l'onglet n'attend pas qu'il se construise.
+        // Les décors et les voix se chauffent dès le lancement, le décor de la
+        // première carte d'abord : ouvrir l'onglet n'attend plus rien.
         .task {
-            let first = app.review.state.cards.first
-            if let name = first?.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepareNext(theme) }
+            Speaker.shared.warm()
+            let first = app.review.state.cards.prefix(3).compactMap { $0.scene.flatMap(SceneTheme.named) }
+            let moves = !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+            let screen = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen
+            SceneCache.shared.warmAll(first: first, size: screen?.bounds.size ?? .zero, moves: moves, displayScale: displayScale)
         }
     }
 

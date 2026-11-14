@@ -136,12 +136,52 @@ final class SceneRenderer: @unchecked Sendable {
         }
     }
 
-    /// Construit le décor hors du fil principal : un décor prend quelques
-    /// dizaines de millisecondes à calculer.
-    static func make(theme: SceneTheme, size: CGSize, moves: Bool) async -> SceneRenderer {
-        await Task.detached(priority: .userInitiated) {
-            SceneRenderer(scene: theme.scene(width: size.width, height: size.height), frameRate: theme.frameRate, moves: moves)
+    /// Construit le décor hors du fil principal, et le chauffe : la première
+    /// image ne doit rien avoir à traduire ni à rendre.
+    static func make(theme: SceneTheme, size: CGSize, moves: Bool, displayScale: Double,
+                     priority: TaskPriority = .userInitiated) async -> SceneRenderer {
+        await Task.detached(priority: priority) {
+            let renderer = SceneRenderer(scene: theme.scene(width: size.width, height: size.height), frameRate: theme.frameRate, moves: moves)
+            renderer.warm(displayScale: displayScale)
+            return renderer
         }.value
+    }
+
+    /// Fait d'avance ce que la première image ferait sur le fil de rendu :
+    /// traduire les chemins vivants, trouver les polices et les glyphes, rendre
+    /// les tuiles des motifs à la finesse de l'écran.
+    func warm(displayScale: Double) {
+        var ops: [PaintOp] = []
+        for part in parts {
+            switch part {
+            case .still(let still): ops += still
+            case .live(let nodes, let style): ops += PaintOp.compile(scene.record(nodes, style, at: moves ? 0 : nil), cache)
+            }
+        }
+        let unit = scene.pointsPerUnit
+        warmTiles(ops, area: unit * unit, displayScale: displayScale)
+    }
+
+    /// `area` est le déterminant de la transformation courante, comme celui
+    /// que `shade` lit dans le contexte : la tuile tombe sous la même clé.
+    private func warmTiles(_ ops: [PaintOp], area: Double, displayScale: Double) {
+        for op in ops {
+            let paint: ResolvedPaint
+            switch op {
+            case .layer(let layer, _, let inner, let mask):
+                let t = layer.transform
+                let inside = area * abs(t.a * t.d - t.b * t.c)
+                warmTiles(inner, area: inside, displayScale: displayScale)
+                if let mask { warmTiles(mask, area: inside, displayScale: displayScale) }
+                continue
+            case .fill(_, let p, _), .stroke(_, _, let p, _): paint = p
+            case .glyphs: continue
+            }
+            if case .pattern(let name, let pattern, _) = paint {
+                let pixels = area.squareRoot() * displayScale
+                if pixels > 0 { _ = tile(name, pattern, pixels: pixels) }
+            }
+        }
     }
 
     func draw(in context: inout GraphicsContext, at time: Double) {
