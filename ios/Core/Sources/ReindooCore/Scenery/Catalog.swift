@@ -30,7 +30,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
 
     /// Certains décors ont des sujets trop grands pour un téléphone : on les
     /// dessine plus serrés.
-    static let densities: [String: Double] = ["koi-mosaic": 2, "night-reef": 2.4]
+    static let densities: [String: Double] = ["koi-mosaic": 2, "night-reef": 2.4, "dither-dunes": 1.7, "dither-dunes-night": 1.7]
 
     /// Construit le décor pour un écran de `width` sur `height` points.
     public func scene(width: Double, height: Double) -> Scene {
@@ -89,6 +89,8 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "braille-stars": BrailleStars.build,
         "teletext-clouds": TeletextClouds.build,
         "departure-board": DepartureBoard.build,
+        "dither-dunes": DitherDunes.build(DitherDunes.day),
+        "dither-dunes-night": DitherDunes.build(DitherDunes.night),
     ]
 
     static let originals: [String: @Sendable () -> Scene] = [
@@ -102,5 +104,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "braille-stars": BrailleStars.original,
         "teletext-clouds": TeletextClouds.original,
         "departure-board": DepartureBoard.original,
+        "dither-dunes": DitherDunes.original(DitherDunes.day),
+        "dither-dunes-night": DitherDunes.original(DitherDunes.night),
     ]
 }
