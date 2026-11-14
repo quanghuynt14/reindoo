@@ -86,6 +86,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "honu-lagoon": HonuLagoon.build,
         "koi-mosaic": KoiMosaic.build,
         "night-reef": NightReef.build,
+        "braille-stars": BrailleStars.build,
     ]
 
     static let originals: [String: @Sendable () -> Scene] = [
@@ -96,5 +97,6 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "honu-lagoon": HonuLagoon.original,
         "koi-mosaic": KoiMosaic.original,
         "night-reef": NightReef.original,
+        "braille-stars": BrailleStars.original,
     ]
 }

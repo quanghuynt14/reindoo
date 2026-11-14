@@ -131,8 +131,10 @@ public struct FrozenSVG: ScenePainter {
         stops.map { "<stop offset=\"\(number($0.offset))\" stop-color=\"\($0.color.hex)\" stop-opacity=\"\(number($0.color.a))\"/>" }.joined()
     }
 
+    /// Une matrice garde six décimales : une rotation de deux dixièmes de degré,
+    /// arrondie au millième, déplace un point lointain de près d'un pixel.
     static func matrix(_ m: Affine) -> String {
-        "matrix(\([m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")))"
+        "matrix(\([m.a, m.b, m.c, m.d, m.tx, m.ty].map { String(($0 * 1_000_000).rounded() / 1_000_000) }.joined(separator: " ")))"
     }
 
     static func number(_ value: Double) -> String {
