@@ -155,7 +155,10 @@ public struct SceneAnimation: Sendable {
         }
     }
 
-    public var keyframes: [Keyframe]
+    public var keyframes: [Keyframe] { didSet { tracks = Self.tracks(of: keyframes) } }
+    /// Pour chaque propriété, ses images clés seules, triées : tirées une fois,
+    /// pas à chaque image. Le koï en a 125 par tranche, et 78 tranches.
+    private var tracks: [Property: [Track]] = [:]
     public var duration: Double
     public var delay: Double
     public var direction: Direction
@@ -168,6 +171,7 @@ public struct SceneAnimation: Sendable {
         timing: Timing = .ease, fillsBackwards: Bool = false
     ) {
         self.keyframes = keyframes.sorted { $0.offset < $1.offset }
+        tracks = Self.tracks(of: self.keyframes)
         self.duration = duration
         self.delay = delay
         self.direction = direction
@@ -175,8 +179,20 @@ public struct SceneAnimation: Sendable {
         self.fillsBackwards = fillsBackwards
     }
 
-    public var properties: Set<Property> {
-        keyframes.reduce(into: Set<Property>()) { $0.formUnion($1.values.keys) }
+    public var properties: Set<Property> { Set(tracks.keys) }
+
+    struct Track: Sendable {
+        var offset: Double
+        var value: Value
+        var timing: Timing?
+    }
+
+    static func tracks(of keyframes: [Keyframe]) -> [Property: [Track]] {
+        var tracks: [Property: [Track]] = [:]
+        for frame in keyframes {
+            for (property, value) in frame.values { tracks[property, default: []].append(Track(offset: frame.offset, value: value, timing: frame.timing)) }
+        }
+        return tracks
     }
 
     /// La progression dans l'itération en cours, sens compris. `nil` avant le départ.
@@ -204,21 +220,31 @@ public struct SceneAnimation: Sendable {
     /// touche pas maintenant. `base` est la valeur du nœud sans animation : les
     /// images clés qui manquent la prennent, comme en CSS.
     public func value(of property: Property, at time: Double, base: Value) -> Value? {
-        guard let p = progress(at: time) else { return nil }
-        var frames = keyframes.filter { $0.values[property] != nil }
-        guard !frames.isEmpty else { return nil }
-        if frames[0].offset > 0 { frames.insert(Keyframe(0, [property: base]), at: 0) }
-        if let last = frames.last, last.offset < 1 { frames.append(Keyframe(1, [property: base])) }
-        var index = 0
-        while index < frames.count - 2, p >= frames[index + 1].offset { index += 1 }
-        let from = frames[index], to = frames[index + 1]
+        guard let track = tracks[property], !track.isEmpty, let p = progress(at: time) else { return nil }
+        // Une image clé qui manque à 0 % ou à 100 % prend la valeur du nœud,
+        // comme en CSS, et le rythme de l'animation.
+        let first = track[0], last = track[track.count - 1]
+        let from: Track, to: Track
+        if p < first.offset {
+            from = Track(offset: 0, value: base, timing: nil)
+            to = first
+        } else if p >= last.offset {
+            if last.offset >= 1 || track.count == 1 && last.offset >= 1 { return last.value }
+            from = last
+            to = Track(offset: 1, value: base, timing: nil)
+        } else {
+            // La dernière image dont le début est atteint : une recherche par moitiés.
+            var low = 0, high = track.count - 1
+            while high - low > 1 {
+                let middle = (low + high) / 2
+                if track[middle].offset <= p { low = middle } else { high = middle }
+            }
+            from = track[low]
+            to = track[high]
+        }
         let span = to.offset - from.offset
         let u = span > 0 ? min(1, max(0, (p - from.offset) / span)) : 1
-        // Le rythme du segment est celui de l'image de départ, comme en CSS : une
-        // image ajoutée pour combler prend celui de l'animation.
-        let eased = (from.timing ?? timing).apply(u)
-        guard let a = from.values[property], let b = to.values[property] else { return nil }
-        return SceneAnimation.mix(a, b, eased)
+        return Self.mix(from.value, to.value, (from.timing ?? timing).apply(u))
     }
 
     static func mix(_ a: Value, _ b: Value, _ u: Double) -> Value {

@@ -231,6 +231,8 @@ public struct Glyphs: Sendable {
     public var xs: [Double]
     public var ys: [Double]
     public var centered: Bool
+    /// Comme pour `PathData` : de quoi garder les glyphes déjà trouvés.
+    public var key: Int?
     public init(text: [Character], xs: [Double], ys: [Double], centered: Bool = true) {
         self.text = text
         self.xs = xs

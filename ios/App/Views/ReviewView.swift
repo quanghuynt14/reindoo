@@ -7,6 +7,10 @@ struct ReviewView: View {
     let model: ReviewViewModel
 
     @AppStorage("reel.readAloud") private var readAloud = true
+    /// Le décor se fige pendant qu'on fait défiler, et quand l'onglet n'est
+    /// pas à l'écran : le défilement passe avant lui.
+    @State private var scrolling = false
+    @State private var visible = false
 
     /// Le temps laissé pour deviner avant que le sens se montre seul.
     private static let revealAfter = 2.2
@@ -38,6 +42,7 @@ struct ReviewView: View {
             .scrollTargetLayout()
         }
         .scrollTargetBehavior(.paging)
+        .onScrollPhaseChange { _, phase in scrolling = phase != .idle }
         .scrollIndicators(.hidden)
         .scrollPosition(id: Binding(
             get: { current?.id },
@@ -50,7 +55,7 @@ struct ReviewView: View {
             if let current {
                 if let name = current.scene, let theme = SceneTheme.named(name) {
                     ZStack {
-                        SceneBackdrop(theme: theme)
+                        SceneBackdrop(theme: theme, paused: scrolling || !visible)
                         SceneVeil(glass: theme.glass)
                     }
                     .ignoresSafeArea()
@@ -59,9 +64,12 @@ struct ReviewView: View {
                 }
             }
         }
-        // Le décor de la carte suivante se prépare pendant qu'on lit celle-ci.
-        .task(id: upcoming(state)?.scene) {
-            if let name = upcoming(state)?.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepareNext(theme) }
+        // Les décors des cartes voisines se préparent pendant qu'on lit
+        // celle-ci : revenir en arrière est aussi rapide qu'avancer.
+        .task(id: neighbours(state).compactMap(\.scene)) {
+            for card in neighbours(state) {
+                if let name = card.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepareNext(theme) }
+            }
         }
         .overlay {
             if let message = state.emptyMessage {
@@ -124,8 +132,14 @@ struct ReviewView: View {
         }
         .sensoryFeedback(.selection, trigger: state.sort)
         .sensoryFeedback(.selection, trigger: state.filter)
-        .onAppear { model.send(.appear) }
-        .onDisappear { Speaker.shared.stop() }
+        .onAppear {
+            visible = true
+            model.send(.appear)
+        }
+        .onDisappear {
+            visible = false
+            Speaker.shared.stop()
+        }
         // Une carte arrive : on dit le mot, on laisse deviner, puis le sens
         // vient seul. Changer de carte annule l'attente.
         .task(id: current?.id) { @MainActor in
@@ -144,9 +158,9 @@ extension ReviewView {
         card.isLight ? Color(white: 0.11) : .white
     }
 
-    /// La carte d'après celle à l'écran, s'il y en a une.
-    func upcoming(_ state: ReviewViewModel.State) -> ReviewViewModel.Card? {
-        state.cards.indices.contains(state.position + 1) ? state.cards[state.position + 1] : nil
+    /// Les cartes juste après et juste avant celle à l'écran.
+    func neighbours(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
+        [state.position + 1, state.position - 1, state.position + 2].compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
     }
 }
 

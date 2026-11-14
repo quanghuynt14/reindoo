@@ -94,9 +94,20 @@ struct GlyphRun {
     /// La police à chasse fixe du système, celle que demandaient les décors
     /// (`ui-monospace`), à la graisse voulue.
     static func font(size: Double, weight: Int) -> CTFont {
+        let key = "\(size)/\(weight)"
+        fontLock.lock()
+        defer { fontLock.unlock() }
+        if let found = fonts[key] { return found }
         let w: UIFont.Weight = weight >= 800 ? .heavy : weight >= 600 ? .bold : weight >= 500 ? .medium : .regular
-        return UIFont.monospacedSystemFont(ofSize: size, weight: w) as CTFont
+        let made = UIFont.monospacedSystemFont(ofSize: size, weight: w) as CTFont
+        fonts[key] = made
+        return made
     }
+
+    /// Une police par taille et par graisse, pour toute l'app : la chercher
+    /// coûte plus que dessiner ses glyphes.
+    nonisolated(unsafe) private static var fonts: [String: CTFont] = [:]
+    private static let fontLock = NSLock()
 
     init(_ glyphs: Glyphs, size: Double, weight: Int) {
         font = Self.font(size: size, weight: weight)

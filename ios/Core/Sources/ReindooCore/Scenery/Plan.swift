@@ -65,6 +65,9 @@ public struct ScenePlan: Sendable {
     }
 
     public var parts: [Part]
+    /// Le décor dont les parties vivantes se rejouent : le même, avec ses
+    /// chemins et ses glyphes numérotés.
+    public var scene: SceneGraph
 
     /// Le nombre de gestes immobiles et de nœuds vivants, pour juger du coût.
     public var summary: (stillOps: Int, stillParts: Int, liveNodes: Int) {
@@ -83,11 +86,52 @@ extension SceneGraph {
     /// Découpe le décor. Sans mouvement, tout est immobile : une seule partie,
     /// peinte comme si aucune animation n'existait.
     public func plan(motion: Bool) -> ScenePlan {
+        let numbered = self.numbered()
         if !motion {
             var recorder = OpRecorder()
-            paint(at: nil, into: &recorder)
-            return ScenePlan(parts: [.still(recorder.ops)])
+            numbered.paint(at: nil, into: &recorder)
+            return ScenePlan(parts: [.still(recorder.ops)], scene: numbered)
         }
+        return numbered.split()
+    }
+
+    /// Chaque chemin et chaque glyphe reçoit son numéro.
+    func numbered() -> SceneGraph {
+        var counter = 0
+        func number(_ node: Node) -> Node {
+            var copy = node
+            switch node.content {
+            case .group(let children): copy.content = .group(children.map(number))
+            case .path(var path):
+                counter += 1
+                path.key = counter
+                copy.content = .path(path)
+            case .glyphs(var glyphs):
+                counter += 1
+                glyphs.key = counter
+                copy.content = .glyphs(glyphs)
+            case .use: break
+            }
+            return copy
+        }
+        var copy = self
+        copy.nodes = nodes.map(number)
+        for (name, def) in defs {
+            switch def {
+            case .symbol(let node): copy.defs[name] = .symbol(number(node))
+            case .pattern(var pattern):
+                pattern.nodes = pattern.nodes.map(number)
+                copy.defs[name] = .pattern(pattern)
+            case .mask(var mask):
+                mask.nodes = mask.nodes.map(number)
+                copy.defs[name] = .mask(mask)
+            default: break
+            }
+        }
+        return copy
+    }
+
+    private func split() -> ScenePlan {
         var parts: [ScenePlan.Part] = []
         var still = OpRecorder()
         var stillCount = 0
@@ -117,7 +161,7 @@ extension SceneGraph {
         }
         walk(nodes, Inherited())
         flush()
-        return ScenePlan(parts: parts)
+        return ScenePlan(parts: parts, scene: self)
     }
 
     /// Les nœuds vivants d'une partie, à l'instant `time`.

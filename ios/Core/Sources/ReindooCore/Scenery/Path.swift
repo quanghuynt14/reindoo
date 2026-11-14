@@ -13,7 +13,12 @@ public struct PathData: Sendable, Equatable {
     }
 
     public var commands: [Command] = []
+    /// Un numéro stable, donné quand le décor est planifié : l'app garde sous
+    /// ce numéro le chemin déjà traduit, au lieu de le refaire à chaque image.
+    public var key: Int?
     public init(_ commands: [Command] = []) { self.commands = commands }
+
+    public static func == (left: PathData, right: PathData) -> Bool { left.commands == right.commands }
 
     public var isEmpty: Bool { commands.isEmpty }
 

@@ -131,6 +131,37 @@ import Testing
         #expect(planned == whole.ops.reduce(0) { $0 + $1.count })
     }
 
+    @Test func aPlannedPathKeepsItsKeyFromFrameToFrame() throws {
+        // L'app garde la géométrie sous ces numéros : un numéro nomme toujours
+        // la même forme. Ce qui est invisible à un instant est sauté : la liste
+        // change, pas le sens des numéros.
+        let plan = try #require(SceneTheme.named("koi-mosaic")).scene(width: 390, height: 844).plan(motion: true)
+        func paths(at time: Double) -> [(Int?, PathData)] {
+            func walk(_ ops: [DrawOp]) -> [(Int?, PathData)] {
+                ops.flatMap { op -> [(Int?, PathData)] in
+                    switch op {
+                    case .layer(_, let inner, let mask): walk(inner) + walk(mask ?? [])
+                    case .fill(let path, _, _), .stroke(let path, _, _): [(path.key, path)]
+                    case .glyphs: []
+                    }
+                }
+            }
+            return plan.parts.flatMap { part -> [(Int?, PathData)] in
+                if case .live(let nodes, let style) = part { return walk(plan.scene.record(nodes, style, at: time)) }
+                return []
+            }
+        }
+        var seen: [Int: PathData] = [:]
+        for time in [3.0, 47.5, 120.25] {
+            for (key, path) in paths(at: time) {
+                let key = try #require(key)
+                if let earlier = seen[key] { #expect(earlier == path, "le numéro \(key) a changé de forme") }
+                seen[key] = path
+            }
+        }
+        #expect(!seen.isEmpty)
+    }
+
     @Test func withoutMotionNothingIsLive() throws {
         let plan = try #require(SceneTheme.named("snow-pines")).scene(width: 390, height: 844).plan(motion: false)
         #expect(plan.summary.liveNodes == 0)

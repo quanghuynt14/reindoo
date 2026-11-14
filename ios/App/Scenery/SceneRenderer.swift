@@ -10,19 +10,19 @@ indirect enum PaintOp {
     case stroke(CGPath, dots: CGPath?, ResolvedPaint, SwiftUI.StrokeStyle)
     case glyphs(GlyphRun, ResolvedPaint)
 
-    static func compile(_ ops: [DrawOp]) -> [PaintOp] { ops.map(compile) }
+    static func compile(_ ops: [DrawOp], _ cache: GeometryCache) -> [PaintOp] { ops.map { compile($0, cache) } }
 
-    static func compile(_ op: DrawOp) -> PaintOp {
+    static func compile(_ op: DrawOp, _ cache: GeometryCache) -> PaintOp {
         switch op {
         case .layer(let layer, let inner, let mask):
             let clip: CGPath? = layer.clip.map { paths in
                 let joined = CGMutablePath()
-                for path in paths { joined.addPath(path.cgPath) }
+                for path in paths { joined.addPath(cache.path(path)) }
                 return joined
             }
-            return .layer(layer, clip: clip, compile(inner), mask: mask.map(compile))
+            return .layer(layer, clip: clip, compile(inner, cache), mask: mask.map { compile($0, cache) })
         case .fill(let path, let paint, let evenOdd):
-            return .fill(path.cgPath, paint, evenOdd: evenOdd)
+            return .fill(cache.path(path), paint, evenOdd: evenOdd)
         case .stroke(let path, let paint, let style):
             var dash = style.dash.map { CGFloat($0) }
             var phase = CGFloat(style.dashOffset)
@@ -37,13 +37,68 @@ indirect enum PaintOp {
             }
             let stroke = SwiftUI.StrokeStyle(lineWidth: style.width, lineCap: style.cap.cg, lineJoin: .round, dash: dash, dashPhase: phase)
             if style.cap == .round && dash.isEmpty {
-                let split = path.splitDots(radius: style.width / 2)
+                let split = cache.dots(path, radius: style.width / 2)
                 return .stroke(split.rest, dots: split.dots, paint, stroke)
             }
-            return .stroke(path.cgPath, dots: nil, paint, stroke)
+            return .stroke(cache.path(path), dots: nil, paint, stroke)
         case .glyphs(let glyphs, let paint, let size, let weight):
-            return .glyphs(GlyphRun(glyphs, size: size, weight: weight), paint)
+            return .glyphs(cache.run(glyphs, size: size, weight: weight), paint)
         }
+    }
+}
+
+/// La géométrie déjà traduite, sous le numéro que Core donne à chaque chemin
+/// et à chaque suite de glyphes. D'une image à l'autre, seuls bougent les
+/// transformations, les opacités et les tirets : les formes restent.
+final class GeometryCache: @unchecked Sendable {
+    private struct DotKey: Hashable {
+        var path: Int
+        var radius: Double
+    }
+
+    private struct RunKey: Hashable {
+        var glyphs: Int
+        var size: Double
+        var weight: Int
+    }
+
+    private let lock = NSLock()
+    private var paths: [Int: CGPath] = [:]
+    private var split: [DotKey: (CGPath, CGPath?)] = [:]
+    private var runs: [RunKey: GlyphRun] = [:]
+
+    func path(_ data: PathData) -> CGPath {
+        guard let key = data.key else { return data.cgPath }
+        lock.lock()
+        defer { lock.unlock() }
+        if let found = paths[key] { return found }
+        let made = data.cgPath
+        paths[key] = made
+        return made
+    }
+
+    /// Les épaisseurs animées (la trame de Halftone) passent par une poignée de
+    /// valeurs : chacune est gardée.
+    func dots(_ data: PathData, radius: Double) -> (rest: CGPath, dots: CGPath?) {
+        guard let key = data.key else { return data.splitDots(radius: radius) }
+        let dotKey = DotKey(path: key, radius: (radius * 100).rounded() / 100)
+        lock.lock()
+        defer { lock.unlock() }
+        if let found = split[dotKey] { return found }
+        let made = data.splitDots(radius: dotKey.radius)
+        split[dotKey] = made
+        return made
+    }
+
+    func run(_ glyphs: Glyphs, size: Double, weight: Int) -> GlyphRun {
+        guard let key = glyphs.key else { return GlyphRun(glyphs, size: size, weight: weight) }
+        let runKey = RunKey(glyphs: key, size: size, weight: weight)
+        lock.lock()
+        defer { lock.unlock() }
+        if let found = runs[runKey] { return found }
+        let made = GlyphRun(glyphs, size: size, weight: weight)
+        runs[runKey] = made
+        return made
     }
 }
 
@@ -57,20 +112,25 @@ final class SceneRenderer: @unchecked Sendable {
     }
 
     let id = UUID()
+    /// Le décor planifié, aux chemins numérotés.
     let scene: SceneGraph
+    private let cache: GeometryCache
     let frameRate: Double
     let moves: Bool
     private let parts: [Part]
     private let lock = NSLock()
     private var tiles: [String: Image] = [:]
 
-    init(scene: SceneGraph, frameRate: Double, moves: Bool) {
-        self.scene = scene
+    init(scene graph: SceneGraph, frameRate: Double, moves: Bool) {
+        let plan = graph.plan(motion: moves)
+        scene = plan.scene
         self.frameRate = frameRate
         self.moves = moves
-        parts = scene.plan(motion: moves).parts.map { part in
+        let cache = GeometryCache()
+        self.cache = cache
+        parts = plan.parts.map { part in
             switch part {
-            case .still(let ops): .still(PaintOp.compile(ops))
+            case .still(let ops): .still(PaintOp.compile(ops, cache))
             case .live(let nodes, let style): .live(nodes, style)
             }
         }
@@ -89,7 +149,7 @@ final class SceneRenderer: @unchecked Sendable {
         for part in parts {
             switch part {
             case .still(let ops): replay(ops, in: &context)
-            case .live(let nodes, let style): replay(PaintOp.compile(scene.record(nodes, style, at: moves ? time : nil)), in: &context)
+            case .live(let nodes, let style): replay(PaintOp.compile(scene.record(nodes, style, at: moves ? time : nil), cache), in: &context)
             }
         }
     }
@@ -183,7 +243,7 @@ final class SceneRenderer: @unchecked Sendable {
         context.scaleBy(x: CGFloat(width) / pattern.width, y: -CGFloat(height) / pattern.height)
         var recorder = OpRecorder()
         scene.paint(pattern.nodes, at: nil, into: &recorder)
-        CGReplay.replay(PaintOp.compile(recorder.ops), in: context)
+        CGReplay.replay(PaintOp.compile(recorder.ops, cache), in: context)
         guard let made = context.makeImage() else { return nil }
         let image = Image(decorative: made, scale: 1)
         tiles[key] = image

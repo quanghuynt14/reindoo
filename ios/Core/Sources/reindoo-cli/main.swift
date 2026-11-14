@@ -98,6 +98,25 @@ if arguments.first == "plan" {
     exit(0)
 }
 
+// Le coût d'une image : combien de temps Core met à rejouer les parties
+// vivantes d'un décor, en moyenne sur 120 images.
+if arguments.first == "bench" {
+    for theme in SceneTheme.all where arguments.count < 2 || arguments[1] == theme.id {
+        let scene = theme.scene(width: 390, height: 844)
+        let plan = scene.plan(motion: true)
+        let start = Date()
+        var ops = 0
+        for frame in 0..<120 {
+            for part in plan.parts {
+                if case .live(let nodes, let style) = part { ops += scene.record(nodes, style, at: Double(frame) / 30).count }
+            }
+        }
+        let ms = Date().timeIntervalSince(start) * 1000 / 120
+        print("\(theme.id): \(String(format: "%.2f", ms)) ms par image")
+    }
+    exit(0)
+}
+
 var fixture = Fixture.sample
 if arguments.first == "--fixture" {
     guard arguments.count >= 2, let chosen = Fixture(rawValue: arguments[1]) else {

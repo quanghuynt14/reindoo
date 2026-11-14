@@ -1,11 +1,14 @@
 import ReindooCore
 import SwiftUI
+import UIKit
 
 /// Le décor animé derrière le reel. Il se construit hors du fil principal, se
 /// fond dans le suivant, et reste immobile quand l'utilisateur demande moins de
 /// mouvement ou que l'iPhone économise sa batterie.
 struct SceneBackdrop: View {
     let theme: SceneTheme
+    /// Figé pour l'instant : on fait défiler, ou l'onglet est caché.
+    var paused = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var renderer: SceneRenderer?
@@ -15,12 +18,12 @@ struct SceneBackdrop: View {
         GeometryReader { geometry in
             ZStack {
                 if let renderer {
-                    SceneCanvas(renderer: renderer)
+                    SceneCanvas(renderer: renderer, paused: paused)
                         .id(renderer.id)
                         .transition(.opacity)
                 }
             }
-            .animation(.easeInOut(duration: 0.45), value: renderer?.id)
+            .animation(.easeInOut(duration: 0.3), value: renderer?.id)
             .task(id: SceneCache.Key(theme: theme.id, size: geometry.size, moves: !reduceMotion && !lowPower)) {
                 guard geometry.size.width > 0, geometry.size.height > 0 else { return }
                 SceneCache.shared.lastSize = geometry.size
@@ -38,10 +41,11 @@ struct SceneBackdrop: View {
 /// Une toile qui repeint le décor au rythme qu'il demande.
 private struct SceneCanvas: View {
     let renderer: SceneRenderer
+    let paused: Bool
     @State private var start = Date()
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / renderer.frameRate, paused: !renderer.moves)) { timeline in
+        TimelineView(.animation(minimumInterval: 1 / renderer.frameRate, paused: paused || !renderer.moves)) { timeline in
             Canvas(opaque: true, rendersAsynchronously: true) { context, _ in
                 renderer.draw(in: &context, at: timeline.date.timeIntervalSince(start))
             }
@@ -72,7 +76,7 @@ final class SceneCache {
     private var ready: [Key: SceneRenderer] = [:]
     private var order: [Key] = []
     private var building: [Key: Task<SceneRenderer, Never>] = [:]
-    private let capacity = 4
+    private let capacity = 6
 
     func renderer(_ theme: SceneTheme, size: CGSize, moves: Bool) async -> SceneRenderer {
         let key = Key(theme: theme.id, size: size, moves: moves)
@@ -89,8 +93,12 @@ final class SceneCache {
         return made
     }
 
-    /// La taille du dernier décor montré : celle du suivant.
-    var lastSize = CGSize.zero
+    /// La taille du dernier décor montré : celle du suivant. Avant le premier,
+    /// celle de l'écran, que le décor couvre en entier.
+    var lastSize: CGSize = {
+        let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        return scene?.screen.bounds.size ?? .zero
+    }()
     var lastMoves = true
 
     /// Prépare le décor de la carte suivante, à la taille de celle-ci.

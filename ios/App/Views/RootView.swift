@@ -21,6 +21,12 @@ struct RootView: View {
                 stack(.history) { HistoryView(model: app.history) }
             }
         }
+        // Le décor de la première carte du reel se prépare dès le lancement :
+        // ouvrir l'onglet n'attend pas qu'il se construise.
+        .task {
+            let first = app.review.state.cards.first
+            if let name = first?.scene, let theme = SceneTheme.named(name) { SceneCache.shared.prepareNext(theme) }
+        }
     }
 
     private func label(_ tab: AppModel.Tab) -> String {
