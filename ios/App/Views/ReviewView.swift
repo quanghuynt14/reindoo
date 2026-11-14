@@ -310,7 +310,7 @@ private struct ReelCard: View {
                 bounce: card.isLiked, action: like
             )
             ReelButton(image: "speaker.wave.2.fill", label: listenLabel) {
-                Speaker.shared.say(card.word, in: card.language)
+                Speaker.shared.say(card.word, in: card.language, asked: true)
             }
             ReelButton(image: "book", label: openLabel, action: open)
         }

@@ -3,19 +3,31 @@ import ReindooCore
 
 /// Lit un mot à voix haute, avec les voix du système : rien à télécharger.
 @MainActor
-final class Speaker {
+final class Speaker: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = Speaker()
 
     private let synthesizer = AVSpeechSynthesizer()
 
-    private init() {
-        // « Ambiant » : le bouton silencieux du téléphone coupe la voix, et la
-        // musique en cours continue.
-        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+    private override init() {
+        super.init()
+        synthesizer.delegate = self
     }
 
-    func say(_ word: String, in language: Language) {
+    /// `asked` : l'utilisateur a touché le bouton. Sa demande passe outre le
+    /// bouton silencieux du téléphone, comme une vidéo qu'on lance. La lecture
+    /// automatique, elle, se tait quand le téléphone est en silencieux.
+    func say(_ word: String, in language: Language, asked: Bool = false) {
         synthesizer.stopSpeaking(at: .immediate)
+
+        let session = AVAudioSession.sharedInstance()
+        if asked {
+            // La musique en cours baisse le temps du mot, puis reprend.
+            try? session.setCategory(.playback, options: .duckOthers)
+        } else {
+            try? session.setCategory(.ambient)
+        }
+        try? session.setActive(true)
+
         let utterance = AVSpeechUtterance(string: word)
         let voice: String = switch language {
         case .french: "fr-FR"
@@ -28,5 +40,13 @@ final class Speaker {
 
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
+    }
+
+    /// Le mot est dit : on rend le son aux autres apps.
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            guard !self.synthesizer.isSpeaking else { return }
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 }
