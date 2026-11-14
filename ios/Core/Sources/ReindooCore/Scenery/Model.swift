@@ -75,9 +75,13 @@ public struct Pattern: Sendable {
 public struct Mask: Sendable {
     /// La région du masque, en unités de l'utilisateur. Rien n'est peint dehors.
     public var region: Rect?
+    /// `.box` : le contenu du masque est dessiné dans la boîte du nœud masqué,
+    /// de 0 à 1 (`maskContentUnits="objectBoundingBox"`).
+    public var contentUnits: Units
     public var nodes: [Node]
-    public init(region: Rect? = nil, nodes: [Node]) {
+    public init(region: Rect? = nil, contentUnits: Units = .user, nodes: [Node]) {
         self.region = region
+        self.contentUnits = contentUnits
         self.nodes = nodes
     }
 }
@@ -243,6 +247,35 @@ public struct Node: Sendable {
 
     /// Vrai si rien ne bouge dans ce nœud ni sous lui : l'app peut le peindre
     /// une fois et garder l'image.
+    /// La boîte de ce que le nœud dessine, sans ses transformations.
+    public func bounds(in scene: Scene) -> Rect? {
+        switch content {
+        case .path(let path): return path.bounds
+        case .glyphs: return nil
+        case .use(let name):
+            if case .symbol(let node)? = scene.defs[name] { return node.bounds(in: scene) }
+            return nil
+        case .group(let children):
+            var box: Rect?
+            for child in children {
+                guard var inner = child.bounds(in: scene) else { continue }
+                if !child.attributes.transform.isEmpty {
+                    let m = Affine.of(child.attributes.transform)
+                    let corners = [Point(inner.x, inner.y), Point(inner.x + inner.width, inner.y), Point(inner.x, inner.y + inner.height), Point(inner.x + inner.width, inner.y + inner.height)].map(m.apply)
+                    let xs = corners.map(\.x), ys = corners.map(\.y)
+                    inner = Rect(xs.min()!, ys.min()!, xs.max()! - xs.min()!, ys.max()! - ys.min()!)
+                }
+                if let current = box {
+                    let x = min(current.x, inner.x), y = min(current.y, inner.y)
+                    box = Rect(x, y, max(current.x + current.width, inner.x + inner.width) - x, max(current.y + current.height, inner.y + inner.height) - y)
+                } else {
+                    box = inner
+                }
+            }
+            return box
+        }
+    }
+
     public func isStill(in scene: Scene) -> Bool {
         if !attributes.animations.isEmpty { return false }
         switch content {

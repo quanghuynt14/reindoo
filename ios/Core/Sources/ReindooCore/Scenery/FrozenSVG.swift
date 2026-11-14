@@ -104,10 +104,10 @@ public struct FrozenSVG: ScenePainter {
         switch paint {
         case .color(let color):
             return color.a < 1 ? "\(name)=\"\(color.hex)\" \(name)-opacity=\"\(Self.number(color.a))\"" : "\(name)=\"\(color.hex)\""
-        case .linear(let start, let end, let stops):
+        case .linear(let start, let end, let transform, let stops):
             let id = nextId("l")
             defs += "<linearGradient id=\"\(id)\" gradientUnits=\"userSpaceOnUse\" x1=\"\(Self.number(start.x))\" y1=\"\(Self.number(start.y))\" "
-                + "x2=\"\(Self.number(end.x))\" y2=\"\(Self.number(end.y))\">\(Self.stops(stops))</linearGradient>"
+                + "x2=\"\(Self.number(end.x))\" y2=\"\(Self.number(end.y))\" gradientTransform=\"\(Self.matrix(transform))\">\(Self.stops(stops))</linearGradient>"
             return "\(name)=\"url(#\(id))\""
         case .radial(let center, let radius, let transform, let stops):
             let id = nextId("r")

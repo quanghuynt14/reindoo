@@ -28,9 +28,14 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
     /// point : les cellules d'ASCII restent fines, les glyphes nets.
     public static let unitsPerPoint = 1.35
 
+    /// Certains décors ont des sujets trop grands pour un téléphone : on les
+    /// dessine plus serrés.
+    static let densities: [String: Double] = ["koi-mosaic": 2]
+
     /// Construit le décor pour un écran de `width` sur `height` points.
     public func scene(width: Double, height: Double) -> Scene {
-        let w = (width * SceneTheme.unitsPerPoint).rounded(), h = (height * SceneTheme.unitsPerPoint).rounded()
+        let density = SceneTheme.densities[id] ?? SceneTheme.unitsPerPoint
+        let w = (width * density).rounded(), h = (height * density).rounded()
         var scene = SceneTheme.builders[id]?(w, h) ?? Scene(width: w, height: h)
         scene.pointsPerUnit = width / w
         return scene
@@ -78,6 +83,8 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "deep-water": Classic.deepWater,
         "ember": Classic.ember,
         "snow-pines": SnowPines.build,
+        "honu-lagoon": HonuLagoon.build,
+        "koi-mosaic": KoiMosaic.build,
     ]
 
     static let originals: [String: @Sendable () -> Scene] = [
@@ -85,5 +92,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "deep-water": Classic.deepWaterOriginal,
         "ember": Classic.emberOriginal,
         "snow-pines": SnowPines.original,
+        "honu-lagoon": HonuLagoon.original,
+        "koi-mosaic": KoiMosaic.original,
     ]
 }

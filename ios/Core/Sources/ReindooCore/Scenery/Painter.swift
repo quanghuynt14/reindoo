@@ -4,8 +4,10 @@ import Foundation
 /// l'opacité de remplissage déjà appliquée.
 public enum ResolvedPaint: Sendable {
     case color(RGBA)
-    /// Un dégradé linéaire, de `start` à `end` en unités de l'utilisateur.
-    case linear(start: Point, end: Point, stops: [Stop])
+    /// Un dégradé linéaire, de `start` à `end`, puis `transform`. En unités de
+    /// la boîte, `transform` étire le carré unité sur la boîte : les bandes du
+    /// dégradé restent perpendiculaires dans la boîte, comme en SVG.
+    case linear(start: Point, end: Point, transform: Affine, stops: [Stop])
     /// Un dégradé radial : un cercle de centre `center` et de rayon `radius`,
     /// puis `transform`, qui en fait une ellipse quand la boîte n'est pas carrée.
     case radial(center: Point, radius: Double, transform: Affine, stops: [Stop])
@@ -131,7 +133,15 @@ extension Scene {
             painter.beginMask()
             var masking = Inherited()
             masking.inMask = true
-            for child in mask.nodes { paint(child, masking, at: time, into: &painter) }
+            var nodes = mask.nodes
+            if mask.contentUnits == .box {
+                guard let box = node.bounds(in: self) else {
+                    painter.pop()
+                    return
+                }
+                nodes = [Node(.group(nodes)).transform(.translate(box.x, box.y), .scale(box.width, box.height))]
+            }
+            for child in nodes { paint(child, masking, at: time, into: &painter) }
         }
         if !plain { painter.pop() }
     }
@@ -164,14 +174,12 @@ extension Scene {
             switch defs[name] {
             case .linear(let gradient)?:
                 let stops = gradient.stops.map { Stop($0.offset, tone($0.color)) }
+                let start = Point(gradient.x1, gradient.y1), end = Point(gradient.x2, gradient.y2)
                 if gradient.units == .user {
-                    return .linear(start: Point(gradient.x1, gradient.y1), end: Point(gradient.x2, gradient.y2), stops: stops)
+                    return .linear(start: start, end: end, transform: .identity, stops: stops)
                 }
-                guard let box = bounds else { return nil }
-                return .linear(
-                    start: Point(box.x + gradient.x1 * box.width, box.y + gradient.y1 * box.height),
-                    end: Point(box.x + gradient.x2 * box.width, box.y + gradient.y2 * box.height), stops: stops
-                )
+                guard let box = bounds, box.width > 0, box.height > 0 else { return nil }
+                return .linear(start: start, end: end, transform: Affine(a: box.width, d: box.height, tx: box.x, ty: box.y), stops: stops)
             case .radial(let gradient)?:
                 let stops = gradient.stops.map { Stop($0.offset, tone($0.color)) }
                 if gradient.units == .user {
