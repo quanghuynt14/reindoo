@@ -247,15 +247,15 @@ struct KoiMosaic {
 
     /// La place de la tête, une image par pas. Là où le pas suivant est loin
     /// (le saut d'un couloir à l'autre, hors de l'écran), l'image tient puis saute.
-    static func swim(_ steps: [Step], seconds: Double) -> Animation {
-        var frames: [Animation.Keyframe] = []
+    static func swim(_ steps: [Step], seconds: Double) -> SceneAnimation {
+        var frames: [SceneAnimation.Keyframe] = []
         for i in 0...steps.count {
             let at = place(steps, i), next = place(steps, i + 1)
             let jumps = i < steps.count && abs(next.x - at.x) + abs(next.y - at.y) > 2 * cell
             let percent = i == steps.count ? 100 : (Double(i) * 100 / Double(steps.count) * 1000).rounded() / 1000
             frames.append(.init(percent / 100, [.transform: .t(.translate(at.x, at.y))], timing: jumps ? .steps(1) : nil))
         }
-        return Animation(frames, duration: seconds, timing: .linear)
+        return SceneAnimation(frames, duration: seconds, timing: .linear)
     }
 
     static func sliceTiles(_ tiles: [Tile], _ index: Int) -> [Node] {
@@ -310,11 +310,11 @@ struct KoiMosaic {
         let body = slices(map), up = slices(tailUp), down = slices(tailDown)
         let stepSeconds = seconds / Double(steps.count)
         let swimming = swim(steps, seconds: seconds)
-        let flipA = Animation([
+        let flipA = SceneAnimation([
             .init(0, [.opacity: .n(1)]), .init(0.375, [.opacity: .n(1)]), .init(0.5, [.opacity: .n(0)]),
             .init(0.875, [.opacity: .n(0)]), .init(1, [.opacity: .n(1)]),
         ], duration: 3.2, timing: .linear)
-        let flipB = Animation([
+        let flipB = SceneAnimation([
             .init(0, [.opacity: .n(0)]), .init(0.375, [.opacity: .n(0)]), .init(0.5, [.opacity: .n(1)]),
             .init(0.875, [.opacity: .n(1)]), .init(1, [.opacity: .n(0)]),
         ], duration: 3.2, timing: .linear)
@@ -460,10 +460,10 @@ struct KoiMosaic {
     static func ripple(_ cx: Int, _ cy: Int, seconds: Double, delay: Double, fraction: Double) -> [Node] {
         [1.8, 3.6, 5.3, 7].enumerated().map { i, radius in
             var frames = ringTracks[i].map { percent, opacity in
-                Animation.Keyframe((percent * fraction * 100).rounded() / 100 / 100, [.opacity: .n(opacity)])
+                SceneAnimation.Keyframe((percent * fraction * 100).rounded() / 100 / 100, [.opacity: .n(opacity)])
             }
             frames.append(.init(1, [.opacity: .n(0)]))
-            let ring = Animation(frames, duration: seconds, delay: -(delay * 100).rounded() / 100, timing: .linear)
+            let ring = SceneAnimation(frames, duration: seconds, delay: -(delay * 100).rounded() / 100, timing: .linear)
             return Node.path(ringOutline(cx, cy, radius)).fill("#f2fffb").opacity(0).animate(ring)
         }
     }
@@ -475,20 +475,20 @@ struct KoiMosaic {
         return ripple(at.x + shift, at.y, seconds: seconds, delay: delay, fraction: 50 / seconds)
     }
 
-    static func floatingPad(_ cells: [Cell], _ rock: Animation, seconds: Double, delay: Double) -> Node {
+    static func floatingPad(_ cells: [Cell], _ rock: SceneAnimation, seconds: Double, delay: Double) -> Node {
         Node.group([halo(cells, reach: 0, shift: (1, 1), opacity: 0.3)] + mosaic(cells)).animate(rock.lasting(seconds).delayed(-delay))
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         KoiMosaic(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         KoiMosaic(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         // Le bassin est plus grand que l'écran : un koï descend un côté, sort par
         // le bas, et remonte par l'autre côté.
         let steps = Self.walk(layout.rightLane) + Self.walk(layout.leftLane)
@@ -502,12 +502,12 @@ struct KoiMosaic {
         scene.linear("sides", x1: 0, y1: 0, x2: layout.gridFade.0, y2: layout.gridFade.1, [(0, "#fff", 1), (0.24, "#fff", 0.18), (0.76, "#fff", 0.18), (0.97, "#fff", 1)])
         scene.define("outward", .mask(Mask(region: Rect(0, 0, width, height), nodes: [.rect(0, 0, width, height).fill("url(#sides)")])))
 
-        let swell = Animation.between([.transform: .t(.translate(-50, -16))], [.transform: .t(.translate(60, 22))], duration: 67, direction: .alternateReverse, timing: .easeInOut)
-        let rockX = Animation([
+        let swell = SceneAnimation.between([.transform: .t(.translate(-50, -16))], [.transform: .t(.translate(60, 22))], duration: 67, direction: .alternateReverse, timing: .easeInOut)
+        let rockX = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0))]), .init(0.3, [.transform: .t(.translate(20, 0))]), .init(0.55, [.transform: .t(.translate(20, 20))]),
             .init(0.8, [.transform: .t(.translate(0, 20))]), .init(1, [.transform: .t(.translate(0, 0))]),
         ], duration: 37, timing: .easeInOut)
-        let rockY = Animation([
+        let rockY = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0))]), .init(0.35, [.transform: .t(.translate(0, 20))]), .init(0.6, [.transform: .t(.translate(-20, 20))]),
             .init(0.85, [.transform: .t(.translate(-20, 0))]), .init(1, [.transform: .t(.translate(0, 0))]),
         ], duration: 41, timing: .easeInOut)
@@ -537,7 +537,7 @@ struct KoiMosaic {
         let stones = stoneBank()
         scene.add(Self.halo(stones, reach: 1, shift: (0, 0), opacity: 0.22))
         scene.add(Self.mosaic(stones))
-        let rocks: [(Animation, Double, Double)] = [(rockX, 37, 5), (rockY, 53, 21), (rockY, 47, 30)]
+        let rocks: [(SceneAnimation, Double, Double)] = [(rockX, 37, 5), (rockY, 53, 21), (rockY, 47, 30)]
         for (pad, rock) in zip(layout.pads, rocks) {
             scene.add(Self.floatingPad(Self.lilyPad(pad.x, pad.y, pad.radius, pad.notch, pad.bloom), rock.0, seconds: rock.1, delay: rock.2))
         }
@@ -545,9 +545,9 @@ struct KoiMosaic {
     }
 }
 
-extension Scene {
+extension SceneGraph {
     /// Tous les glyphes du décor dans une police, comme une règle `text{}` de CSS.
-    func withFont(size: Double, weight: Int) -> Scene {
+    func withFont(size: Double, weight: Int) -> SceneGraph {
         var copy = self
         copy.nodes = [Node.group(nodes).font(size: size, weight: weight)]
         return copy

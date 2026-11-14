@@ -223,7 +223,7 @@ struct SnowPines {
         let caps = all.filter { $0.tone == .cap }
         let grid = depth.grid
         func wave(_ cell: Cell) -> Int { Int((Self.hash(cell.x, cell.y, seed + 5) * 4).rounded(.down)) }
-        let settle = Animation([
+        let settle = SceneAnimation([
             .init(0, [.fillOpacity: .n(0.1)]), .init(0.12, [.fillOpacity: .n(0.4)]), .init(0.56, [.fillOpacity: .n(1)]),
             .init(0.86, [.fillOpacity: .n(1)]), .init(1, [.fillOpacity: .n(0.1)]),
         ], duration: 160, timing: .linear)
@@ -412,8 +412,8 @@ struct SnowPines {
         return bands.enumerated().map { which, flakes in
             let seconds = layer.seconds[which]
             let fallDelay = (seconds * (0.23 + Double(which) * 0.31) * 100).rounded() / 100
-            let falling = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(0, fall))], duration: seconds, delay: -fallDelay, timing: .linear)
-            let sway = Animation.between([.translate: .t(.translate(-28, 0))], [.translate: .t(.translate(14, 0))], duration: layer.swaySeconds, delay: -Double(which * 7 + layer.seed % 10), direction: .alternate, timing: .easeInOut)
+            let falling = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(0, fall))], duration: seconds, delay: -fallDelay, timing: .linear)
+            let sway = SceneAnimation.between([.translate: .t(.translate(-28, 0))], [.translate: .t(.translate(14, 0))], duration: layer.swaySeconds, delay: -Double(which * 7 + layer.seed % 10), direction: .alternate, timing: .easeInOut)
             return Node.glyphs(flakes.map(\.2), xs: flakes.map(\.0), ys: flakes.map(\.1))
                 .fill(Paint(layer.colour), opacity: layer.opacity).font(size: layer.fontSize, weight: 400)
                 .animate([falling, sway])
@@ -440,7 +440,7 @@ struct SnowPines {
         }
         let left = Double(column) * grid.cellWidth
         let top = Double(row) * grid.cellHeight
-        let glow = Animation.between([.fillOpacity: .n(0.7)], [.fillOpacity: .n(1)], duration: 7, direction: .alternate, timing: .easeInOut)
+        let glow = SceneAnimation.between([.fillOpacity: .n(0.7)], [.fillOpacity: .n(1)], duration: 7, direction: .alternate, timing: .easeInOut)
         return [
             Node.ellipse(left + 26, top + 20, 44, 12).fill("url(#lamp)").animate(glow),
             Self.tiles(wall + pane, grid, "#1c1c46", 1), Self.tiles(roof, grid, "#5a5c94", 1),
@@ -451,22 +451,22 @@ struct SnowPines {
 
     // MARK: Le décor
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         SnowPines(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         SnowPines(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("sky", [(0, "#181a46", 1), (0.22, "#1c1d4d", 1), (0.4, "#242253", 1), (0.52, "#30295b", 1), (0.6, "#3c3162", 1), (0.67, "#483967", 1), (0.74, "#52406b", 1)])
         scene.linear("field", [(0.66, "#4b4679", 1), (0.82, "#403c72", 1), (1, "#37346a", 1)])
         scene.radial("rose", [(0, "#a8607a", 0.32), (0.2, "#a45e7a", 0.27), (0.4, "#9e5c7a", 0.2), (0.6, "#985a7a", 0.12), (0.8, "#92587a", 0.05), (1, "#8c567a", 0)])
         scene.radial("lamp", [(0, "#ffb65c", 0.16), (1, "#ffb65c", 0)])
         scene.radial("hush", [(0.55, "#1b1c4b", 0.85), (1, "#1b1c4b", 0)])
-        let dusk = Animation.between(
+        let dusk = SceneAnimation.between(
             [.transform: .t(.translate(layout.dusk.0, 0)), .fillOpacity: .n(0.5)], [.transform: .t(.translate(layout.dusk.1, 0)), .fillOpacity: .n(1)],
             duration: 170, direction: .alternate, timing: .easeInOut
         )

@@ -14,7 +14,7 @@ public enum ResolvedPaint: Sendable {
     case pattern(name: String, Pattern, opacity: Double)
 }
 
-public struct StrokeStyle: Sendable {
+public struct StrokeSpec: Sendable {
     public var width: Double
     public var cap: LineCap
     public var dash: [Double]
@@ -29,7 +29,7 @@ public struct Layer: Sendable {
     /// Vrai : la couche finit par un masque (`beginMask`), peint en alpha.
     public var isMasked = false
     public var maskRegion: Rect?
-    public var blend: BlendMode = .normal
+    public var blend: SceneBlend = .normal
 
     /// Une couche qui ne change rien n'a pas besoin d'exister.
     var isPlain: Bool {
@@ -46,12 +46,12 @@ public protocol ScenePainter {
     mutating func beginMask()
     mutating func pop()
     mutating func fill(_ path: PathData, _ paint: ResolvedPaint, evenOdd: Bool)
-    mutating func stroke(_ path: PathData, _ paint: ResolvedPaint, _ style: StrokeStyle)
+    mutating func stroke(_ path: PathData, _ paint: ResolvedPaint, _ style: StrokeSpec)
     mutating func glyphs(_ glyphs: Glyphs, _ paint: ResolvedPaint, size: Double, weight: Int)
 }
 
 /// Ce qui passe d'un nœud à ses enfants, une fois les animations jouées.
-struct Inherited {
+struct Inherited: Sendable {
     var fill: Paint = .color(.black)
     var fillOpacity = 1.0
     var evenOdd = false
@@ -66,7 +66,7 @@ struct Inherited {
     /// Dans un masque, les couleurs deviennent de l'alpha (leur luminance).
     var inMask = false
 
-    func applying(_ attributes: Attributes, at time: Double) -> Inherited {
+    func applying(_ attributes: Attributes, at time: Double?) -> Inherited {
         var next = self
         let style = attributes.style
         if let fill = style.fill { next.fill = fill }
@@ -87,20 +87,21 @@ struct Inherited {
     }
 }
 
-extension Scene {
-    /// Peint le décor tel qu'il est à l'instant `time`, en secondes.
-    public func paint<P: ScenePainter>(at time: Double, into painter: inout P) {
+extension SceneGraph {
+    /// Peint le décor tel qu'il est à l'instant `time`, en secondes ; `nil` le
+    /// peint immobile.
+    public func paint<P: ScenePainter>(at time: Double?, into painter: inout P) {
         paint(nodes, at: time, into: &painter)
     }
 
     /// Peint des nœuds du décor : ceux de la scène, d'un motif ou d'un groupe
     /// que l'app garde en image.
-    public func paint<P: ScenePainter>(_ list: [Node], at time: Double, into painter: inout P) {
+    public func paint<P: ScenePainter>(_ list: [Node], at time: Double?, into painter: inout P) {
         let root = Inherited()
         for node in list { paint(node, root, at: time, into: &painter) }
     }
 
-    func paint<P: ScenePainter>(_ node: Node, _ inherited: Inherited, at time: Double, into painter: inout P) {
+    func paint<P: ScenePainter>(_ node: Node, _ inherited: Inherited, at time: Double?, into painter: inout P) {
         let attributes = node.attributes
         let style = inherited.applying(attributes, at: time)
         var layer = Layer()
@@ -158,7 +159,7 @@ extension Scene {
                 dash = dash.map { $0 * scale }
                 offset *= scale
             }
-            painter.stroke(path, paint, StrokeStyle(width: style.strokeWidth, cap: style.lineCap, dash: dash, dashOffset: offset))
+            painter.stroke(path, paint, StrokeSpec(width: style.strokeWidth, cap: style.lineCap, dash: dash, dashOffset: offset))
         }
     }
 

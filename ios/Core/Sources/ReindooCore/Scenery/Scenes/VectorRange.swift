@@ -113,7 +113,7 @@ struct VectorRange {
     static func trace(_ path: PathData, delay: Double, shownAtRest: Bool) -> [Node] {
         parts.map { part in
             let end = round((part.length - travel) * 1000) / 1000
-            let run = Animation([
+            let run = SceneAnimation([
                 .init(0, [.dashOffset: .n(part.length)]), .init(0.25, [.dashOffset: .n(end)]), .init(1, [.dashOffset: .n(end)]),
             ], duration: cycle, delay: -delay, timing: .cubic(0.3, 0.1, 0.7, 0.9))
             let rest = JS.round((part.length - (shownAtRest ? restAt : travel)) * 1000) / 1000
@@ -194,7 +194,7 @@ struct VectorRange {
         for (side, part) in traced.enumerated() {
             nodes += Self.trace(PathData(part), delay: side < layer.traceDelays.count ? layer.traceDelays[side] : 0, shownAtRest: side == layer.restBeamSide)
         }
-        let sway = Animation.between([.transform: .t(.translate(-layer.reach, 0))], [.transform: .t(.translate(layer.reach, 0))], duration: layer.seconds, delay: -layer.delay, direction: .alternate, timing: .easeInOut)
+        let sway = SceneAnimation.between([.transform: .t(.translate(-layer.reach, 0))], [.transform: .t(.translate(layer.reach, 0))], duration: layer.seconds, delay: -layer.delay, direction: .alternate, timing: .easeInOut)
         return Node.group(nodes).animate(sway)
     }
 
@@ -212,7 +212,7 @@ struct VectorRange {
             index += 1
         }
         let cover = PathData(ridge + [.line(width + tile + 300, horizon), .line(-100, horizon), .close])
-        let drift = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(-tile, 0))], duration: 520, timing: .linear)
+        let drift = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(-tile, 0))], duration: 520, timing: .linear)
         return Node.group([
             Node.path(cover).fill("url(#sky)").stroke(.none),
             Node.path(PathData(ridge)).stroke(Paint(Self.cold), width: 1.1, opacity: 0.4),
@@ -230,14 +230,14 @@ struct VectorRange {
             foot += 400
         }
         let total = Double(Self.crossLines + 1)
-        var frames: [Animation.Keyframe] = []
+        var frames: [SceneAnimation.Keyframe] = []
         for step in 0...(Self.crossLines + 1) * 4 {
             let travelled = Double(step) / 4
             let depth = Self.nearDepth + Double(Self.crossLines) - travelled
             if depth >= 5 && step % 4 != 0 { continue }
             frames.append(.init(Self.round(travelled / total * 100) / 100, [.transform: .t(.translate(0, crossY(depth)))]))
         }
-        let creep = Animation(frames, duration: total * Self.creepSeconds, timing: .linear)
+        let creep = SceneAnimation(frames, duration: total * Self.creepSeconds, timing: .linear)
         var nodes: [Node] = [Node.path(PathData(rays)).strokeOpacity(0.85)]
         for line in 0...Self.crossLines {
             let y = crossY(Self.nearDepth + Double(line))
@@ -257,7 +257,7 @@ struct VectorRange {
     func stars() -> Node {
         var small: [PathData.Command] = [], large: [PathData.Command] = [], middling: [PathData.Command] = []
         var breathing: [Node] = []
-        let breathe = Animation([.init(0, [.strokeOpacity: .n(0.12)]), .init(0.5, [.strokeOpacity: .n(1)]), .init(1, [.strokeOpacity: .n(0.12)])], duration: 9, timing: .easeInOut)
+        let breathe = SceneAnimation([.init(0, [.strokeOpacity: .n(0.12)]), .init(0.5, [.strokeOpacity: .n(1)]), .init(1, [.strokeOpacity: .n(0.12)])], duration: 9, timing: .easeInOut)
         for index in 0..<64 {
             let (x, y) = layout.star(index)
             if hypot(x - layout.moon.0, y - layout.moon.1) < layout.moon.2 + 60 { continue }
@@ -281,23 +281,23 @@ struct VectorRange {
         ]).stroke(Paint(Self.warm)).lineCap(.round)
     }
 
-    func fadeStroke(_ scene: inout Scene, _ name: String, _ colour: String, _ low: Double) {
+    func fadeStroke(_ scene: inout SceneGraph, _ name: String, _ colour: String, _ low: Double) {
         let half = Self.round((1 + low) / 2)
         scene.linear(name, x1: 0, y1: 0, x2: width, y2: 0, units: .user, [
             (0, colour, 1), (0.12, colour, 1), (0.24, colour, half), (0.36, colour, low), (0.64, colour, low), (0.76, colour, half), (0.88, colour, 1), (1, colour, 1),
         ])
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         VectorRange(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         VectorRange(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("sky", x1: 0, y1: 0, x2: 0, y2: horizon, units: .user, [(0, Self.skyTop, 1), (1, Self.skyLow, 1)])
         scene.linear("ground", [(0, Self.groundFar, 1), (1, Self.groundNear, 1)])
         scene.linear("afterglow", [(0, "#16473a", 0), (0.35, "#16473a", 0.06), (0.65, "#16473a", 0.2), (0.85, "#16473a", 0.36), (1, "#16473a", 0.5)])

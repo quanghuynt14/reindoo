@@ -242,10 +242,10 @@ struct NightReef {
         }
     }
 
-    static let rim = Animation([.init(0, [.opacity: .n(0.14)]), .init(0.5, [.opacity: .n(0.95)]), .init(1, [.opacity: .n(0.14)])], duration: 12, timing: .easeInOut)
-    static let ember = Animation([.init(0, [.opacity: .n(0.35)]), .init(0.5, [.opacity: .n(0.9)]), .init(1, [.opacity: .n(0.35)])], duration: 17, timing: .easeInOut)
-    static let speck = Animation([.init(0, [.opacity: .n(0.28)]), .init(0.5, [.opacity: .n(1)]), .init(1, [.opacity: .n(0.28)])], duration: 9, timing: .easeInOut)
-    static let halo = Animation([.init(0, [.opacity: .n(0.5)]), .init(0.5, [.opacity: .n(1)]), .init(1, [.opacity: .n(0.5)])], duration: 9, timing: .easeInOut)
+    static let rim = SceneAnimation([.init(0, [.opacity: .n(0.14)]), .init(0.5, [.opacity: .n(0.95)]), .init(1, [.opacity: .n(0.14)])], duration: 12, timing: .easeInOut)
+    static let ember = SceneAnimation([.init(0, [.opacity: .n(0.35)]), .init(0.5, [.opacity: .n(0.9)]), .init(1, [.opacity: .n(0.35)])], duration: 17, timing: .easeInOut)
+    static let speck = SceneAnimation([.init(0, [.opacity: .n(0.28)]), .init(0.5, [.opacity: .n(1)]), .init(1, [.opacity: .n(0.28)])], duration: 9, timing: .easeInOut)
+    static let halo = SceneAnimation([.init(0, [.opacity: .n(0.5)]), .init(0.5, [.opacity: .n(1)]), .init(1, [.opacity: .n(0.5)])], duration: 9, timing: .easeInOut)
 
     /// Des carreaux qui brillent ensemble, sur une horloge lente.
     static func lit(_ list: [Cell], ember isEmber: Bool, _ colour: String, _ ink: String, seconds: Double, delay: Double) -> Node? {
@@ -310,10 +310,10 @@ struct NightReef {
         ]
         let tracks = poses.count == 3 ? three : two
         return poses.enumerated().map { i, body in
-            let frames = tracks[i].map { Animation.Keyframe($0.0, [.opacity: .n($0.1)]) }
+            let frames = tracks[i].map { SceneAnimation.Keyframe($0.0, [.opacity: .n($0.1)]) }
             // Sans animation, une seule pose se voit : la deuxième sur trois, la première sur deux.
             let still = (poses.count == 3 ? [0.0, 1, 0] : [1.0, 0])[i]
-            return Node.group(body).opacity(still).animate(Animation(frames, duration: seconds, delay: delay, timing: .linear))
+            return Node.group(body).opacity(still).animate(SceneAnimation(frames, duration: seconds, delay: delay, timing: .linear))
         }
     }
 
@@ -341,18 +341,18 @@ struct NightReef {
             + violetHeart(body, 9, 9) + tealEdge(shellRim, share: 0.7, seconds: 12, seed: 0, groups: 6)
     }
 
-    static func legs(_ delay: Double) -> [Animation] {
+    static func legs(_ delay: Double) -> [SceneAnimation] {
         let tracks: [[(Double, Double)]] = [
             [(0, 1), (0.4359, 1), (0.4391, 0), (0.997, 0), (1, 1)],
             [(0, 0), (0.4359, 0), (0.4391, 1), (0.4984, 1), (0.5016, 0), (1, 0)],
             [(0, 0), (0.4984, 0), (0.5016, 1), (0.9359, 1), (0.9391, 0), (1, 0)],
             [(0, 0), (0.9359, 0), (0.9391, 1), (0.997, 1), (1, 0)],
         ]
-        return tracks.map { track in Animation(track.map { Animation.Keyframe($0.0, [.opacity: .n($0.1)]) }, duration: 128, delay: delay, timing: .linear) }
+        return tracks.map { track in SceneAnimation(track.map { SceneAnimation.Keyframe($0.0, [.opacity: .n($0.1)]) }, duration: 128, delay: delay, timing: .linear) }
     }
 
-    static func way(_ lap: Lap, delay: Double) -> Animation {
-        Animation([
+    static func way(_ lap: Lap, delay: Double) -> SceneAnimation {
+        SceneAnimation([
             .init(0, [.transform: .t(.translate(0, lap.y0))]), .init(0.4375, [.transform: .t(.translate(0, lap.y1))]),
             .init(0.5, [.transform: .t(.translate(lap.dx, lap.y1))]), .init(0.9375, [.transform: .t(.translate(lap.dx, lap.y0))]),
             .init(1, [.transform: .t(.translate(0, lap.y0))]),
@@ -435,7 +435,7 @@ struct NightReef {
         }
         nodes.append(Node.path(violetPath).fill("#8b7bff").opacity(0.6).animate(speck.lasting(10).delayed(-tenth(hash(s.seed, 95) * 9))))
         nodes.append(Node.group(halos + [Node.path(bright).fill("#b8fff0")]).opacity(0.6).animate(speck.lasting(11).delayed(-tenth(hash(s.seed, 99) * 11))))
-        let drift = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(s.dx, s.dy))], duration: s.drift,
+        let drift = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(s.dx, s.dy))], duration: s.drift,
                                       delay: -JS.round(hash(s.seed, 77) * s.drift), direction: .alternate, timing: .easeInOut)
         return Node.group(nodes).animate(drift)
     }
@@ -456,16 +456,16 @@ struct NightReef {
         return Pattern(width: 96, height: 96, nodes: [Node.path(light).fill("#9db4ff", opacity: 0.022), Node.path(dark).fill("#000", opacity: 0.09)])
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         NightReef(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         NightReef(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         scene.radial("water", cx: layout.water.0, cy: layout.water.1, r: layout.water.2, units: .user,
                      [(0, "#1b2d5a", 1), (0.3, "#13224a", 1), (0.6, "#0a1430", 1), (0.85, "#060c1f", 1), (1, "#040816", 1)])
         scene.linear("caustic", x1: 0, y1: 0, x2: 1, y2: 0, [(0, "#6f8fd6", 0), (0.5, "#6f8fd6", 0.085), (1, "#6f8fd6", 0)])
@@ -478,7 +478,7 @@ struct NightReef {
         scene.radial("speckhalo", [(0, Self.teal, 0.5), (0.4, Self.teal, 0.14), (1, Self.teal, 0)])
         scene.define("grain", .pattern(Self.grain()))
 
-        let caustic = Animation.between([.transform: .t(.translate(-90, 0))], [.transform: .t(.translate(90, 0))], duration: 110, direction: .alternate, timing: .easeInOut)
+        let caustic = SceneAnimation.between([.transform: .t(.translate(-90, 0))], [.transform: .t(.translate(90, 0))], duration: 110, direction: .alternate, timing: .easeInOut)
         let c0 = layout.caustics[0], c1 = layout.caustics[1]
         scene.add(.rect(0, 0, width, height).fill("url(#water)"))
         scene.add(Node.group([

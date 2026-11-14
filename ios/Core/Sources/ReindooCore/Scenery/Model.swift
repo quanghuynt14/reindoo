@@ -5,7 +5,7 @@ import Foundation
 // et sait l'évaluer à un instant donné ; l'app ne fait que le peindre. Ainsi
 // tout ce qui peut se tromper se teste sous Linux.
 
-public struct Scene: Sendable {
+public struct SceneGraph: Sendable {
     /// La taille en unités du décor. Elle vaut l'écran fois `unitsPerPoint`.
     public var width: Double
     public var height: Double
@@ -22,8 +22,8 @@ public struct Scene: Sendable {
 }
 
 public enum Def: Sendable {
-    case linear(LinearGradient)
-    case radial(RadialGradient)
+    case linear(LinearGradientDef)
+    case radial(RadialGradientDef)
     case pattern(Pattern)
     /// Un masque de luminance, comme `<mask>` : le blanc garde, le noir efface.
     case mask(Mask)
@@ -43,7 +43,7 @@ public struct Stop: Sendable, Equatable {
 
 public enum Units: Sendable, Equatable { case box, user }
 
-public struct LinearGradient: Sendable {
+public struct LinearGradientDef: Sendable {
     public var x1 = 0.0, y1 = 0.0, x2 = 1.0, y2 = 0.0
     public var units: Units = .box
     public var stops: [Stop]
@@ -52,7 +52,7 @@ public struct LinearGradient: Sendable {
     }
 }
 
-public struct RadialGradient: Sendable {
+public struct RadialGradientDef: Sendable {
     public var cx = 0.5, cy = 0.5, r = 0.5
     public var units: Units = .box
     public var stops: [Stop]
@@ -154,7 +154,7 @@ extension Paint: ExpressibleByStringLiteral {
 }
 
 public enum LineCap: String, Sendable { case butt, round, square }
-public enum BlendMode: String, Sendable { case normal, multiply, screen }
+public enum SceneBlend: String, Sendable { case normal, multiply, screen }
 
 /// Les propriétés qui passent du parent à l'enfant, comme en SVG. `nil` :
 /// l'enfant prend celle du parent.
@@ -195,13 +195,13 @@ public struct Attributes: Sendable {
     public var style = Style()
     public var transform: [TransformOp] = []
     public var opacity: Double = 1
-    public var animations: [Animation] = []
+    public var animations: [SceneAnimation] = []
     /// Le point autour duquel tournent et grandissent les animations, en
     /// unités de l'utilisateur (`transform-origin`).
     public var origin: Point = .zero
     public var clip: String?
     public var mask: String?
-    public var blend: BlendMode = .normal
+    public var blend: SceneBlend = .normal
     /// La longueur que le chemin dit avoir (`pathLength`) : ses tirets et leur
     /// décalage se comptent dans cette unité.
     public var pathLength: Double?
@@ -217,7 +217,7 @@ public struct Point: Sendable, Equatable {
     public static let zero = Point(0, 0)
 }
 
-public indirect enum Content: Sendable {
+public indirect enum NodeContent: Sendable {
     case group([Node])
     case path(PathData)
     /// Des glyphes, chacun à sa place, centrés sur leur x (`text-anchor:middle`)
@@ -240,10 +240,10 @@ public struct Glyphs: Sendable {
 }
 
 public struct Node: Sendable {
-    public var content: Content
+    public var content: NodeContent
     public var attributes: Attributes
 
-    public init(_ content: Content, _ attributes: Attributes = Attributes()) {
+    public init(_ content: NodeContent, _ attributes: Attributes = Attributes()) {
         self.content = content
         self.attributes = attributes
     }
@@ -251,7 +251,7 @@ public struct Node: Sendable {
     /// Vrai si rien ne bouge dans ce nœud ni sous lui : l'app peut le peindre
     /// une fois et garder l'image.
     /// La boîte de ce que le nœud dessine, sans ses transformations.
-    public func bounds(in scene: Scene) -> Rect? {
+    public func bounds(in scene: SceneGraph) -> Rect? {
         switch content {
         case .path(let path): return path.bounds
         case .glyphs: return nil
@@ -279,7 +279,7 @@ public struct Node: Sendable {
         }
     }
 
-    public func isStill(in scene: Scene) -> Bool {
+    public func isStill(in scene: SceneGraph) -> Bool {
         if !attributes.animations.isEmpty { return false }
         switch content {
         case .group(let children): return children.allSatisfy { $0.isStill(in: scene) }

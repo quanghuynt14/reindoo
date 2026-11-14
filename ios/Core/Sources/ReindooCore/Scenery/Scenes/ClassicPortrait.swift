@@ -8,8 +8,8 @@ import Foundation
 extension Classic {
     // MARK: Aurora
 
-    static func aurora(width w: Double, height h: Double) -> Scene {
-        var scene = Scene(width: w, height: h)
+    static func aurora(width w: Double, height h: Double) -> SceneGraph {
+        var scene = SceneGraph(width: w, height: h)
         scene.linear("night", [(0, "#0c1136", 1), (0.55, "#090b22", 1), (1, "#05060f", 1)])
         soft(&scene, "green", "#5dffb5", 0.3)
         soft(&scene, "violet", "#9f7bff", 0.26)
@@ -17,12 +17,12 @@ extension Classic {
         soft(&scene, "dusk", "#7a5cff", 0.18)
 
         let reach = w * 0.08
-        let wave = Animation.between(
+        let wave = SceneAnimation.between(
             [.transform: .t(.translate(-reach, 0), .skewX(-7), .scale(1, 0.94))],
             [.transform: .t(.translate(reach, 0), .skewX(7), .scale(1, 1.08))],
             duration: 44, direction: .alternate, timing: .easeInOut
         )
-        let breathe = Animation.between([.opacity: .n(0.55)], [.opacity: .n(1)], duration: 30, direction: .alternate, timing: .easeInOut)
+        let breathe = SceneAnimation.between([.opacity: .n(0.55)], [.opacity: .n(1)], duration: 30, direction: .alternate, timing: .easeInOut)
 
         scene.add(.rect(0, 0, w, h).fill("url(#night)"))
         scene.add(.ellipse(w * 0.2, h * 0.05, w * 0.75, h * 0.22).fill("url(#glow)").animate(breathe))
@@ -56,8 +56,8 @@ extension Classic {
 
     // MARK: Deep Water
 
-    static func deepWater(width w: Double, height h: Double) -> Scene {
-        var scene = Scene(width: w, height: h)
+    static func deepWater(width w: Double, height h: Double) -> SceneGraph {
+        var scene = SceneGraph(width: w, height: h)
         scene.linear("deep", [(0, "#0f6f86", 1), (0.45, "#0a4660", 1), (1, "#041c30", 1)])
         scene.linear("ray", x1: 0, y1: 0, x2: 1, y2: 0, [(0, "#bff3ff", 0), (0.5, "#bff3ff", 0.3), (1, "#bff3ff", 0)])
         scene.linear("down", [(0, "#fff", 1), (0.92, "#000", 1)])
@@ -67,17 +67,17 @@ extension Classic {
         soft(&scene, "orb", "#c9f6ff", 0.22)
         soft(&scene, "glint", "#e8fdff", 0.3)
 
-        let sway = Animation.between([.transform: .t(.skewX(-5))], [.transform: .t(.skewX(6))], duration: 38, direction: .alternate, timing: .easeInOut)
+        let sway = SceneAnimation.between([.transform: .t(.skewX(-5))], [.transform: .t(.skewX(6))], duration: 38, direction: .alternate, timing: .easeInOut)
         let swayB = sway.lasting(52).directed(.alternateReverse)
-        let drift = Animation.between([.transform: .t(.translate(-w * 0.12, 0))], [.transform: .t(.translate(w * 0.12, 0))], duration: 70, direction: .alternate, timing: .easeInOut)
+        let drift = SceneAnimation.between([.transform: .t(.translate(-w * 0.12, 0))], [.transform: .t(.translate(w * 0.12, 0))], duration: 70, direction: .alternate, timing: .easeInOut)
         let driftB = drift.lasting(95).directed(.alternateReverse)
-        let rise = Animation([
+        let rise = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0)), .opacity: .n(0)]),
             .init(0.12, [.opacity: .n(1)]),
             .init(0.85, [.opacity: .n(1)]),
             .init(1, [.transform: .t(.translate(0, -(h + 150))), .opacity: .n(0)]),
         ], duration: 46, timing: .linear)
-        let glide = Animation.between(
+        let glide = SceneAnimation.between(
             [.transform: .t(.translate(0, 0), .rotate(-4))], [.transform: .t(.translate(-w * 0.1, -20), .rotate(3))],
             duration: 80, direction: .alternate, timing: .easeInOut
         )
@@ -107,20 +107,20 @@ extension Classic {
 
     // MARK: Ember
 
-    static func ember(width w: Double, height h: Double) -> Scene {
-        var scene = Scene(width: w, height: h)
+    static func ember(width w: Double, height h: Double) -> SceneGraph {
+        var scene = SceneGraph(width: w, height: h)
         scene.linear("dusk2", [(0, "#0d0709", 1), (0.6, "#1c0b0e", 1), (1, "#3a1210", 1)])
         soft(&scene, "fire", "#ff7a2a", 0.5)
         soft(&scene, "coal", "#ff3d1a", 0.34)
         soft(&scene, "mote", "#ffc27a", 0.75)
         soft(&scene, "dim", "#ffc27a", 0.22)
 
-        let pulse = Animation.between(
+        let pulse = SceneAnimation.between(
             [.opacity: .n(0.6), .transform: .t(.scale(0.97, 0.97))], [.opacity: .n(1), .transform: .t(.scale(1.04, 1.04))],
             duration: 9, direction: .alternate, timing: .easeInOut
         )
         let pulseB = pulse.lasting(13).directed(.alternateReverse)
-        let lift = Animation([
+        let lift = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0)), .opacity: .n(0)]),
             .init(0.1, [.opacity: .n(0.9)]),
             .init(0.7, [.opacity: .n(0.5)]),

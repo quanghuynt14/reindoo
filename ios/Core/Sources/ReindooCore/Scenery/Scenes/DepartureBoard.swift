@@ -163,20 +163,20 @@ struct DepartureBoard {
 
     static func fixed(_ value: Double, _ digits: Double) -> Double { (value * digits).rounded() / digits }
 
-    static func flips() -> (was: Animation, next: Animation) {
+    static func flips() -> (was: SceneAnimation, next: SceneAnimation) {
         let fade = 1.2 / flipSeconds * 100
         let a = fixed(50 - fade, 100) / 100, b = fixed(100 - fade, 100) / 100
-        let was = Animation([.init(0, [.opacity: .n(1)]), .init(a, [.opacity: .n(1)]), .init(0.5, [.opacity: .n(0)]), .init(b, [.opacity: .n(0)]), .init(1, [.opacity: .n(1)])], duration: flipSeconds, timing: .linear)
-        let next = Animation([.init(0, [.opacity: .n(0)]), .init(a, [.opacity: .n(0)]), .init(0.5, [.opacity: .n(1)]), .init(b, [.opacity: .n(1)]), .init(1, [.opacity: .n(0)])], duration: flipSeconds, timing: .linear)
+        let was = SceneAnimation([.init(0, [.opacity: .n(1)]), .init(a, [.opacity: .n(1)]), .init(0.5, [.opacity: .n(0)]), .init(b, [.opacity: .n(0)]), .init(1, [.opacity: .n(1)])], duration: flipSeconds, timing: .linear)
+        let next = SceneAnimation([.init(0, [.opacity: .n(0)]), .init(a, [.opacity: .n(0)]), .init(0.5, [.opacity: .n(1)]), .init(b, [.opacity: .n(1)]), .init(1, [.opacity: .n(0)])], duration: flipSeconds, timing: .linear)
         return (was, next)
     }
 
     /// Une lueur qui monte au changement et retombe en vingt secondes, en
     /// marches : deux fois par tour, comme les images clés d'origine.
-    static func settle(peak: Double, rest: Double) -> Animation {
+    static func settle(peak: Double, rest: Double) -> SceneAnimation {
         let fade = 1.2 / flipSeconds * 100, settle = 20 / flipSeconds * 100
         let gentle = Timing.steps(24)
-        return Animation([
+        return SceneAnimation([
             .init(0, [.fillOpacity: .n(peak)], timing: gentle), .init(fixed(settle, 100) / 100, [.fillOpacity: .n(rest)]),
             .init(fixed(50 - 2 * fade, 100) / 100, [.fillOpacity: .n(rest)]), .init(0.5, [.fillOpacity: .n(peak)], timing: gentle),
             .init(fixed(50 + settle, 100) / 100, [.fillOpacity: .n(rest)]), .init(fixed(100 - 2 * fade, 100) / 100, [.fillOpacity: .n(rest)]),
@@ -237,7 +237,7 @@ struct DepartureBoard {
             for (from, to, level) in layout.swellParts {
                 let path = stripeSlice(left, 150, from, to)
                 if path.isEmpty { continue }
-                let rise = Animation([
+                let rise = SceneAnimation([
                     .init(0, [.fillOpacity: .n(0)]), .init(0.16, [.fillOpacity: .n(level)]), .init(0.32, [.fillOpacity: .n(0)]), .init(1, [.fillOpacity: .n(0)]),
                 ], duration: Self.swellSeconds, delay: delay, timing: .steps(20))
                 out.append(Node.path(path).fillOpacity(0).animate(rise))
@@ -246,27 +246,27 @@ struct DepartureBoard {
         return Node.group(out).fill("url(#swellDot)")
     }
 
-    static func dotPattern(_ scene: inout Scene, _ id: String, halo: String, core: String, glint: String) {
+    static func dotPattern(_ scene: inout SceneGraph, _ id: String, halo: String, core: String, glint: String) {
         scene.radial("\(id)Halo", [(0, halo, 0.5), (0.5, halo, 0.18), (1, halo, 0)])
         scene.define(id, .pattern(Pattern(width: pitch, height: pitch, nodes: [
             Node.rect(0, 0, pitch, pitch).fill(Paint("url(#\(id)Halo)")), Node.circle(5, 5, 2.5).fill(Paint(core)), Node.circle(5, 5, 1.05).fill(Paint(glint)),
         ])))
     }
 
-    static func unlit(_ scene: inout Scene, _ id: String, _ radius: Double, _ colour: String) {
+    static func unlit(_ scene: inout SceneGraph, _ id: String, _ radius: Double, _ colour: String) {
         scene.define(id, .pattern(Pattern(width: pitch, height: pitch, nodes: [Node.circle(5, 5, radius).fill(Paint(colour))])))
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         DepartureBoard(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         DepartureBoard(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         Self.unlit(&scene, "unlit", 1.5, "#3a2b1d")
         Self.unlit(&scene, "rule", 1.6, "#523c1e")
         Self.unlit(&scene, "swellDot", 1.9, "#7a5526")

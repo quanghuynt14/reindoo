@@ -253,7 +253,7 @@ struct PaperGarden {
         return tone.map { node.opacity(Self.tones[stock][$0]!) } ?? node
     }
 
-    static let animations: [String: Animation] = [
+    static let animations: [String: SceneAnimation] = [
         "sway": .between([.transform: .t(.rotate(-2.4))], [.transform: .t(.rotate(2.8))], duration: 40, direction: .alternate, timing: .easeInOut),
         "swayWide": .between([.transform: .t(.rotate(-4))], [.transform: .t(.rotate(4.5))], duration: 20, direction: .alternate, timing: .easeInOut),
         "stir": .between([.transform: .t(.rotate(-7))], [.transform: .t(.rotate(8))], duration: 12, direction: .alternate, timing: .easeInOut),
@@ -273,7 +273,7 @@ struct PaperGarden {
         var shadows = [use(shape, far, "shadow", "far"), use(shape, near, "shadow", "near")]
         if motion.lifting {
             let more = Self.turned(lift * 1.3, lift * 1.6, -facing)
-            var lifting = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(more.0, more.1))], duration: 14, direction: .alternate, timing: .easeInOut)
+            var lifting = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(more.0, more.1))], duration: 14, direction: .alternate, timing: .easeInOut)
             if motion.seconds > 0 { lifting = lifting.lasting(motion.seconds) }
             shadows = [Node.group(shadows).animate(lifting.delayed(-motion.delay))]
         }
@@ -298,7 +298,7 @@ struct PaperGarden {
 
     /// Une tige avec des folioles des deux côtés. La tige est coupée en segments
     /// qui plient chacun à leur jointure : le balancement s'ajoute vers la pointe.
-    func sprig(_ item: Sprig, _ index: Int, into scene: inout Scene) -> Node {
+    func sprig(_ item: Sprig, _ index: Int, into scene: inout SceneGraph) -> Node {
         let count = item.pairs * 2
         var pieces = Array(repeating: [Node](), count: item.segments)
         for i in 0...count {
@@ -379,16 +379,16 @@ struct PaperGarden {
         return PathData(svg: d)
     }
 
-    static func build(_ stock: Int) -> @Sendable (Double, Double) -> Scene {
+    static func build(_ stock: Int) -> @Sendable (Double, Double) -> SceneGraph {
         { width, height in PaperGarden(stock: stock, width: width, height: height, layout: .portrait(width, height)).scene() }
     }
 
-    static func original(_ stock: Int) -> @Sendable () -> Scene {
+    static func original(_ stock: Int) -> @Sendable () -> SceneGraph {
         { PaperGarden(stock: stock, width: 1600, height: 1000, layout: .original).scene() }
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         let shapes: [(String, PathData)] = [
             ("leafGreat", Self.broadLeaf(660, 150, 0.16, 5, 4)), ("leafMid", Self.broadLeaf(440, 108, -0.2, 8, 3)),
             ("bladeLong", Self.blade(430, 30, 0.2, 4)), ("bladeShort", Self.blade(300, 24, -0.26, 6)),

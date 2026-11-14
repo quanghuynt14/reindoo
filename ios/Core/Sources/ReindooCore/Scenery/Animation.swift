@@ -122,7 +122,7 @@ public enum Timing: Sendable, Equatable {
 /// Une animation CSS sur un nœud : des images clés, une durée, un retard (négatif :
 /// déjà commencée), un sens, un rythme. Elle tourne sans fin, comme toutes celles
 /// des décors.
-public struct Animation: Sendable {
+public struct SceneAnimation: Sendable {
     public enum Property: Hashable, Sendable {
         /// La propriété `transform`. Elle remplace la transformation fixe du nœud.
         case transform
@@ -218,7 +218,7 @@ public struct Animation: Sendable {
         // image ajoutée pour combler prend celui de l'animation.
         let eased = (from.timing ?? timing).apply(u)
         guard let a = from.values[property], let b = to.values[property] else { return nil }
-        return Animation.mix(a, b, eased)
+        return SceneAnimation.mix(a, b, eased)
     }
 
     static func mix(_ a: Value, _ b: Value, _ u: Double) -> Value {
@@ -243,7 +243,10 @@ public struct Animation: Sendable {
 
 extension Attributes {
     /// La dernière animation qui touche `property` l'emporte, comme en CSS.
-    private func animated(_ property: Animation.Property, at time: Double, base: Animation.Value) -> Animation.Value? {
+    /// Sans instant (`nil`), rien ne bouge : c'est le décor quand l'utilisateur
+    /// demande moins de mouvement.
+    private func animated(_ property: SceneAnimation.Property, at time: Double?, base: SceneAnimation.Value) -> SceneAnimation.Value? {
+        guard let time else { return nil }
         for animation in animations.reversed() {
             if let value = animation.value(of: property, at: time, base: base) { return value }
         }
@@ -251,7 +254,7 @@ extension Attributes {
     }
 
     /// La transformation du nœud à l'instant `time`, `transform-origin` compris.
-    public func matrix(at time: Double) -> Affine {
+    public func matrix(at time: Double?) -> Affine {
         var ops = transform
         if case .ops(let moving)? = animated(.transform, at: time, base: .ops(transform)) { ops = moving }
         var individual: [TransformOp] = []
@@ -261,17 +264,17 @@ extension Attributes {
         return Affine(tx: origin.x, ty: origin.y) * inner * Affine(tx: -origin.x, ty: -origin.y)
     }
 
-    public func opacity(at time: Double) -> Double {
+    public func opacity(at time: Double?) -> Double {
         number(.opacity, at: time, base: opacity)
     }
 
     /// Une valeur numérique animée, ou `base` si rien ne la touche.
-    public func number(_ property: Animation.Property, at time: Double, base: Double) -> Double {
+    public func number(_ property: SceneAnimation.Property, at time: Double?, base: Double) -> Double {
         if case .number(let value)? = animated(property, at: time, base: .number(base)) { return value }
         return base
     }
 
-    public func animates(_ property: Animation.Property) -> Bool {
+    public func animates(_ property: SceneAnimation.Property) -> Bool {
         animations.contains { $0.properties.contains(property) }
     }
 }

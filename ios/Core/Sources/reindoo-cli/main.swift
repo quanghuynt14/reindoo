@@ -82,6 +82,22 @@ if arguments.first == "scene" {
     exit(0)
 }
 
+// Comment chaque décor se découpe : ce que l'app résout une fois, ce qu'elle
+// rejoue à chaque image.
+if arguments.first == "plan" {
+    for theme in SceneTheme.all where arguments.count < 2 || arguments[1] == theme.id {
+        let scene = theme.scene(width: 390, height: 844)
+        let plan = scene.plan(motion: true)
+        let live = plan.parts.reduce(0) { total, part in
+            if case .live(let nodes, let style) = part { return total + scene.record(nodes, style, at: 7).reduce(0) { $0 + $1.count } }
+            return total
+        }
+        let summary = plan.summary
+        print("\(theme.id): \(summary.stillParts) parties fixes, \(summary.stillOps) gestes fixes, \(summary.liveNodes) nœuds vivants, \(live) gestes par image")
+    }
+    exit(0)
+}
+
 var fixture = Fixture.sample
 if arguments.first == "--fixture" {
     guard arguments.count >= 2, let chosen = Fixture(rawValue: arguments[1]) else {

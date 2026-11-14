@@ -44,18 +44,18 @@ import Testing
     }
 
     @Test func aNegativeDelayStartsMidway() {
-        let slide = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(100, 0))], duration: 10, delay: -5, timing: .linear)
+        let slide = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(100, 0))], duration: 10, delay: -5, timing: .linear)
         #expect(slide.value(of: .transform, at: 0, base: .ops([])) == .ops([.translate(50, 0)]))
     }
 
     @Test func aPositiveDelayLeavesTheBaseUntilItStarts() {
-        let fade = Animation.between([.opacity: .n(0)], [.opacity: .n(1)], duration: 10, delay: 3, timing: .linear)
+        let fade = SceneAnimation.between([.opacity: .n(0)], [.opacity: .n(1)], duration: 10, delay: 3, timing: .linear)
         #expect(fade.value(of: .opacity, at: 1, base: .n(0.4)) == nil)
         #expect(fade.value(of: .opacity, at: 8, base: .n(0.4)) == .n(0.5))
     }
 
     @Test func alternateRunsBackOnOddIterations() {
-        let swing = Animation.between([.opacity: .n(0)], [.opacity: .n(1)], duration: 10, direction: .alternate, timing: .linear)
+        let swing = SceneAnimation.between([.opacity: .n(0)], [.opacity: .n(1)], duration: 10, direction: .alternate, timing: .linear)
         #expect(swing.value(of: .opacity, at: 12, base: .n(1)) == .n(0.8))
         let back = swing.directed(.alternateReverse)
         #expect(back.value(of: .opacity, at: 2, base: .n(1)) == .n(0.8))
@@ -63,7 +63,7 @@ import Testing
 
     @Test func aPropertyMissingFromAKeyframeIsInterpolatedOverTheOthers() {
         // Comme les bulles : l'opacité a quatre images, la position deux.
-        let rise = Animation([
+        let rise = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0)), .opacity: .n(0)]),
             .init(0.12, [.opacity: .n(1)]),
             .init(1, [.transform: .t(.translate(0, -100)), .opacity: .n(0)]),
@@ -75,22 +75,22 @@ import Testing
     @Test func anAnimatedTransformReplacesTheFixedOne() {
         var attributes = Attributes()
         attributes.transform = [.translate(500, 500)]
-        attributes.animations = [Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(10, 0))], duration: 10, timing: .linear)]
+        attributes.animations = [SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(10, 0))], duration: 10, timing: .linear)]
         #expect(attributes.matrix(at: 5) == Affine(tx: 5, ty: 0))
     }
 
     @Test func rotationTurnsAroundTheOrigin() {
         var attributes = Attributes()
         attributes.origin = Point(10, 10)
-        attributes.animations = [Animation.between([.transform: .t(.rotate(0))], [.transform: .t(.rotate(180))], duration: 1, timing: .linear)]
+        attributes.animations = [SceneAnimation.between([.transform: .t(.rotate(0))], [.transform: .t(.rotate(180))], duration: 1, timing: .linear)]
         let half = attributes.matrix(at: 0.9999999)
         let moved = half.apply(Point(10, 10))
         #expect(abs(moved.x - 10) < 1e-6 && abs(moved.y - 10) < 1e-6)
     }
 
     @Test func anAnimatedFillOpacityPassesToChildrenThatSetNone() {
-        var scene = Scene(width: 10, height: 10)
-        let settle = Animation.between([.fillOpacity: .n(0)], [.fillOpacity: .n(1)], duration: 10, timing: .linear)
+        var scene = SceneGraph(width: 10, height: 10)
+        let settle = SceneAnimation.between([.fillOpacity: .n(0)], [.fillOpacity: .n(1)], duration: 10, timing: .linear)
         scene.add(.group([
             .rect(0, 0, 1, 1).fill("#ffffff"),
             .rect(0, 0, 1, 1).fill("#ffffff", opacity: 0.9),
@@ -101,7 +101,7 @@ import Testing
     }
 
     @Test func aMaskTurnsLuminanceIntoAlpha() {
-        let scene = Scene(width: 10, height: 10)
+        let scene = SceneGraph(width: 10, height: 10)
         let grey = scene.resolve(.color(RGBA(0.5, 0.5, 0.5)), opacity: 1, bounds: nil, mask: true)
         guard case .color(let color)? = grey else {
             Issue.record("une couleur reste une couleur")
@@ -114,6 +114,27 @@ import Testing
         // Valeurs tirées de snow-pines.ts sous Node.
         #expect(SnowPines.hash(0, 0, 0) == 0)
         #expect(SnowPines.hash(12, 3, 11) == 0.67127)
+    }
+
+    @Test(arguments: ["snow-pines", "koi-mosaic", "plotter-tide", "braille-stars"])
+    func aPlannedFrameIsTheWholeFrame(id: String) throws {
+        let scene = try #require(SceneTheme.named(id)).scene(width: 390, height: 844)
+        var whole = OpRecorder()
+        scene.paint(at: 12.5, into: &whole)
+        var planned = 0
+        for part in scene.plan(motion: true).parts {
+            switch part {
+            case .still(let ops): planned += ops.reduce(0) { $0 + $1.count }
+            case .live(let nodes, let style): planned += scene.record(nodes, style, at: 12.5).reduce(0) { $0 + $1.count }
+            }
+        }
+        #expect(planned == whole.ops.reduce(0) { $0 + $1.count })
+    }
+
+    @Test func withoutMotionNothingIsLive() throws {
+        let plan = try #require(SceneTheme.named("snow-pines")).scene(width: 390, height: 844).plan(motion: false)
+        #expect(plan.summary.liveNodes == 0)
+        #expect(plan.summary.stillParts == 1)
     }
 
     @Test func everyThemeBuildsAPortraitScene() {
@@ -134,6 +155,6 @@ struct Recorder: ScenePainter {
     mutating func fill(_ path: PathData, _ paint: ResolvedPaint, evenOdd: Bool) {
         if case .color(let color) = paint { alphas.append(color.a) }
     }
-    mutating func stroke(_ path: PathData, _ paint: ResolvedPaint, _ style: StrokeStyle) {}
+    mutating func stroke(_ path: PathData, _ paint: ResolvedPaint, _ style: StrokeSpec) {}
     mutating func glyphs(_ glyphs: Glyphs, _ paint: ResolvedPaint, size: Double, weight: Int) {}
 }

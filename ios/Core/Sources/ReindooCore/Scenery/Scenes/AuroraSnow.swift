@@ -5,7 +5,7 @@ import Foundation
 // partout, plus dense sur les bords.
 
 enum AuroraSnow {
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         var scene = Classic.aurora(width: width, height: height)
         let pines = SnowPines(width: width, height: height, layout: .portrait(width, height))
         let layout = pines.layout

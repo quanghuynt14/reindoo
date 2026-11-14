@@ -23,6 +23,17 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
 
     public static func == (left: SceneTheme, right: SceneTheme) -> Bool { left.id == right.id }
 
+    /// Combien d'images par seconde le décor demande. Ceux qui avancent par
+    /// marches (`steps()`) n'ont pas besoin de plus : la batterie dit merci.
+    public var frameRate: Double {
+        switch id {
+        case "teletext-clouds": 4
+        case "dither-dunes", "dither-dunes-night", "halftone-dawn", "halftone-dusk": 8
+        case "departure-board", "braille-stars": 10
+        default: 30
+        }
+    }
+
     /// Les décors ont été dessinés pour un écran d'ordinateur, où une unité
     /// vaut à peu près un pixel. Sur un téléphone, une unité vaut moins d'un
     /// point : les cellules d'ASCII restent fines, les glyphes nets.
@@ -33,17 +44,17 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
     static let densities: [String: Double] = ["koi-mosaic": 2, "night-reef": 2.4, "dither-dunes": 1.7, "dither-dunes-night": 1.7, "paper-garden": 2.2, "paper-garden-kraft": 2.2, "blueprint": 2, "vector-range": 1.6]
 
     /// Construit le décor pour un écran de `width` sur `height` points.
-    public func scene(width: Double, height: Double) -> Scene {
+    public func scene(width: Double, height: Double) -> SceneGraph {
         let density = SceneTheme.densities[id] ?? SceneTheme.unitsPerPoint
         let w = (width * density).rounded(), h = (height * density).rounded()
-        var scene = SceneTheme.builders[id]?(w, h) ?? Scene(width: w, height: h)
+        var scene = SceneTheme.builders[id]?(w, h) ?? SceneGraph(width: w, height: h)
         scene.pointsPerUnit = width / w
         return scene
     }
 
     /// Le décor à sa taille d'origine (1600 sur 1000), pour le comparer à
     /// theme-examples. Seuls les décors encore à l'identique en ont une.
-    public func original() -> Scene? {
+    public func original() -> SceneGraph? {
         SceneTheme.originals[id]?()
     }
 
@@ -79,7 +90,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
     ]
 
     /// Les vingt décors de theme-examples, et l'aurore sous la neige du site.
-    static let builders: [String: @Sendable (Double, Double) -> Scene] = [
+    static let builders: [String: @Sendable (Double, Double) -> SceneGraph] = [
         "aurora": Classic.aurora,
         "deep-water": Classic.deepWater,
         "ember": Classic.ember,
@@ -103,7 +114,7 @@ public struct SceneTheme: Sendable, Identifiable, Equatable {
         "aurora-snow": AuroraSnow.build,
     ]
 
-    static let originals: [String: @Sendable () -> Scene] = [
+    static let originals: [String: @Sendable () -> SceneGraph] = [
         "aurora": Classic.auroraOriginal,
         "deep-water": Classic.deepWaterOriginal,
         "ember": Classic.emberOriginal,

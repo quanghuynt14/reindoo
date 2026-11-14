@@ -5,22 +5,22 @@ import Foundation
 // D'après theme-examples (Anthropic, Apache 2.0), scenes/classic.ts.
 
 enum Classic {
-    static func soft(_ scene: inout Scene, _ name: String, _ color: String, _ peak: Double) {
+    static func soft(_ scene: inout SceneGraph, _ name: String, _ color: String, _ peak: Double) {
         scene.radial(name, [(0, color, peak), (1, color, 0)])
     }
 
     /// Un voile très léger au milieu, pour que le centre ne soit jamais la
     /// partie la plus chargée.
-    static func calm(_ scene: inout Scene) {
+    static func calm(_ scene: inout SceneGraph) {
         scene.radial("calm", cx: 0.5, cy: 0.55, r: 0.6, [(0, "#000", 0.12), (0.6, "#000", 0.05), (1, "#000", 0)])
         scene.add(.rect(0, 0, scene.width, scene.height).fill("url(#calm)"))
     }
 
     // MARK: Deep Water
 
-    static func deepWaterOriginal() -> Scene {
+    static func deepWaterOriginal() -> SceneGraph {
         let (width, height) = (1600.0, 1000.0)
-        var scene = Scene(width: width, height: height)
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("deep", [(0, "#0f6f86", 1), (0.45, "#0a4660", 1), (1, "#041c30", 1)])
         scene.linear("ray", x1: 0, y1: 0, x2: 1, y2: 0, [(0, "#bff3ff", 0), (0.5, "#bff3ff", 0.3), (1, "#bff3ff", 0)])
         scene.linear("down", [(0, "#fff", 1), (0.92, "#000", 1)])
@@ -29,17 +29,17 @@ enum Classic {
         soft(&scene, "orb", "#c9f6ff", 0.22)
         soft(&scene, "glint", "#e8fdff", 0.3)
 
-        let sway = Animation.between([.transform: .t(.skewX(-5))], [.transform: .t(.skewX(6))], duration: 38, direction: .alternate, timing: .easeInOut)
+        let sway = SceneAnimation.between([.transform: .t(.skewX(-5))], [.transform: .t(.skewX(6))], duration: 38, direction: .alternate, timing: .easeInOut)
         let swayB = sway.lasting(52).directed(.alternateReverse)
-        let drift = Animation.between([.transform: .t(.translate(-90, 0))], [.transform: .t(.translate(90, 0))], duration: 70, direction: .alternate, timing: .easeInOut)
+        let drift = SceneAnimation.between([.transform: .t(.translate(-90, 0))], [.transform: .t(.translate(90, 0))], duration: 70, direction: .alternate, timing: .easeInOut)
         let driftB = drift.lasting(95).directed(.alternateReverse)
-        let rise = Animation([
+        let rise = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0)), .opacity: .n(0)]),
             .init(0.12, [.opacity: .n(1)]),
             .init(0.85, [.opacity: .n(1)]),
             .init(1, [.transform: .t(.translate(0, -1150)), .opacity: .n(0)]),
         ], duration: 46, timing: .linear)
-        let glide = Animation.between(
+        let glide = SceneAnimation.between(
             [.transform: .t(.translate(0, 0), .rotate(-4))], [.transform: .t(.translate(-70, -26), .rotate(3))],
             duration: 80, direction: .alternate, timing: .easeInOut
         )
@@ -81,21 +81,21 @@ enum Classic {
 
     // MARK: Aurora
 
-    static func auroraOriginal() -> Scene {
+    static func auroraOriginal() -> SceneGraph {
         let (width, height) = (1600.0, 1000.0)
-        var scene = Scene(width: width, height: height)
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("night", [(0, "#0c1136", 1), (0.55, "#090b22", 1), (1, "#05060f", 1)])
         soft(&scene, "green", "#5dffb5", 0.3)
         soft(&scene, "violet", "#9f7bff", 0.26)
         soft(&scene, "glow", "#3affc0", 0.2)
         soft(&scene, "dusk", "#7a5cff", 0.18)
 
-        let wave = Animation.between(
+        let wave = SceneAnimation.between(
             [.transform: .t(.translate(-70, 0), .skewX(-7), .scale(1, 0.94))],
             [.transform: .t(.translate(70, 0), .skewX(7), .scale(1, 1.08))],
             duration: 44, direction: .alternate, timing: .easeInOut
         )
-        let breathe = Animation.between([.opacity: .n(0.55)], [.opacity: .n(1)], duration: 30, direction: .alternate, timing: .easeInOut)
+        let breathe = SceneAnimation.between([.opacity: .n(0.55)], [.opacity: .n(1)], duration: 30, direction: .alternate, timing: .easeInOut)
 
         scene.add(.rect(0, 0, 1600, 1000).fill("url(#night)"))
         scene.add(.ellipse(260, 80, 520, 260).fill("url(#glow)").animate(breathe))
@@ -116,21 +116,21 @@ enum Classic {
 
     // MARK: Ember
 
-    static func emberOriginal() -> Scene {
+    static func emberOriginal() -> SceneGraph {
         let (width, height) = (1600.0, 1000.0)
-        var scene = Scene(width: width, height: height)
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("dusk2", [(0, "#0d0709", 1), (0.6, "#1c0b0e", 1), (1, "#3a1210", 1)])
         soft(&scene, "fire", "#ff7a2a", 0.5)
         soft(&scene, "coal", "#ff3d1a", 0.34)
         soft(&scene, "mote", "#ffc27a", 0.75)
         soft(&scene, "dim", "#ffc27a", 0.22)
 
-        let pulse = Animation.between(
+        let pulse = SceneAnimation.between(
             [.opacity: .n(0.6), .transform: .t(.scale(0.97, 0.97))], [.opacity: .n(1), .transform: .t(.scale(1.04, 1.04))],
             duration: 9, direction: .alternate, timing: .easeInOut
         )
         let pulseB = pulse.lasting(13).directed(.alternateReverse)
-        let lift = Animation([
+        let lift = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0)), .opacity: .n(0)]),
             .init(0.1, [.opacity: .n(0.9)]),
             .init(0.7, [.opacity: .n(0.5)]),

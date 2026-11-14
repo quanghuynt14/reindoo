@@ -216,8 +216,8 @@ struct BrailleStars {
         return tones[min(3, max(0, tone + step))]
     }
 
-    static func stepped(_ track: [(Double, Double)], seconds: Double, delay: Double = 0) -> Animation {
-        Animation(track.map { Animation.Keyframe($0.0, [.strokeOpacity: .n($0.1)]) }, duration: seconds, delay: delay, timing: .steps(1))
+    static func stepped(_ track: [(Double, Double)], seconds: Double, delay: Double = 0) -> SceneAnimation {
+        SceneAnimation(track.map { SceneAnimation.Keyframe($0.0, [.strokeOpacity: .n($0.1)]) }, duration: seconds, delay: delay, timing: .steps(1))
     }
 
     static let first: [(Double, Double)] = [(0, 1), (0.4, 0.66), (0.43, 0.33), (0.46, 0), (0.9, 0.33), (0.93, 0.66), (0.96, 1), (1, 1)]
@@ -397,7 +397,7 @@ struct BrailleStars {
 
     func bandGlow(_ spine: [Sample]) -> [Node] {
         let spots: [(Int, Double, Double, String)] = [(14, 300, 110, "glowBlue"), (32, 330, 150, "glowCore"), (47, 280, 130, "glowBlue")]
-        let breath = Animation.between([.fillOpacity: .n(0.7)], [.fillOpacity: .n(1)], duration: 74, direction: .alternate, timing: .steps(12))
+        let breath = SceneAnimation.between([.fillOpacity: .n(0.7)], [.fillOpacity: .n(1)], duration: 74, direction: .alternate, timing: .steps(12))
         return spots.enumerated().map { index, spot in
             let sample = spine[spot.0]
             let angle = (atan2(sample.tangentY, sample.tangentX) * 180 / .pi * 10).rounded() / 10
@@ -415,7 +415,7 @@ struct BrailleStars {
             return Node.path(PathData([.move(x, y), .line(x, y)]))
                 .stroke(.color(Self.blend(index < 3 ? "#fff6d0" : "#e6ebff", opacity, Self.skyBase)), width: index == 0 ? 5.4 : index < 4 ? 4.2 : 3.4)
         }
-        let shoot = Animation([
+        let shoot = SceneAnimation([
             .init(0, [.strokeOpacity: .n(0), .transform: .t(.translate(0, 0))]), .init(0.95, [.strokeOpacity: .n(0), .transform: .t(.translate(0, 0))]),
             .init(0.955, [.strokeOpacity: .n(1)]), .init(0.992, [.strokeOpacity: .n(0.9)]),
             .init(1, [.strokeOpacity: .n(0), .transform: .t(.translate(260, 162))]),
@@ -423,21 +423,21 @@ struct BrailleStars {
         return Node.group(dots).strokeOpacity(0).animate(shoot)
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         BrailleStars(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         BrailleStars(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("night", [(0, "#080d26", 1), (0.4, "#0b1230", 1), (0.75, "#0f183e", 1), (1, "#121c48", 1)])
         scene.radial("glowBlue", [(0, "#2b3676", 0.32), (0.35, "#2b3676", 0.2), (0.7, "#2b3676", 0.07), (1, "#2b3676", 0)])
         scene.radial("glowCore", [(0, "#3d3a7c", 0.42), (0.4, "#30367a", 0.22), (0.72, "#2b3676", 0.07), (1, "#2b3676", 0)])
         let spine = spine()
-        let turn = Animation.between([.transform: .t(.rotate(-3))], [.transform: .t(.rotate(3))], duration: 280, delay: -140, direction: .alternate, timing: .steps(560))
+        let turn = SceneAnimation.between([.transform: .t(.rotate(-3))], [.transform: .t(.rotate(3))], duration: 280, delay: -140, direction: .alternate, timing: .steps(560))
         scene.add(.rect(0, 0, width, height).fill("url(#night)"))
         scene.add(Node.group(bandGlow(spine) + milkyWayCells(spine) + fieldStars(spine) + figures()).origin(layout.pole.0, layout.pole.1).animate(turn))
         scene.add(shootingStar())

@@ -288,7 +288,7 @@ struct HonuLagoon {
 
     /// La tortue : quatre poses de nage qui se relaient.
     func turtle(heading: (Double, Double), size: Double, beat: Double) -> Node {
-        let turn = Animation([
+        let turn = SceneAnimation([
             .init(0, [.opacity: .n(0)]), .init(0.018, [.opacity: .n(1)]), .init(0.25, [.opacity: .n(1)]),
             .init(0.268, [.opacity: .n(0)]), .init(1, [.opacity: .n(0)]),
         ], duration: beat, timing: .linear)
@@ -298,12 +298,12 @@ struct HonuLagoon {
                 .opacity(index == 0 ? 1 : 0).animate(turn.delayed(-(beat * Double(4 - index)) / 4))
         }
         let c = Self.cell
-        let x = Animation([
+        let x = SceneAnimation([
             .init(0, [.transform: .t(.translate(layout.honuX.0 * c, 0))], timing: .easeInOut),
             .init(0.45, [.transform: .t(.translate(layout.honuX.1 * c, 0))], timing: .easeInOut),
             .init(1, [.transform: .t(.translate(layout.honuX.0 * c, 0))]),
         ], duration: 170)
-        let y = Animation([
+        let y = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, layout.honuY.0 * c))], timing: .easeInOut),
             .init(0.45, [.transform: .t(.translate(0, layout.honuY.1 * c))], timing: .easeInOut),
             .init(1, [.transform: .t(.translate(0, layout.honuY.0 * c))]),
@@ -330,29 +330,29 @@ struct HonuLagoon {
         cells.compactMap { c -> Node? in
             let pick = hash(c.x + 61, c.y + 13)
             if pick > 0.055 { return nil }
-            let dim = Animation.between([.opacity: .n(0)], [.opacity: .n(0.3)], duration: 9 + (pick * 90).rounded(.down),
+            let dim = SceneAnimation.between([.opacity: .n(0)], [.opacity: .n(0.3)], duration: 9 + (pick * 90).rounded(.down),
                                         delay: -(hash(c.x, c.y + 5) * 12).rounded(.down), direction: .alternate, timing: .easeInOut)
             return Node.rect(Double(c.x) * cell + 1, Double(c.y) * cell + 1, cell - 2, cell - 2).fill("#8fdbe6").opacity(0).animate(dim)
         }
     }
 
     static func sparkle(_ x: Double, _ y: Double, _ size: Double, delay: Double, seconds: Double) -> Node {
-        let twinkle = Animation([.init(0, [.opacity: .n(0)]), .init(0.5, [.opacity: .n(0.8)]), .init(1, [.opacity: .n(0)])],
+        let twinkle = SceneAnimation([.init(0, [.opacity: .n(0)]), .init(0.5, [.opacity: .n(0.8)]), .init(1, [.opacity: .n(0)])],
                                 duration: seconds, delay: -delay, timing: .easeInOut)
         return Node.circle(x, y, size).fill("#fff").animate(twinkle)
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         let columns = Int((width / cell).rounded(.up)), rows = Int((height / cell).rounded(.up))
         return HonuLagoon(width: width, height: height, layout: .portrait(width, height, columns: columns, rows: rows)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         HonuLagoon(width: 1600, height: 1000, layout: .original(columns: Int((1600 / cell).rounded(.up)))).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         let c = Self.cell
         let (wx, wy) = layout.water
         scene.linear("water", x1: 0, y1: 0, x2: wx, y2: wy, [
@@ -369,15 +369,15 @@ struct HonuLagoon {
         scene.define("soft-mask", .mask(Mask(contentUnits: .box, nodes: [.rect(0, 0, 1, 1).fill("url(#soft)")])))
 
         let south = (sin(0.26), cos(0.26))
-        let breathe = Animation.between([.opacity: .n(0.3)], [.opacity: .n(1)], duration: 20, direction: .alternate, timing: .easeInOut)
-        let drift = Animation.between([.transform: .t(.translate(-layout.drift.0, -layout.drift.1))], [.transform: .t(.translate(layout.drift.0, layout.drift.1))],
+        let breathe = SceneAnimation.between([.opacity: .n(0.3)], [.opacity: .n(1)], duration: 20, direction: .alternate, timing: .easeInOut)
+        let drift = SceneAnimation.between([.transform: .t(.translate(-layout.drift.0, -layout.drift.1))], [.transform: .t(.translate(layout.drift.0, layout.drift.1))],
                                       duration: 52, direction: .alternate, timing: .easeInOut)
         let glintTimes: [(Double, Double)] = [(9, 0), (11, 3), (10, 5), (13, 2)]
         let glints = zip(layout.glints, glintTimes).map { spot, time in
             Node.group([.ellipse(spot.0, spot.1, spot.2, spot.3).fill("url(#dots)").mask("soft-mask")])
                 .animate(breathe.lasting(time.0 + 9).delayed(-time.1))
         }
-        let coralX = Animation([
+        let coralX = SceneAnimation([
             .init(0, [.transform: .t(.translate(layout.coralFrom.0 * c, layout.coralFrom.1 * c))], timing: .easeInOut),
             .init(0.5, [.transform: .t(.translate(layout.coralTo.0 * c, layout.coralTo.1 * c))], timing: .easeInOut),
             .init(1, [.transform: .t(.translate(layout.coralFrom.0 * c, layout.coralFrom.1 * c))]),

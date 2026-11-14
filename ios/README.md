@@ -38,6 +38,22 @@ et dépose les captures d'écran, claires et sombres, en artefact.
 Arguments de lancement (Debug) : `-fixture sample|returning`, `-tab search|review|history`,
 `-query <texte>`, `-open <mot>`.
 
+## Les décors du reel
+
+Le reel peut porter un décor animé : vingt scènes reprises de `theme-examples`
+(Anthropic, Apache 2.0), plus Aurora Snow. Core les construit et les évalue à
+tout instant (`Scenery/`) ; l'app ne fait que les peindre dans un `Canvas`.
+
+```sh
+swift run --package-path ios/Core reindoo-cli scene snow-pines 390 844 12 > frame.svg   # une image, en SVG
+swift run --package-path ios/Core reindoo-cli scene snow-pines original 12 > orig.svg     # la mise en page d'origine
+swift run --package-path ios/Core reindoo-cli plan                                         # ce que chaque décor coûte par image
+```
+
+La version `original` de chaque décor se compare pixel à pixel au SVG du
+greffon, mis en pause au même instant dans un navigateur. Les mises en page
+`portrait` se regardent à l'œil.
+
 ## Le lexique
 
 L'app cherche `App/Resources/lexicon.sqlite` (ignoré par git). Absent, elle se

@@ -22,7 +22,7 @@ struct Halftone {
         var coralOpacity: Double
         var blue: String
         var blueOpacity: Double
-        var blend: BlendMode
+        var blend: SceneBlend
     }
 
     /// Sur le crème, les encres se multiplient comme une vraie surimpression ;
@@ -117,7 +117,7 @@ struct Halftone {
                 groups[key]!.commands += [.move(px, py), .line(px, py)]
             }
         }
-        var frames: [Animation.Keyframe] = []
+        var frames: [SceneAnimation.Keyframe] = []
         for step in 0...12 {
             let pulse = pow((1 + cos(Double(step) / 12 * 2 * .pi)) / 2, wave.sharp)
             let scale = ((wave.rest + (wave.peak - wave.rest) * pulse) * 1000).rounded() / 1000
@@ -128,20 +128,20 @@ struct Halftone {
             let lag = ((group.band + 0.5) * Self.band / wave.length).truncatingRemainder(dividingBy: 1)
             let delay = ((lag * wave.seconds - wave.seconds) * 100).rounded() / 100
             return Node.path(PathData(group.commands)).strokeWidth(group.width)
-                .animate(Animation(frames, duration: wave.seconds, delay: delay, timing: .steps(4)))
+                .animate(SceneAnimation(frames, duration: wave.seconds, delay: delay, timing: .steps(4)))
         }
     }
 
-    static func build(_ stock: Stock) -> @Sendable (Double, Double) -> Scene {
+    static func build(_ stock: Stock) -> @Sendable (Double, Double) -> SceneGraph {
         { width, height in Halftone(width: width, height: height, layout: .portrait(width, height), stock: stock).scene() }
     }
 
-    static func original(_ stock: Stock) -> @Sendable () -> Scene {
+    static func original(_ stock: Stock) -> @Sendable () -> SceneGraph {
         { Halftone(width: 1600, height: 1000, layout: .original, stock: stock).scene() }
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("paper", [(0, stock.paperTop, 1), (1, stock.paperFoot, 1)])
         let sun = layout.sun
         let dots = screen(sunTone, { x, y in hypot(x - sun.x, y - sun.y) / Self.band }, Self.sunWave, halfCell: false)

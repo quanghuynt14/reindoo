@@ -220,7 +220,7 @@ struct DitherDunes {
             var node = Node.path(path).fill(Paint("url(#\(ink)\(level))"))
             if let creep {
                 let delay = ((creep.phase + Double(level) * 2.9).truncatingRemainder(dividingBy: creep.seconds) * 10).rounded() / 10
-                node = node.animate(Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(creep.x * 3, creep.y * 3))],
+                node = node.animate(SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(creep.x * 3, creep.y * 3))],
                                                       duration: creep.seconds, delay: -delay, direction: .alternate, timing: .steps(3)))
             }
             layers.append(node)
@@ -277,7 +277,7 @@ struct DitherDunes {
         return Node.path(path).fill(Paint(stock.lee))
     }
 
-    func dune(_ dune: Dune, _ index: Int, into scene: inout Scene) -> Node {
+    func dune(_ dune: Dune, _ index: Int, into scene: inout SceneGraph) -> Node {
         let shape = outline(dune)
         let half = tileColumns / 2
         let i = Double(index)
@@ -286,8 +286,8 @@ struct DitherDunes {
             + layerStack("strong", half, tileColumns, .strong, dune, index, creep: (1, 1, dune.seconds, i * 29))
         let steps = Int(abs(dune.driftUnits) / Self.cell)
         let delay = -(Double(index) * 31).truncatingRemainder(dividingBy: dune.driftSeconds)
-        let drift = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(dune.driftUnits, 0))], duration: dune.driftSeconds, delay: delay, direction: .alternate, timing: .steps(steps))
-        let undrift = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(-dune.driftUnits, 0))], duration: dune.driftSeconds, delay: delay, direction: .alternate, timing: .steps(steps))
+        let drift = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(dune.driftUnits, 0))], duration: dune.driftSeconds, delay: delay, direction: .alternate, timing: .steps(steps))
+        let undrift = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(-dune.driftUnits, 0))], duration: dune.driftSeconds, delay: delay, direction: .alternate, timing: .steps(steps))
         scene.define("c\(index)", .clip(Clip([shape])))
         let sand = index < stock.sands.count ? stock.sands[index] : stock.paper
         return Node.group([
@@ -298,7 +298,7 @@ struct DitherDunes {
     }
 
     func grains() -> [Node] {
-        let move = Animation([
+        let move = SceneAnimation([
             .init(0, [.transform: .t(.translate(0, 0)), .opacity: .n(0)]), .init(0.08, [.opacity: .n(1)]), .init(0.8, [.opacity: .n(1)]),
             .init(1, [.transform: .t(.translate(44 * Self.cell, 0)), .opacity: .n(0)]),
         ], duration: 50, timing: .steps(44))
@@ -313,7 +313,7 @@ struct DitherDunes {
         }
     }
 
-    static func patterns(_ scene: inout Scene, _ name: String, _ colour: String, _ levels: Int) {
+    static func patterns(_ scene: inout SceneGraph, _ name: String, _ colour: String, _ levels: Int) {
         let m = Double(matrix)
         for y in 0..<matrix {
             for x in 0..<matrix where bayer[y][x] < levels {
@@ -322,23 +322,23 @@ struct DitherDunes {
         }
     }
 
-    static func build(_ stock: Stock) -> @Sendable (Double, Double) -> Scene {
+    static func build(_ stock: Stock) -> @Sendable (Double, Double) -> SceneGraph {
         { width, height in DitherDunes(width: width, height: height, layout: .portrait(width, height), stock: stock).scene() }
     }
 
-    static func original(_ stock: Stock) -> @Sendable () -> Scene {
+    static func original(_ stock: Stock) -> @Sendable () -> SceneGraph {
         { DitherDunes(width: 1600, height: 1000, layout: .original, stock: stock).scene() }
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         let inked = Int((Self.softCeiling * Double(Self.tones)).rounded(.up))
         Self.patterns(&scene, "haze", stock.haze, inked)
         Self.patterns(&scene, "soft", stock.soft, inked)
         Self.patterns(&scene, "strong", stock.strong, inked)
         Self.patterns(&scene, "sun", stock.sun, Self.tones)
-        let rise = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(0, -Double(layout.riseSteps) * Self.cell))], duration: 200, direction: .alternate, timing: .steps(layout.riseSteps))
-        let veer = Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(-19 * Self.cell, 0))], duration: 200, direction: .alternate, timing: .steps(19))
+        let rise = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(0, -Double(layout.riseSteps) * Self.cell))], duration: 200, direction: .alternate, timing: .steps(layout.riseSteps))
+        let veer = SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(-19 * Self.cell, 0))], duration: 200, direction: .alternate, timing: .steps(19))
 
         scene.add(.rect(0, 0, width, height).fill(Paint(stock.paper)))
         scene.add(Node.group(layerStack("haze", 0, tileColumns, .haze, nil, 0, creep: nil)).transform(.scale(Self.tile, Self.tile)))

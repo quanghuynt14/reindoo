@@ -239,17 +239,17 @@ struct PlotterTide {
 
     /// Le travail d'une plume : les chemins tracés l'un après l'autre sur un
     /// cycle commun, chacun effacé avant son tour suivant.
-    func penJob(_ paths: [PathData], _ job: Job, into scene: inout Scene) -> (near: Node, far: Node) {
+    func penJob(_ paths: [PathData], _ job: Job, into scene: inout SceneGraph) -> (near: Node, far: Node) {
         let count = Double(paths.count)
         let stepSeconds = job.cycleSeconds / count
         let drawnAt = job.drawShare > 0 ? job.drawShare : Self.round(100 / count)
         let restUntil = 100 - job.absentShare - drawnAt
-        let ink = Animation([
+        let ink = SceneAnimation([
             .init(0, [.dashOffset: .n(1.01), .opacity: .n(1)]), .init(drawnAt / 100, [.dashOffset: .n(0), .opacity: .n(1)]),
             .init(Self.round(drawnAt * 2.5) / 100, [.dashOffset: .n(0), .opacity: .n(0.74)]), .init(restUntil / 100, [.dashOffset: .n(0), .opacity: .n(0.74)]),
             .init((restUntil + drawnAt) / 100, [.dashOffset: .n(-1.01)]), .init(1, [.dashOffset: .n(-1.01), .opacity: .n(0.74)]),
         ], duration: job.cycleSeconds, timing: .linear)
-        let pen = Animation([
+        let pen = SceneAnimation([
             .init(0, [.dashOffset: .n(0), .opacity: .n(1)]), .init(drawnAt / 100, [.dashOffset: .n(-1), .opacity: .n(1)]),
             .init((drawnAt + 0.01) / 100, [.dashOffset: .n(-1), .opacity: .n(0)]), .init(1, [.dashOffset: .n(-1), .opacity: .n(0)]),
         ], duration: job.cycleSeconds, timing: .linear)
@@ -275,16 +275,16 @@ struct PlotterTide {
         )
     }
 
-    static func build(_ stock: Stock) -> @Sendable (Double, Double) -> Scene {
+    static func build(_ stock: Stock) -> @Sendable (Double, Double) -> SceneGraph {
         { width, height in PlotterTide(width: width, height: height, layout: .portrait(width, height), stock: stock).scene() }
     }
 
-    static func original(_ stock: Stock) -> @Sendable () -> Scene {
+    static func original(_ stock: Stock) -> @Sendable () -> SceneGraph {
         { PlotterTide(width: 1600, height: 1000, layout: .original, stock: stock).scene() }
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         let (east, west, islet) = (layout.east, layout.west, layout.islet)
         let eastTides = tideLines(east), westTides = tideLines(west), rings = Self.isletRings(islet)
         let eastSea = penJob(Array(eastTides.dropFirst()), Job(name: "e", ink: stock.ink, width: 1.15, opacity: 1, opacityFade: 0.4, cycleSeconds: 136, cycleStart: 30, absentShare: 20, drawShare: 0, farFrom: 7, coastWidth: 0, hidePen: false), into: &scene)
@@ -295,7 +295,7 @@ struct PlotterTide {
         let isletLand = penJob(Array(rings.prefix(1)), Job(name: "j", ink: stock.rust, width: 1, opacity: 0.8, opacityFade: 0, cycleSeconds: 140, cycleStart: 9, absentShare: 6, drawShare: 6, farFrom: 0, coastWidth: 1.3, hidePen: true), into: &scene)
 
         func tide(_ node: Node, _ dx: Double, _ dy: Double, delay: Double = 0) -> Node {
-            Node.group([node]).animate(Animation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(dx, dy))], duration: 70, delay: delay, direction: .alternate, timing: .easeInOut))
+            Node.group([node]).animate(SceneAnimation.between([.transform: .t(.translate(0, 0))], [.transform: .t(.translate(dx, dy))], duration: 70, delay: delay, direction: .alternate, timing: .easeInOut))
         }
         scene.add(.rect(0, 0, width, height).fill(Paint(stock.paper)))
         scene.add([landShape(east), landShape(west), landShape(islet)])

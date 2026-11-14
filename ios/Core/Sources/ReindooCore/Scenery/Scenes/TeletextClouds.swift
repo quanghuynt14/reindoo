@@ -146,7 +146,7 @@ struct TeletextClouds {
         var belly: [Block] = [], rose: [Block] = [], body: [Block] = [], bodyLight: [Block] = [], bodyHigh: [Block] = [], top: [Block] = []
         var travelling = Array(repeating: [Block](), count: 5)
         var puffs: [Node] = []
-        let puff = Animation([.init(0, [.opacity: .n(1)]), .init(0.55, [.opacity: .n(1)]), .init(0.56, [.opacity: .n(0)]), .init(1, [.opacity: .n(0)])], duration: 16, timing: .steps(1))
+        let puff = SceneAnimation([.init(0, [.opacity: .n(1)]), .init(0.55, [.opacity: .n(1)]), .init(0.56, [.opacity: .n(0)]), .init(1, [.opacity: .n(0)])], duration: 16, timing: .steps(1))
         for block in blocks.list {
             let isTop = !blocks.has(block.column, block.row - 1)
             let isBelly = !blocks.has(block.column, block.row + 1)
@@ -174,7 +174,7 @@ struct TeletextClouds {
                 body.append(block)
             }
         }
-        let travel = Animation([.init(0, [.opacity: .n(0)]), .init(0.12, [.opacity: .n(1)]), .init(0.3, [.opacity: .n(0)]), .init(1, [.opacity: .n(0)])], duration: 7, timing: .easeInOut)
+        let travel = SceneAnimation([.init(0, [.opacity: .n(0)]), .init(0.12, [.opacity: .n(1)]), .init(0.3, [.opacity: .n(0)]), .init(1, [.opacity: .n(0)])], duration: 7, timing: .easeInOut)
         let light = travelling.enumerated().compactMap { group, list -> Node? in
             if list.isEmpty { return nil }
             let delay = ((Double(group) * 1.4 + Double(seed % 5)) * 10).rounded() / 10
@@ -187,13 +187,13 @@ struct TeletextClouds {
     static func drifting(_ blocksEachWay: Double, _ secondsPerBlock: Double, delay: Double, _ inner: [Node]) -> Node {
         let reach = blocksEachWay * blockWidth
         let steps = Int(blocksEachWay * 2)
-        let drift = Animation.between([.transform: .t(.translate(-reach, 0))], [.transform: .t(.translate(reach, 0))],
+        let drift = SceneAnimation.between([.transform: .t(.translate(-reach, 0))], [.transform: .t(.translate(reach, 0))],
                                       duration: Double(steps) * secondsPerBlock, delay: -delay, direction: .alternate, timing: .steps(steps))
         return Node.group(inner).animate(drift)
     }
 
     func stars() -> [Node] {
-        let star = Animation([.init(0, [.opacity: .n(1)]), .init(0.5, [.opacity: .n(0.5)]), .init(1, [.opacity: .n(1)])], duration: 9, timing: .steps(2))
+        let star = SceneAnimation([.init(0, [.opacity: .n(1)]), .init(0.5, [.opacity: .n(0.5)]), .init(1, [.opacity: .n(1)])], duration: 9, timing: .steps(2))
         return (0..<26).map { index in
             let (column, row) = layout.stars(index)
             let x = Double(column) * Self.blockWidth, y = Double(row) * Self.blockHeight
@@ -239,16 +239,16 @@ struct TeletextClouds {
         return Self.paths([("sun", bright), ("sunShade", shade)])
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         TeletextClouds(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         TeletextClouds(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         scene.linear("sky", [(0, "#0a1238", 1), (0.6, "#14225c", 1), (1, "#1b2b6e", 1)])
         let f = layout.fade.stops
         scene.linear("edges", x1: 0, y1: 0, x2: layout.fade.x2, y2: layout.fade.y2, [(f[0], "#fff", 1), (f[1], "#fff", 0), (f[2], "#fff", 0), (f[3], "#fff", 1)])
@@ -256,7 +256,7 @@ struct TeletextClouds {
 
         var deckBlocks = Blocks()
         for bank in layout.deck { for block in bankBlocks(bank).list { deckBlocks.add(block) } }
-        let driftDeck = Animation.between([.transform: .t(.translate(-240, 0))], [.transform: .t(.translate(240, 0))], duration: 360, delay: -90, direction: .alternate, timing: .steps(24))
+        let driftDeck = SceneAnimation.between([.transform: .t(.translate(-240, 0))], [.transform: .t(.translate(240, 0))], duration: 360, delay: -90, direction: .alternate, timing: .steps(24))
 
         scene.add(.rect(0, 0, width, height).fill("url(#sky)"))
         scene.add(stars())

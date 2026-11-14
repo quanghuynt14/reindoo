@@ -7,8 +7,8 @@ public struct FrozenSVG: ScenePainter {
     private var defs = ""
     private var stack: [Frame] = [Frame()]
     private var counter = 0
-    private let scene: Scene
-    private let time: Double
+    private let scene: SceneGraph
+    private let time: Double?
 
     private struct Frame {
         var layer = Layer()
@@ -18,7 +18,7 @@ public struct FrozenSVG: ScenePainter {
     }
 
     /// Le décor à l'instant `time`, en un document SVG.
-    public static func render(_ scene: Scene, at time: Double) -> String {
+    public static func render(_ scene: SceneGraph, at time: Double?) -> String {
         var painter = FrozenSVG(scene: scene, time: time)
         scene.paint(at: time, into: &painter)
         let w = number(scene.width), h = number(scene.height)
@@ -27,7 +27,7 @@ public struct FrozenSVG: ScenePainter {
             + "<defs>\(painter.defs)</defs>\(painter.stack[0].body)</svg>"
     }
 
-    private init(scene: Scene, time: Double) {
+    private init(scene: SceneGraph, time: Double?) {
         self.scene = scene
         self.time = time
     }
@@ -82,7 +82,7 @@ public struct FrozenSVG: ScenePainter {
         emit("<path d=\"\(Self.path(path))\" \(attribute("fill", paint))\(rule)/>")
     }
 
-    public mutating func stroke(_ path: PathData, _ paint: ResolvedPaint, _ style: StrokeStyle) {
+    public mutating func stroke(_ path: PathData, _ paint: ResolvedPaint, _ style: StrokeSpec) {
         var text = "<path d=\"\(Self.path(path))\" fill=\"none\" \(attribute("stroke", paint)) stroke-width=\"\(Self.number(style.width))\""
         if style.cap != .butt { text += " stroke-linecap=\"\(style.cap.rawValue)\"" }
         if !style.dash.isEmpty {

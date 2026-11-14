@@ -80,55 +80,55 @@ extension Node {
     public func origin(_ x: Double, _ y: Double) -> Node { with { $0.origin = Point(x, y) } }
     public func clip(_ name: String) -> Node { with { $0.clip = name } }
     public func mask(_ name: String) -> Node { with { $0.mask = name } }
-    public func blend(_ mode: BlendMode) -> Node { with { $0.blend = mode } }
-    public func animate(_ animation: Animation) -> Node { with { $0.animations.append(animation) } }
+    public func blend(_ mode: SceneBlend) -> Node { with { $0.blend = mode } }
+    public func animate(_ animation: SceneAnimation) -> Node { with { $0.animations.append(animation) } }
 
-    public func animate(_ animations: [Animation]) -> Node { with { $0.animations += animations } }
+    public func animate(_ animations: [SceneAnimation]) -> Node { with { $0.animations += animations } }
 }
 
-extension Animation {
+extension SceneAnimation {
     /// `@keyframes x { from {…} to {…} }`.
     public static func between(
         _ from: [Property: Value], _ to: [Property: Value], duration: Double, delay: Double = 0,
         direction: Direction = .normal, timing: Timing = .ease
-    ) -> Animation {
-        Animation([Keyframe(0, from), Keyframe(1, to)], duration: duration, delay: delay, direction: direction, timing: timing)
+    ) -> SceneAnimation {
+        SceneAnimation([Keyframe(0, from), Keyframe(1, to)], duration: duration, delay: delay, direction: direction, timing: timing)
     }
 
     /// La même animation, décalée : `animation-delay`.
-    public func delayed(_ seconds: Double) -> Animation {
+    public func delayed(_ seconds: Double) -> SceneAnimation {
         var copy = self
         copy.delay = seconds
         return copy
     }
 
-    public func lasting(_ seconds: Double) -> Animation {
+    public func lasting(_ seconds: Double) -> SceneAnimation {
         var copy = self
         copy.duration = seconds
         return copy
     }
 
-    public func directed(_ direction: Direction) -> Animation {
+    public func directed(_ direction: Direction) -> SceneAnimation {
         var copy = self
         copy.direction = direction
         return copy
     }
 }
 
-extension Animation.Value {
-    public static func n(_ value: Double) -> Animation.Value { .number(value) }
-    public static func t(_ ops: TransformOp...) -> Animation.Value { .ops(ops) }
+extension SceneAnimation.Value {
+    public static func n(_ value: Double) -> SceneAnimation.Value { .number(value) }
+    public static func t(_ ops: TransformOp...) -> SceneAnimation.Value { .ops(ops) }
 }
 
-extension Scene {
+extension SceneGraph {
     public mutating func define(_ name: String, _ def: Def) { defs[name] = def }
 
     public mutating func linear(_ name: String, x1: Double = 0, y1: Double = 0, x2: Double = 0, y2: Double = 1, units: Units = .box, _ stops: [(Double, String, Double)]) {
-        defs[name] = .linear(LinearGradient(x1: x1, y1: y1, x2: x2, y2: y2, units: units, stops: stops.map(Scene.stop)))
+        defs[name] = .linear(LinearGradientDef(x1: x1, y1: y1, x2: x2, y2: y2, units: units, stops: stops.map(SceneGraph.stop)))
     }
 
     public mutating func radial(_ name: String, cx: Double = 0.5, cy: Double = 0.5, r: Double = 0.5, units: Units = .box, _ stops: [(Double, String, Double)]) {
-        defs[name] = .radial(RadialGradient(cx: cx, cy: cy, r: r, units: units, stops: stops.map(Scene.stop)))
+        defs[name] = .radial(RadialGradientDef(cx: cx, cy: cy, r: r, units: units, stops: stops.map(SceneGraph.stop)))
     }
 
     static func stop(_ entry: (Double, String, Double)) -> Stop {

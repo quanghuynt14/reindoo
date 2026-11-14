@@ -154,8 +154,8 @@ struct Blueprint {
 
     /// La course de la comète en images clés, à pas de temps égaux : chaque pose
     /// tourne un repère autour du soleil vers la comète.
-    func cometAnimations(_ count: Int) -> (run: Animation, radius: Animation, bearing: Animation, trail: Animation) {
-        var run: [Animation.Keyframe] = [], radius: [Animation.Keyframe] = [], bearing: [Animation.Keyframe] = [], trail: [Animation.Keyframe] = []
+    func cometAnimations(_ count: Int) -> (run: SceneAnimation, radius: SceneAnimation, bearing: SceneAnimation, trail: SceneAnimation) {
+        var run: [SceneAnimation.Keyframe] = [], radius: [SceneAnimation.Keyframe] = [], bearing: [SceneAnimation.Keyframe] = [], trail: [SceneAnimation.Keyframe] = []
         var previous = 0.0
         let lap = shares()
         for index in 0...count {
@@ -174,8 +174,8 @@ struct Blueprint {
             let share = index == count ? 1 : Self.share(lap, Self.turnAtTime(Double(index) / Double(count)))
             trail.append(.init(offset, [.dashOffset: .n(((Self.trailLongest - 1 - share) * 10000).rounded() / 10000)]))
         }
-        func make(_ frames: [Animation.Keyframe]) -> Animation {
-            Animation(frames, duration: Self.period, delay: -JS.round(Self.period * 0.36), timing: .linear)
+        func make(_ frames: [SceneAnimation.Keyframe]) -> SceneAnimation {
+            SceneAnimation(frames, duration: Self.period, delay: -JS.round(Self.period * 0.36), timing: .linear)
         }
         return (make(run), make(radius), make(bearing), make(trail))
     }
@@ -208,7 +208,7 @@ struct Blueprint {
             copy.content = .path(PathData(svg: d))
             return copy
         }
-        let orbit = Animation.between([.transform: .t(.rotate(0))], [.transform: .t(.rotate(-360))], duration: 600, delay: Self.round(-((360 - 250) / 360) * 120), timing: .linear)
+        let orbit = SceneAnimation.between([.transform: .t(.rotate(0))], [.transform: .t(.rotate(-360))], duration: 600, delay: Self.round(-((360 - 250) / 360) * 120), timing: .linear)
         return [
             withPath(fine, "M\(x - 346) \(y)H\(x + 96)M\(x) \(y - 346)V\(y + 96)").dash([26, 5, 4, 5]),
             Node.path(Self.circle(x, y, 66)).fill(.none).stroke(Paint(Self.chalk), width: 1.1).opacity(0.26),
@@ -246,16 +246,16 @@ struct Blueprint {
         ]
     }
 
-    static func build(width: Double, height: Double) -> Scene {
+    static func build(width: Double, height: Double) -> SceneGraph {
         Blueprint(width: width, height: height, layout: .portrait(width, height)).scene()
     }
 
-    static func original() -> Scene {
+    static func original() -> SceneGraph {
         Blueprint(width: 1600, height: 1000, layout: .original).scene()
     }
 
-    func scene() -> Scene {
-        var scene = Scene(width: width, height: height)
+    func scene() -> SceneGraph {
+        var scene = SceneGraph(width: width, height: height)
         let c = Self.chalk
         scene.radial("washDeep", [(0, "#0e2c58", 0.78), (0.4, "#0e2c58", 0.46), (0.72, "#0e2c58", 0.15), (1, "#0e2c58", 0)])
         let from = Self.pointAt(sunX, sunY, 324, 160), to = Self.pointAt(sunX, sunY, 324, 290)
