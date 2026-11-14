@@ -153,6 +153,9 @@ public struct Copy: Equatable, Sendable {
     public var listen: String { pick("Listen", "Écouter", "Nghe") }
     public var readAloud: String { pick("Read words aloud", "Lire les mots à voix haute", "Đọc to từng từ") }
     public var options: String { pick("Options", "Options", "Tuỳ chọn") }
+    public var sceneTitle: String { pick("Scene", "Décor", "Cảnh nền") }
+    public var scenePerWord: String { pick("One per word", "Un par mot", "Mỗi từ một cảnh") }
+    public var sceneColours: String { pick("Plain colours", "Couleurs unies", "Màu trơn") }
 
     // MARK: L'app
 

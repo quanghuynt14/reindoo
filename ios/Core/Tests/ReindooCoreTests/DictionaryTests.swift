@@ -510,6 +510,43 @@ import Testing
         #expect(try app.state("cards.1.hue") != first)
         #expect((0..<1).contains(first))
     }
+
+    @Test func eachWordKeepsItsOwnScene() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        #expect(try app.state("scene") == "word")
+        try scroll(app, to: 4)
+        let first: String = try #require(try app.state("cards.0.scene"))
+        #expect(try app.state("cards.4.scene") == first, "aller, au second tour")
+        let theme = try #require(SceneTheme.named(first))
+        #expect(try app.state("cards.0.isLight") == (theme.window == .light))
+        // Assez de mots tirent plus d'un décor.
+        let scenes = Set(try cards(app).compactMap { $0["scene"] as? String })
+        #expect(scenes.count > 1)
+    }
+
+    @Test func aChosenSceneDressesEveryCard() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        try app.do("setScene", #"{"name":"snow-pines"}"#)
+        #expect(try cards(app).allSatisfy { $0["scene"] as? String == "snow-pines" && $0["isLight"] as? Bool == false })
+        #expect(try app.state("scenes.0.label") == Harness.copy.scenePerWord)
+        let picked = try #require(try app.state("scenes", as: [[String: Any]].self)).filter { $0["isSelected"] as? Bool == true }
+        #expect(picked.compactMap { $0["name"] as? String } == ["snow-pines"])
+
+        // Les cartes tirées ensuite le portent aussi.
+        try scroll(app, to: 8)
+        #expect(try cards(app).allSatisfy { $0["scene"] as? String == "snow-pines" })
+
+        try app.do("setScene", #"{"name":"koi-mosaic"}"#)
+        #expect(try app.state("cards.0.isLight") == true, "un décor clair")
+
+        // Les couleurs seules : plus de décor, la teinte reste.
+        try app.do("setScene", #"{"name":"colours"}"#)
+        #expect(try cards(app).allSatisfy { $0["scene"] == nil })
+        #expect(throws: (any Error).self) { try app.do("setScene", #"{"name":"lava-lamp"}"#) }
+        #expect(try app.state("scene") == "colours")
+    }
 }
 
 @MainActor

@@ -126,6 +126,28 @@ actor FakeServer: SyncClient {
         #expect(cards?.isEmpty == true)
     }
 
+    @Test func theChosenSceneSurvivesReopeningAndStaysOnTheDevice() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("reindoo-scene-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let userPath = directory.appendingPathComponent("user.sqlite").path
+        let lexiconPath = directory.appendingPathComponent("lexicon.sqlite").path
+        _ = try LexiconBuilder.build(ndjson: [Fixture.sampleNDJSON], to: lexiconPath)
+
+        do {
+            let user = try UserStore(path: userPath)
+            let session = Session(app: AppModel(lexicon: try Lexicon(path: lexiconPath), user: user, copy: Harness.copy))
+            try session.perform("selectTab", input: #"{"name":"review"}"#)
+            try session.perform("setScene", input: #"{"name":"halftone-dusk"}"#)
+            // Un réglage de l'appareil : rien ne part au serveur.
+            #expect(try user.pendingCount() == 0)
+        }
+        let session = Session(app: AppModel(lexicon: try Lexicon(path: lexiconPath), user: try UserStore(path: userPath), copy: Harness.copy))
+        try session.perform("selectTab", input: #"{"name":"review"}"#)
+        let state = try session.ls()["state"] as? [String: Any]
+        #expect(state?["scene"] as? String == "halftone-dusk")
+    }
+
     @Test func aLexiconOfTheWrongSchemaIsRefusedClearly() throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent("reindoo-bad-\(UUID().uuidString).sqlite").path
         defer { try? FileManager.default.removeItem(atPath: path) }

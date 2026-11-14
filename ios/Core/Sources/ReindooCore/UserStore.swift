@@ -63,6 +63,12 @@ public final class UserStore {
           PRIMARY KEY (language, word)
         ) WITHOUT ROWID;
         """,
+        """
+        CREATE TABLE setting (
+          key   TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        ) WITHOUT ROWID;
+        """,
     ]
 
     /// `path` vaut `":memory:"` pour une base jetable.
@@ -137,6 +143,18 @@ public final class UserStore {
 
     public func liked() throws -> Set<WordKey> {
         Set(try saved("SELECT language, word, likedAt FROM liked").map(\.key))
+    }
+
+    // MARK: Réglages
+
+    /// Un choix de l'utilisateur pour cet appareil, comme le décor du reel. Il
+    /// ne part pas au serveur : il n'a pas d'équivalent sur le site.
+    public func setting(_ key: String) throws -> String? {
+        try database.query("SELECT value FROM setting WHERE key = ?", [.text(key)]) { $0.text(0) }.first
+    }
+
+    public func setSetting(_ key: String, _ value: String) throws {
+        try database.run("INSERT OR REPLACE INTO setting (key, value) VALUES (?, ?)", [.text(key), .text(value)])
     }
 
     // MARK: File d'envoi

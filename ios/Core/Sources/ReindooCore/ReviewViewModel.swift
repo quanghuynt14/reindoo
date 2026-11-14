@@ -31,6 +31,10 @@ public final class ReviewViewModel: Introspectable {
         public var readAloudLabel = ""
         public var optionsLabel = ""
         public var emptyMessage: String?
+        /// Le décor choisi : `word` (un par mot), `colours`, ou un thème.
+        public var scene = "word"
+        public var sceneTitle = ""
+        public var scenes: [Option] = []
     }
 
     public struct Card: Codable, Equatable, Sendable, Identifiable {
@@ -58,6 +62,11 @@ public final class ReviewViewModel: Introspectable {
         public var isLiked: Bool
         /// La teinte du fond, de 0 à 1. Elle tient au mot : il garde sa couleur.
         public var hue: Double
+        /// Le décor de la carte, un thème de `SceneTheme`, ou `nil` pour la
+        /// teinte seule. En mode « un par mot », il tient au mot, comme la teinte.
+        public var scene: String? = nil
+        /// Le décor est clair : le texte de la carte se met en sombre.
+        public var isLight = false
         /// Ce que la carte annonce : « Từ mới », la question, la série.
         public var badge: String?
         public var choices: [Choice]
@@ -97,7 +106,15 @@ public final class ReviewViewModel: Introspectable {
         case open(String?)
         /// Rebattre les cartes et repartir du début.
         case restart
+        /// `word`, `colours`, ou l'identifiant d'un thème.
+        case setScene(String)
     }
+
+    /// Un décor par mot : le mot choisit son thème, et le garde.
+    public nonisolated static let perWord = "word"
+    /// La teinte du mot, sans décor : la plus légère pour la batterie.
+    public nonisolated static let colours = "colours"
+    static let sceneSetting = "reel.scene"
 
     public private(set) var state = State()
 
@@ -139,7 +156,35 @@ public final class ReviewViewModel: Introspectable {
         state.listenLabel = copy.listen
         state.readAloudLabel = copy.readAloud
         state.optionsLabel = copy.options
+        state.sceneTitle = copy.sceneTitle
+        if let saved = try? user.setting(Self.sceneSetting), Self.isScene(saved) { state.scene = saved }
+        state.scenes = sceneOptions()
         deal()
+    }
+
+    static func isScene(_ name: String) -> Bool {
+        name == perWord || name == colours || SceneTheme.named(name) != nil
+    }
+
+    private func sceneOptions() -> [Option] {
+        [Option(name: Self.perWord, label: copy.scenePerWord, isSelected: state.scene == Self.perWord)]
+            + SceneTheme.all.map { Option(name: $0.id, label: $0.title, isSelected: state.scene == $0.id) }
+            + [Option(name: Self.colours, label: copy.sceneColours, isSelected: state.scene == Self.colours)]
+    }
+
+    /// Le décor d'une carte, selon le choix. Un mot garde le sien d'un tour à
+    /// l'autre : le même hachage que sa teinte.
+    private static func dress(_ card: inout Card, in scene: String) {
+        let theme: SceneTheme?
+        switch scene {
+        case Self.colours: theme = nil
+        case Self.perWord:
+            let all = SceneTheme.all
+            theme = all[Int(Self.fnv("\(card.language.rawValue)/\(card.word)") % UInt64(all.count))]
+        default: theme = SceneTheme.named(scene)
+        }
+        card.scene = theme?.id
+        card.isLight = theme?.window == .light
     }
 
     public func send(_ action: Action) {
@@ -159,6 +204,14 @@ public final class ReviewViewModel: Introspectable {
             deal()
         case .restart:
             deal()
+        case .setScene(let name):
+            guard Self.isScene(name), name != state.scene else { return }
+            // Le choix reste sur l'appareil ; s'il ne s'écrit pas, il vaut pour la séance.
+            try? user.setSetting(Self.sceneSetting, name)
+            state.scene = name
+            state.scenes = sceneOptions()
+            // Le choix est lu avant : lire `state` pendant qu'on le modifie arrête l'app.
+            for index in state.cards.indices { Self.dress(&state.cards[index], in: name) }
         case .setPosition(let index):
             guard state.cards.indices.contains(index) else { return }
             state.position = index
@@ -297,7 +350,7 @@ public final class ReviewViewModel: Introspectable {
 
     private func card(_ kind: Card.Kind, for entry: Entry, liked: Set<WordKey>, badge: String? = nil) -> Card {
         let key = "\(entry.language.rawValue)/\(entry.word)"
-        return Card(
+        var card = Card(
             id: issue(kind == .word ? key : "\(kind.rawValue)/\(key)"), kind: kind,
             word: entry.word, language: entry.language,
             languageLabel: copy.languageShort(entry.language),
@@ -306,6 +359,8 @@ public final class ReviewViewModel: Introspectable {
             isRevealed: false, isLiked: liked.contains(WordKey(entry.language, entry.word)),
             hue: Self.hue(of: key), badge: badge, choices: [], picked: nil
         )
+        Self.dress(&card, in: state.scene)
+        return card
     }
 
     /// La première carte d'un mot porte son nom ; les suivantes, un numéro.
@@ -318,12 +373,16 @@ public final class ReviewViewModel: Introspectable {
     /// La teinte d'un mot. FNV-1a : le même mot donne la même couleur à chaque
     /// lancement, ce que `hashValue` ne promet pas.
     static func hue(of text: String) -> Double {
+        Double(fnv(text) % 360) / 360
+    }
+
+    static func fnv(_ text: String) -> UInt64 {
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
         for byte in text.utf8 {
             hash ^= UInt64(byte)
             hash = hash &* 0x0000_0100_0000_01b3
         }
-        return Double(hash % 360) / 360
+        return hash
     }
 
     // MARK: Surprises
@@ -396,11 +455,13 @@ public final class ReviewViewModel: Introspectable {
     private func streak() -> Card? {
         guard let last = state.cards.last else { return nil }
         let count = state.cards.count { $0.kind == .word }
-        return Card(
+        var card = Card(
             id: issue("streak/\(count)"), kind: .streak, word: "\(count)",
             language: last.language, languageLabel: "", ipa: "", gloss: "", example: nil,
             isRevealed: true, isLiked: false, hue: 0.07, badge: copy.streak(count), choices: [], picked: nil
         )
+        Self.dress(&card, in: state.scene)
+        return card
     }
 
     // MARK: Introspection
@@ -413,7 +474,7 @@ public final class ReviewViewModel: Introspectable {
             ("appear", ""), ("cycleSort", ""), ("setSort", "{name: random|newest|oldest}"),
             ("setFilter", "{name: all|french|english}"), ("setPosition", "{index}"),
             ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("like", "[{id}]"), ("choose", "{index}"),
-            ("open", "[{id}]"), ("restart", ""),
+            ("open", "[{id}]"), ("restart", ""), ("setScene", "{name: word|colours|<theme>}"),
         ]
     }
 
@@ -448,6 +509,12 @@ public final class ReviewViewModel: Introspectable {
         case "choose":
             send(.choose(nil, try Input.decode(Index.self, input, action: action, expected: "{index}").index))
         case "open": send(.open(try optionalID()))
+        case "setScene":
+            let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
+            guard Self.isScene(name) else {
+                throw IntrospectionError.badInput(action: action, expected: "{name: word|colours|\(SceneTheme.all.map(\.id).joined(separator: "|"))}")
+            }
+            send(.setScene(name))
         default: return false
         }
         return true
