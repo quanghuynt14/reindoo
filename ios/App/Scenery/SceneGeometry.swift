@@ -109,7 +109,9 @@ struct GlyphRun {
         var advance = CGSize.zero
         _ = CTFontGetAdvancesForGlyphs(font, .horizontal, &sample, &advance, 1)
         let shift = glyphs.centered ? advance.width / 2 : 0
-        positions = zip(glyphs.xs, glyphs.ys).map { CGPoint(x: $0 - shift, y: $1) }
+        // Les positions sont dans l'espace du texte, que la matrice du texte
+        // retourne aussi : y y est donc écrit à l'envers.
+        positions = zip(glyphs.xs, glyphs.ys).map { CGPoint(x: $0 - shift, y: -$1) }
     }
 
     /// Dessine dans un contexte dont l'axe y descend, comme celui des décors.
