@@ -63,6 +63,25 @@ if arguments.first == "build-lexicon" {
     }
 }
 
+// Un décor du reel, figé à un instant, en SVG : de quoi le regarder dans un
+// navigateur sans Mac.
+if arguments.first == "scene" {
+    guard arguments.count >= 2, let theme = SceneTheme.named(arguments[1]) else {
+        fail("usage : reindoo-cli scene <thème> [largeur hauteur [secondes]]. Thèmes : \(SceneTheme.all.map(\.id).joined(separator: ", "))")
+    }
+    // `original` : le décor d'origine, 1600 sur 1000, pour le comparer à theme-examples.
+    if arguments.count >= 3, arguments[2] == "original" {
+        guard let scene = theme.original() else { fail("\(theme.id) n'a plus de version d'origine") }
+        print(FrozenSVG.render(scene, at: arguments.count >= 4 ? Double(arguments[3]) ?? 0 : 0))
+        exit(0)
+    }
+    let numbers = arguments.dropFirst(2).compactMap(Double.init)
+    let width = numbers.count >= 2 ? numbers[0] : 390, height = numbers.count >= 2 ? numbers[1] : 844
+    let time = numbers.count >= 3 ? numbers[2] : 0
+    print(FrozenSVG.render(theme.scene(width: width, height: height), at: time))
+    exit(0)
+}
+
 var fixture = Fixture.sample
 if arguments.first == "--fixture" {
     guard arguments.count >= 2, let chosen = Fixture(rawValue: arguments[1]) else {
