@@ -11,9 +11,10 @@ struct ReviewView: View {
     /// pas à l'écran : le défilement passe avant lui.
     @State private var scrolling = false
     @State private var visible = false
-    /// La carte que le défilement montre. Core ne l'apprend qu'une fois la
-    /// page posée : changer l'état en plein élan (cartes ajoutées, décor,
-    /// voix) relançait le défilement, et il sautait une carte.
+    /// La carte que le défilement montre. L'écran la suit en plein geste : le
+    /// mot suivant grandit, ses boutons viennent, le décor change. Core, lui,
+    /// ne l'apprend qu'une fois la page posée : ajouter des cartes en plein
+    /// élan relançait le défilement, et il sautait une carte.
     @State private var shownID: String?
 
     /// Le temps laissé pour deviner avant que le sens se montre seul.
@@ -22,6 +23,7 @@ struct ReviewView: View {
     var body: some View {
         let state = model.state
         let current = state.cards.indices.contains(state.position) ? state.cards[state.position] : nil
+        let shown = state.cards.first { $0.id == shownID } ?? current
         let aloud = readAloud
 
         // La page est mesurée une fois, ici, et chaque carte reçoit cette
@@ -31,7 +33,7 @@ struct ReviewView: View {
             LazyVStack(spacing: 0) {
                 ForEach(state.cards) { card in
                     ReelCard(
-                        card: card, isCurrent: card.id == current?.id,
+                        card: card, isCurrent: card.id == shown?.id,
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
                         revealAfter: Self.revealAfter,
@@ -45,7 +47,7 @@ struct ReviewView: View {
             }
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(OneCardPerSwipe())
+        .scrollTargetBehavior(.paging)
         .onScrollPhaseChange { _, phase in
             scrolling = phase != .idle
             if phase == .idle { settle() }
@@ -61,15 +63,15 @@ struct ReviewView: View {
             if id != shownID { shownID = id }
         }
         .background {
-            if let current {
-                if let name = current.scene, let theme = SceneTheme.named(name) {
+            if let shown {
+                if let name = shown.scene, let theme = SceneTheme.named(name) {
                     ZStack {
                         SceneBackdrop(theme: theme, paused: scrolling || !visible)
                         SceneVeil(glass: theme.glass)
                     }
                     .ignoresSafeArea()
                 } else {
-                    ReelBackdrop(hue: current.hue).ignoresSafeArea()
+                    ReelBackdrop(hue: shown.hue).ignoresSafeArea()
                 }
             }
         }
@@ -92,7 +94,7 @@ struct ReviewView: View {
         .navigationTitle(current == nil ? state.title : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(current == nil ? nil : current!.isLight ? .light : .dark, for: .navigationBar)
+        .toolbarColorScheme(shown == nil ? nil : shown!.isLight ? .light : .dark, for: .navigationBar)
         .toolbar {
             // Les rennes suivent : un saut par carte, une pirouette toutes les dix.
             HerdToolbarItem(hops: state.position, tricks: state.position / 10)
@@ -129,7 +131,7 @@ struct ReviewView: View {
                     }
                     Toggle(state.readAloudLabel, systemImage: "speaker.wave.2", isOn: $readAloud)
                 } label: {
-                    let ink = current.map(Self.ink) ?? Color.primary
+                    let ink = shown.map(Self.ink) ?? Color.primary
                     Image(systemName: "slider.horizontal.3")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(ink)
@@ -151,12 +153,12 @@ struct ReviewView: View {
         }
         // Une carte arrive : on dit le mot, on laisse deviner, puis le sens
         // vient seul. Changer de carte annule l'attente.
-        .task(id: current?.id) { @MainActor in
-            guard let current, current.kind == .word || current.kind == .discovery else { return }
-            if aloud { Speaker.shared.say(current.word, in: current.language) }
-            guard !current.isRevealed else { return }
+        .task(id: shown?.id) { @MainActor in
+            guard let shown, shown.kind == .word || shown.kind == .discovery else { return }
+            if aloud { Speaker.shared.say(shown.word, in: shown.language) }
+            guard !shown.isRevealed else { return }
             try? await Task.sleep(for: .seconds(Self.revealAfter))
-            if !Task.isCancelled { model.send(.unveil(current.id)) }
+            if !Task.isCancelled { model.send(.unveil(shown.id)) }
         }
     }
 }
@@ -177,21 +179,6 @@ extension ReviewView {
     /// Les cartes juste après et juste avant celle à l'écran.
     func neighbours(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
         [state.position + 1, state.position - 1, state.position + 2].compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
-    }
-}
-
-/// Une carte par geste, jamais deux : un élan fort s'arrête à la suivante,
-/// comme un geste lent qui dépasse le quart de la page.
-private struct OneCardPerSwipe: ScrollTargetBehavior {
-    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
-        let page = context.containerSize.height
-        guard page > 0 else { return }
-        // La page d'où part le geste : celle que visait le défilement à son début.
-        let start = (context.originalTarget.rect.minY / page).rounded()
-        let moved = target.rect.minY / page - start
-        let step: CGFloat = moved > 0.25 ? 1 : moved < -0.25 ? -1 : 0
-        let last = max(0, ((context.contentSize.height - page) / page).rounded())
-        target.rect.origin.y = min(max(start + step, 0), last) * page
     }
 }
 
