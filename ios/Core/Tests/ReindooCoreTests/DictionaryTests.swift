@@ -455,6 +455,42 @@ import Testing
         #expect(Array(try words(app).prefix(4)) == ["aller", "élève", "go", "venir"])
     }
 
+    @Test func theEntryLikesItsWordForTheReel() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        try app.do("open", #"{"id":"french/élève"}"#)
+        #expect(try app.screen == "entry")
+        #expect(try app.state("isLiked") == false)
+        #expect(try app.state("likeLabel") == Harness.copy.like)
+        #expect(try app.state("listenLabel") == Harness.copy.listen)
+
+        try app.do("like")
+        #expect(try app.state("isLiked") == true)
+        #expect(try app.app.user.liked() == [WordKey(.french, "élève")])
+
+        // De retour au reel, la carte porte le cœur posé dans le détail.
+        try app.do("back")
+        #expect(try app.state("cards.1.isLiked") == true)
+
+        // Et le détail rouvert le montre, puis le retire.
+        try app.do("open", #"{"id":"french/élève"}"#)
+        #expect(try app.state("isLiked") == true)
+        try app.do("like")
+        #expect(try app.app.user.liked().isEmpty)
+        try app.do("back")
+        #expect(try app.state("cards.1.isLiked") == false)
+    }
+
+    @Test func aWordNotFoundCannotBeLiked() throws {
+        let app = try Harness(.returning)
+        try app.search("zzzz")
+        #expect(try app.screen == "entry")
+        #expect(try app.state("status") == "notFound")
+        try app.do("like")
+        #expect(try app.state("isLiked") == false)
+        #expect(try app.app.user.liked().isEmpty)
+    }
+
     @Test func surprisesBreakTheRoutine() throws {
         let app = try Harness(.returning)
         try app.do("selectTab", #"{"name":"review"}"#)

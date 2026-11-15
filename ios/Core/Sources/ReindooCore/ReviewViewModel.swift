@@ -190,7 +190,15 @@ public final class ReviewViewModel: Introspectable {
     public func send(_ action: Action) {
         switch action {
         case .appear:
-            if (try? user.history(limit: Self.deckLimit)) != dealtFrom { deal() }
+            if (try? user.history(limit: Self.deckLimit)) != dealtFrom {
+                deal()
+            } else if let liked = try? user.liked() {
+                // Le cœur a pu changer dans le détail d'un mot.
+                for index in state.cards.indices where state.cards[index].kind != .streak {
+                    let card = state.cards[index]
+                    state.cards[index].isLiked = liked.contains(WordKey(card.language, card.word))
+                }
+            }
         case .cycleSort:
             let all = Sort.allCases
             state.sort = all[(all.firstIndex(of: state.sort)! + 1) % all.count]

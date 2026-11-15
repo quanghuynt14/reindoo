@@ -45,6 +45,24 @@ final class GestureTests: XCTestCase {
         XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 5))
     }
 
+    /// Le détail d'un mot le lit et pose le cœur.
+    func testTheEntryListensAndLikes() {
+        let app = launch("-fixture", "returning", "-open", "aller")
+        XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))
+
+        app.buttons["entry.listen"].tap()
+        assertAlive(app, "l'app a planté en lisant le mot")
+
+        let like = app.buttons["entry.like"]
+        XCTAssertTrue(like.waitForExistence(timeout: 5))
+        XCTAssertFalse(like.isSelected)
+        like.tap()
+        XCTAssertTrue(like.isSelected, "le cœur se pose")
+        snap("entry-liked")
+        like.tap()
+        XCTAssertFalse(like.isSelected, "le cœur se retire")
+    }
+
     func testSwipingBackAfterTypingAndTappingAResult() {
         let app = launch("-fixture", "returning")
         let field = app.searchFields.firstMatch

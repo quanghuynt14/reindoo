@@ -19,6 +19,23 @@ struct EntryView: View {
             .padding(.vertical, Theme.gap)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if state.status == .found {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { model.send(.like) } label: {
+                        Image(systemName: state.isLiked ? "heart.fill" : "heart")
+                            .foregroundStyle(state.isLiked ? Color(red: 1, green: 0.36, blue: 0.42) : Color.primary)
+                            .symbolEffect(.bounce, value: state.isLiked)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .accessibilityLabel(state.likeLabel)
+                    .accessibilityAddTraits(state.isLiked ? .isSelected : [])
+                    .accessibilityIdentifier("entry.like")
+                    .sensoryFeedback(.impact(weight: .medium), trigger: state.isLiked)
+                }
+            }
+        }
+        .onDisappear { Speaker.shared.stop() }
     }
 
     // MARK: Trouvé
@@ -26,9 +43,24 @@ struct EntryView: View {
     @ViewBuilder
     private func found(_ state: EntryViewModel.State) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(state.word)
-                .font(Theme.headword())
-                .textSelection(.enabled)
+            HStack(alignment: .center, spacing: Theme.gap) {
+                Text(state.word)
+                    .font(Theme.headword())
+                    .textSelection(.enabled)
+                Spacer(minLength: 0)
+                // Toucher le haut-parleur, c'est demander : la voix passe outre
+                // le bouton silencieux, comme dans le reel.
+                Button {
+                    Speaker.shared.say(state.word, in: state.language, asked: true)
+                } label: {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.title3)
+                        .frame(width: 44, height: 44)
+                        .background(.tint.opacity(0.12), in: .circle)
+                }
+                .accessibilityLabel(state.listenLabel)
+                .accessibilityIdentifier("entry.listen")
+            }
             if !state.ipa.isEmpty {
                 Text(state.ipa)
                     .font(.callout)

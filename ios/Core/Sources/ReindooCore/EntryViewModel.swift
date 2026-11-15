@@ -25,6 +25,10 @@ public final class EntryViewModel: Introspectable, Identifiable {
         public var derivedTitle = ""
         public var derived: [String] = []
         public var wiki: String?
+        /// Le cœur, le même que dans le reel : un mot aimé y revient plus souvent.
+        public var isLiked = false
+        public var likeLabel = ""
+        public var listenLabel = ""
 
         // Introuvable
         public var hint: String?
@@ -55,11 +59,14 @@ public final class EntryViewModel: Introspectable, Identifiable {
         case open(String)
         /// Ouvrir le mot dans l'autre dictionnaire, celui qui l'a.
         case openElsewhere(Language)
+        /// Poser ou retirer le cœur.
+        case like
     }
 
     public private(set) var state = State()
 
     private let open: (String, Language) -> Void
+    private let user: UserStore
     private var typed = ""
 
     /// `remembers` : chercher un mot l'inscrit à l'historique ; le revoir en
@@ -69,7 +76,10 @@ public final class EntryViewModel: Introspectable, Identifiable {
         open: @escaping (String, Language) -> Void
     ) {
         self.open = open
+        self.user = user
         state.language = language
+        state.likeLabel = copy.like
+        state.listenLabel = copy.listen
         state.alsoFromTitle = copy.alsoFrom
         state.derivedTitle = copy.derived
 
@@ -92,6 +102,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
             }
             state.derived = entry.derived
             state.wiki = entry.wiki
+            state.isLiked = (try? user.liked().contains(WordKey(language, entry.word))) ?? false
             // Chercher un mot, c'est aussi s'en souvenir — comme sur le site.
             if remembers { try? user.remember(WordKey(language, entry.word)) }
         case .notFound(let typed, let suggestions):
@@ -121,6 +132,12 @@ public final class EntryViewModel: Introspectable, Identifiable {
             // On rouvre ce qui a été tapé : la note « est une forme de » suit.
             guard state.elsewhere.contains(where: { $0.language == language }) else { return }
             open(typed, language)
+        case .like:
+            guard state.status == .found else { return }
+            let liked = !state.isLiked
+            // S'il ne s'écrit pas, le cœur ne bouge pas : il ne ment pas.
+            guard (try? user.setLiked(WordKey(state.language, state.word), liked)) != nil else { return }
+            state.isLiked = liked
         }
     }
 
@@ -129,7 +146,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
     public var nodeName: String { "entry" }
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var childNode: (any Introspectable)? { nil }
-    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english}")] }
+    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english}"), ("like", "")] }
 
     public func perform(_ action: String, input: Data?) throws -> Bool {
         switch action {
@@ -140,6 +157,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
                 throw IntrospectionError.badInput(action: action, expected: "{name: french|english}")
             }
             send(.openElsewhere(language))
+        case "like": send(.like)
         default: return false
         }
         return true
