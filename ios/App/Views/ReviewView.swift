@@ -47,7 +47,7 @@ struct ReviewView: View {
             }
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(.paging)
+        .scrollTargetBehavior(OneCardPerSwipe())
         .onScrollPhaseChange { _, phase in
             scrolling = phase != .idle
             if phase == .idle { settle() }
@@ -179,6 +179,21 @@ extension ReviewView {
     /// Les cartes juste après et juste avant celle à l'écran.
     func neighbours(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
         [state.position + 1, state.position - 1, state.position + 2].compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
+    }
+}
+
+/// Une carte par geste, jamais deux : un élan fort s'arrête à la suivante,
+/// comme un geste lent qui dépasse le quart de la page.
+private struct OneCardPerSwipe: ScrollTargetBehavior {
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        let page = context.containerSize.height
+        guard page > 0 else { return }
+        // La page d'où part le geste : celle que visait le défilement à son début.
+        let start = (context.originalTarget.rect.minY / page).rounded()
+        let moved = target.rect.minY / page - start
+        let step: CGFloat = moved > 0.25 ? 1 : moved < -0.25 ? -1 : 0
+        let last = max(0, ((context.contentSize.height - page) / page).rounded())
+        target.rect.origin.y = min(max(start + step, 0), last) * page
     }
 }
 
