@@ -11,27 +11,32 @@ struct ReviewView: View {
     /// pas à l'écran : le défilement passe avant lui.
     @State private var scrolling = false
     @State private var visible = false
-    /// La carte que le défilement montre. L'écran la suit en plein geste : le
-    /// mot suivant grandit, ses boutons viennent, le décor change. Core, lui,
-    /// ne l'apprend qu'une fois la page posée : ajouter des cartes en plein
-    /// élan relançait le défilement, et il sautait une carte.
-    @State private var shownID: String?
+    /// Le doigt tire la page de tant de points ; vers le haut, c'est négatif.
+    @State private var drag: CGFloat = 0
+    @State private var pageHeight: CGFloat = 0
 
     /// Le temps laissé pour deviner avant que le sens se montre seul.
     private static let revealAfter = 2.2
+    /// Une page se pose toujours en ce temps, quel que soit l'élan : ni trop
+    /// vite après un geste vif, ni trop lentement après un geste mou.
+    private static let pace = Animation.smooth(duration: 0.38)
 
     var body: some View {
         let state = model.state
         let current = state.cards.indices.contains(state.position) ? state.cards[state.position] : nil
-        let shown = state.cards.first { $0.id == shownID } ?? current
+        // Passé la moitié de la page, la carte qui vient est déjà celle qu'on
+        // montre : le mot grandit, ses boutons viennent, le décor change.
+        let shown = shownCard(state)
         let aloud = readAloud
 
-        // La page est mesurée une fois, ici, et chaque carte reçoit cette
-        // taille : des cartes de hauteurs différentes ne se caleraient plus.
+        // Le reel tourne ses pages lui-même. Une ScrollView pose la page à la
+        // vitesse de l'élan, et un geste vif en sautait une : ici, le doigt
+        // tire la page, puis elle se pose en un temps fixe, une carte à la fois.
         GeometryReader { page in
-        ScrollView(.vertical) {
-            LazyVStack(spacing: 0) {
-                ForEach(state.cards) { card in
+            let height = page.size.height
+            ZStack {
+                ForEach(window(state)) { card in
+                    let index = state.cards.firstIndex { $0.id == card.id } ?? state.position
                     ReelCard(
                         card: card, isCurrent: card.id == shown?.id,
                         hint: state.revealHint, openLabel: state.openLabel,
@@ -42,25 +47,22 @@ struct ReviewView: View {
                         open: { model.send(.open(card.id)) },
                         choose: { model.send(.choose(card.id, $0)) }
                     )
-                    .frame(width: page.size.width, height: page.size.height)
+                    .frame(width: page.size.width, height: height)
+                    .offset(y: CGFloat(index - state.position) * height + drag)
+                    .transition(.identity)
+                    .accessibilityHidden(card.id != current?.id)
                 }
             }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(OneCardPerSwipe())
-        .onScrollPhaseChange { _, phase in
-            scrolling = phase != .idle
-            if phase == .idle { settle() }
-        }
-        .scrollIndicators(.hidden)
-        .scrollPosition(id: $shownID, anchor: .top)
-        }
-        // Un saut venu d'ailleurs (un défilement posé sans élan, un accès
-        // d'accessibilité) se dit tout de suite.
-        .onChange(of: shownID) { if !scrolling { settle() } }
-        // Core a changé de carte de lui-même : le paquet rebattu repart du début.
-        .onChange(of: current?.id, initial: true) { _, id in
-            if id != shownID { shownID = id }
+            .frame(width: page.size.width, height: height, alignment: .top)
+            .contentShape(.rect)
+            .gesture(pageTurn(state, height: height))
+            .accessibilityScrollAction { edge in
+                switch edge {
+                case .bottom: turn(state, by: 1)
+                case .top: turn(state, by: -1)
+                default: break
+                }
+            }
         }
         .background {
             if let shown {
@@ -164,11 +166,57 @@ struct ReviewView: View {
 }
 
 extension ReviewView {
-    /// Dit à Core la carte où le défilement s'est posé.
-    private func settle() {
-        let state = model.state
-        guard let id = shownID, let index = state.cards.firstIndex(where: { $0.id == id }), index != state.position else { return }
-        model.send(.setPosition(index))
+    /// Le mot vers lequel tire le doigt, passé la moitié de la page.
+    private func shownCard(_ state: ReviewViewModel.State) -> ReviewViewModel.Card? {
+        let step = pageHeight > 0 && abs(drag) > pageHeight / 2 ? (drag < 0 ? 1 : -1) : 0
+        let index = state.position + step
+        if state.cards.indices.contains(index) { return state.cards[index] }
+        return state.cards.indices.contains(state.position) ? state.cards[state.position] : nil
+    }
+
+    /// Les cartes posées : celle à l'écran et ses deux voisines. Les autres
+    /// sont loin hors de l'écran.
+    private func window(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
+        (state.position - 1...state.position + 1).compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
+    }
+
+    /// Le geste : le doigt tire la page ; lâchée, elle avance d'une carte si
+    /// le doigt est allé au-delà d'un quart, ou s'il a lancé la page assez fort.
+    private func pageTurn(_ state: ReviewViewModel.State, height: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                // Un geste de côté n'est pas pour le reel.
+                guard abs(value.translation.height) > abs(value.translation.width) || drag != 0 else { return }
+                pageHeight = height
+                scrolling = true
+                var pulled = value.translation.height
+                // Au bord du paquet, la page résiste.
+                let atStart = state.position == 0 && pulled > 0
+                let atEnd = state.position >= state.cards.count - 1 && pulled < 0
+                if atStart || atEnd { pulled *= 0.3 }
+                drag = pulled
+            }
+            .onEnded { value in
+                guard drag != 0 else { return }
+                let pulled = value.translation.height
+                let thrown = value.predictedEndTranslation.height
+                let step = pulled < -height / 4 || thrown < -height / 2 ? 1
+                    : pulled > height / 4 || thrown > height / 2 ? -1 : 0
+                turn(state, by: step)
+            }
+    }
+
+    /// Avance ou recule d'une carte, toujours au même rythme.
+    private func turn(_ state: ReviewViewModel.State, by step: Int) {
+        let target = state.position + step
+        let moves = step != 0 && state.cards.indices.contains(target)
+        scrolling = true
+        withAnimation(Self.pace) {
+            drag = 0
+            if moves { model.send(.setPosition(target)) }
+        } completion: {
+            if drag == 0 { scrolling = false }
+        }
     }
 
     /// La couleur du texte : sombre sur un décor clair, blanche partout ailleurs.
@@ -179,21 +227,6 @@ extension ReviewView {
     /// Les cartes juste après et juste avant celle à l'écran.
     func neighbours(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
         [state.position + 1, state.position - 1, state.position + 2].compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
-    }
-}
-
-/// Une carte par geste, jamais deux : un élan fort s'arrête à la suivante,
-/// comme un geste lent qui dépasse le quart de la page.
-private struct OneCardPerSwipe: ScrollTargetBehavior {
-    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
-        let page = context.containerSize.height
-        guard page > 0 else { return }
-        // La page d'où part le geste : celle que visait le défilement à son début.
-        let start = (context.originalTarget.rect.minY / page).rounded()
-        let moved = target.rect.minY / page - start
-        let step: CGFloat = moved > 0.25 ? 1 : moved < -0.25 ? -1 : 0
-        let last = max(0, ((context.contentSize.height - page) / page).rounded())
-        target.rect.origin.y = min(max(start + step, 0), last) * page
     }
 }
 
