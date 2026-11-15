@@ -138,6 +138,18 @@ final class GestureTests: XCTestCase {
         snap("reel-eighth")
     }
 
+    /// Un geste vif ne saute pas de carte : il pose la suivante, pas celle d'après.
+    func testAFastFlickMovesOneCard() {
+        let app = launch("-fixture", "returning", "-tab", "review")
+        XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))
+        app.swipeUp(velocity: .fast)
+        sleep(2)
+        assertAlive(app, "l'app a planté sur un geste vif")
+        // Le mot s'affiche tout de suite ; son sens, lui, attend.
+        XCTAssertTrue(app.staticTexts["élève"].firstMatch.isHittable, "un geste vif pose la carte suivante, pas celle d'après")
+        XCTAssertEqual(app.buttons["herd"].value as? String, "right", "une carte, un saut des rennes")
+    }
+
     func testTheReelOptionsChangeTheOrder() {
         let app = launch("-fixture", "returning", "-tab", "review")
         XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))
