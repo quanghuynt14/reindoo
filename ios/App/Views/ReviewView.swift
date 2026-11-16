@@ -369,7 +369,7 @@ private struct ReelBackdrop: View {
     }
 }
 
-/// Une carte du reel. Toucher montre ou cache le sens ; toucher deux fois pose
+/// Une carte du reel. Toucher montre le sens, qui reste ; toucher deux fois pose
 /// un cœur.
 private struct ReelCard: View {
     let card: ReviewViewModel.Card

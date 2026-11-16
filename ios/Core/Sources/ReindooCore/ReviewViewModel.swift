@@ -97,7 +97,8 @@ public final class ReviewViewModel: Introspectable {
         case setFilter(Language?)
         /// La vue a défilé jusqu'à cette carte.
         case setPosition(Int)
-        /// Montrer ou recacher le sens. Sans identifiant : la carte à l'écran.
+        /// Montrer le sens sans attendre. Une fois montré, il reste : retoucher
+        /// ne le cache pas. Sans identifiant : la carte à l'écran.
         case reveal(String?)
         /// Montrer le sens, sans jamais le recacher : la carte le fait seule
         /// après un temps.
@@ -229,7 +230,7 @@ public final class ReviewViewModel: Introspectable {
             topUp()
         case .reveal(let id):
             guard let index = index(of: id), Self.hasMeaning(state.cards[index]) else { return }
-            state.cards[index].isRevealed.toggle()
+            state.cards[index].isRevealed = true
             state.cards[index].wasRevealed = true
         case .unveil(let id):
             guard let index = index(of: id), Self.hasMeaning(state.cards[index]) else { return }
