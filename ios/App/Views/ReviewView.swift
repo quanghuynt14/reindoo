@@ -424,14 +424,15 @@ private struct ReelCard: View {
         .overlay(alignment: .top) {
             // Comme une story : le trait se remplit, puis le sens vient.
             // Seule la carte à l'écran le porte : celui de la suivante se
-            // verrait sous la barre d'onglets. Il s'efface trois fois plus
-            // vite que la carte.
+            // verrait sous la barre d'onglets. Il s'efface dix fois plus vite
+            // que la carte : parti avant qu'elle ait monté d'un dixième.
             if hasMeaning, isCurrent, !card.wasRevealed {
                 ProgressLine(duration: revealAfter, held: held, ink: ReviewView.ink(card), done: unveil)
                     .padding(.horizontal, Theme.margin)
                     .padding(.top, 6)
-                    .opacity(max(0, 1 - 3 * (1 - presence)))
-                    .transition(.opacity)
+                    .opacity(max(0, 1 - 10 * (1 - presence)))
+                    // Plein, il part tout de suite : le sens prend la place.
+                    .transition(.opacity.animation(.easeOut(duration: 0.12)))
             }
         }
         .foregroundStyle(ReviewView.ink(card))
