@@ -252,8 +252,9 @@ public enum LexiconBuilder {
 
                     if line._collection == "dictionary", let word = line.word {
                         let entry = Entry(
-                            word: word, language: language, translated: line.translated ?? "",
-                            explains: line.explains ?? [], ipa: line.ipa ?? [], audio: line.audio,
+                            word: word, language: language, translated: Text.cleanGloss(line.translated ?? ""),
+                            explains: (line.explains ?? []).filter { !Text.isWikiResidue($0.explain) },
+                            ipa: line.ipa ?? [], audio: line.audio,
                             wiki: line.wiki, derived: line.derived ?? []
                         )
                         let body = String(decoding: try encoder.encode(Packed(entry)), as: UTF8.self)

@@ -7,6 +7,19 @@ enum Text {
         text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
     }
 
+    /// Un modèle du wiki que l'extraction n'a pas déplié, comme `{{rfdef}}`.
+    /// Ce n'est pas un sens : c'est la page qui en réclame un.
+    static func isWikiResidue(_ text: String) -> Bool {
+        text.contains("{{") || text.contains("}}")
+    }
+
+    /// Le résumé d'une entrée joint ses sens par « / ». On garde les lisibles.
+    static func cleanGloss(_ gloss: String) -> String {
+        gloss.components(separatedBy: " / ")
+            .filter { !isWikiResidue($0) && !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .joined(separator: " / ")
+    }
+
     /// Distance de Levenshtein bornée : au-delà de `max`, on rend `max + 1`.
     /// Portée telle quelle de `searchWord.usecase.ts`.
     static func editDistance(_ a: String, _ b: String, max: Int) -> Int {

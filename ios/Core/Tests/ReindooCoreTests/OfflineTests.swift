@@ -164,6 +164,27 @@ actor FakeServer: SyncClient {
         #expect(report == LexiconBuilder.Report(entries: 12, forms: 5, skipped: 2))
         #expect(try Lexicon(path: path).count(.french) == 9)
     }
+
+    @Test func theBuilderDropsWikiTemplatesLeftInTheSource() throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("reindoo-wiki-\(UUID().uuidString).sqlite").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let rfdef = "{{#switch:|vi|mul=Mục từ này cần một định nghĩa. Xin hãy giúp đỡ bằng cách thêm định nghĩa cho nó, sau đó xóa văn bản {{rfdef}}.}}"
+        let source = [
+            #"{"_collection":"dictionary","word":"abaca","sourceLanguage":"french","translated":"Một loại chuối / \#(rfdef)","explains":[{"explain":"Một loại chuối"},{"explain":"\#(rfdef)"}]}"#,
+            #"{"_collection":"dictionary","word":"vide","sourceLanguage":"french","translated":"\#(rfdef)","explains":[{"explain":"\#(rfdef)"}]}"#,
+        ].joined(separator: "\n")
+        _ = try LexiconBuilder.build(ndjson: [source], to: path)
+        let lexicon = try Lexicon(path: path)
+
+        let abaca = try #require(try lexicon.entry("abaca", in: .french))
+        #expect(abaca.translated == "Một loại chuối")
+        #expect(abaca.explains.map(\.explain) == ["Một loại chuối"])
+
+        // Rien de lisible : le mot reste cherchable, sans sens à montrer.
+        let vide = try #require(try lexicon.entry("vide", in: .french))
+        #expect(vide.translated.isEmpty)
+        #expect(vide.explains.isEmpty)
+    }
 }
 
 @Suite struct Primitives {
