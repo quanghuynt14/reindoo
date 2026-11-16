@@ -426,7 +426,7 @@ private struct ReelCard: View {
             // Seule la carte à l'écran le porte : celui de la suivante se
             // verrait sous la barre d'onglets. Il s'efface trois fois plus
             // vite que la carte.
-            if hasMeaning, isCurrent, !card.isRevealed {
+            if hasMeaning, isCurrent, !card.wasRevealed {
                 ProgressLine(duration: revealAfter, held: held, ink: ReviewView.ink(card), done: unveil)
                     .padding(.horizontal, Theme.margin)
                     .padding(.top, 6)

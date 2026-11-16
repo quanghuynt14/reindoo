@@ -59,6 +59,9 @@ public final class ReviewViewModel: Introspectable {
         public var gloss: String
         public var example: Example?
         public var isRevealed: Bool
+        /// Le sens s'est déjà montré une fois. Le recacher ne relance pas
+        /// l'attente : deviner, c'est fini pour cette carte.
+        public var wasRevealed = false
         public var isLiked: Bool
         /// La teinte du fond, de 0 à 1. Elle tient au mot : il garde sa couleur.
         public var hue: Double
@@ -227,9 +230,11 @@ public final class ReviewViewModel: Introspectable {
         case .reveal(let id):
             guard let index = index(of: id), Self.hasMeaning(state.cards[index]) else { return }
             state.cards[index].isRevealed.toggle()
+            state.cards[index].wasRevealed = true
         case .unveil(let id):
             guard let index = index(of: id), Self.hasMeaning(state.cards[index]) else { return }
             state.cards[index].isRevealed = true
+            state.cards[index].wasRevealed = true
         case .like(let id):
             guard let index = index(of: id), state.cards[index].kind != .streak else { return }
             let card = state.cards[index]
@@ -247,6 +252,7 @@ public final class ReviewViewModel: Introspectable {
             else { return }
             state.cards[index].picked = choice
             state.cards[index].isRevealed = true
+            state.cards[index].wasRevealed = true
         case .open(let id):
             guard let index = index(of: id), state.cards[index].kind != .streak else { return }
             open(state.cards[index].word, state.cards[index].language)
@@ -440,6 +446,7 @@ public final class ReviewViewModel: Introspectable {
         card.id = issue("quiz/\(target.language.rawValue)/\(target.word)")
         card.kind = .quiz
         card.isRevealed = false
+        card.wasRevealed = false
         card.isLiked = liked.contains(WordKey(target.language, target.word))
         card.badge = copy.quizPrompt
         card.choices = choices

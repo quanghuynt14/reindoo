@@ -320,6 +320,8 @@ import Testing
         #expect(try app.state("cards.2.isRevealed") == true)
         try app.do("reveal", #"{"id":"english/go"}"#)
         #expect(try app.state("cards.2.isRevealed") == false, "retoucher recache")
+        #expect(try app.state("cards.2.wasRevealed") == true, "recaché, le sens a déjà été vu : l'attente ne revient pas")
+        #expect(try app.state("cards.1.wasRevealed") == false)
 
         try app.do("setPosition", #"{"index":99}"#)
         #expect(try app.state("position") == 2, "une position hors du reel est ignorée")
