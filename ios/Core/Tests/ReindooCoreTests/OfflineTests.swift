@@ -186,6 +186,27 @@ actor FakeServer: SyncClient {
         #expect(vide.explains.isEmpty)
     }
 
+    @Test func emptySensesGoAndAMissingSummaryComesFromTheFirstReadableSense() throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("reindoo-empty-\(UUID().uuidString).sqlite").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let source = [
+            #"{"_collection":"dictionary","word":"comet","sourceLanguage":"english","translated":"","explains":[{"explain":"(Danh từ) ."},{"explain":"(Danh từ) Sao chổi."}]}"#,
+            #"{"_collection":"dictionary","word":"triton","sourceLanguage":"french","translated":"","explains":[{"explain":"(Danh từ) (thần thoại) thần đuôi cá."}]}"#,
+            #"{"_collection":"dictionary","word":"should","sourceLanguage":"english","translated":"","explains":[{"explain":"(Trợ động từ) .","exampleSentences":[{"sourceSentence":"You should go.","targetTranslation":"Bạn nên đi."}]}]}"#,
+        ].joined(separator: "\n")
+        _ = try LexiconBuilder.build(ndjson: [source], to: path)
+        let lexicon = try Lexicon(path: path)
+
+        let comet = try #require(try lexicon.entry("comet", in: .english))
+        #expect(comet.explains.map(\.explain) == ["(Danh từ) Sao chổi."])
+        #expect(comet.translated == "Sao chổi")
+        #expect(try #require(try lexicon.entry("triton", in: .french)).translated == "Thần đuôi cá")
+        // Un sens vide qui porte un exemple reste : l'exemple apprend quelque chose.
+        let should = try #require(try lexicon.entry("should", in: .english))
+        #expect(should.explains.count == 1)
+        #expect(should.translated.isEmpty)
+    }
+
     @Test func aGlossThatOnlyPointsToAnotherHeadwordIsRecognised() throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent("reindoo-pointer-\(UUID().uuidString).sqlite").path
         defer { try? FileManager.default.removeItem(atPath: path) }

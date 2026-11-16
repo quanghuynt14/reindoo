@@ -20,6 +20,22 @@ enum Text {
             .joined(separator: " / ")
     }
 
+    /// Ce qu'un sens dit une fois ôtées ses étiquettes : « (Danh từ) Sao
+    /// chổi. » rend « Sao chổi ». « (Danh từ) . » ne dit rien.
+    static func bareSense(_ explain: String) -> String {
+        var text = Substring(explain).drop { $0 == " " }
+        while text.first == "(", let close = text.firstIndex(of: ")") {
+            text = text[text.index(after: close)...].drop { $0 == " " }
+        }
+        return text.trimmingCharacters(in: CharacterSet(charactersIn: " .;:,"))
+    }
+
+    /// Un résumé tiré du premier sens lisible, quand la source n'en donne pas.
+    static func summary(from senses: [Sense]) -> String {
+        guard let bare = senses.lazy.map({ bareSense($0.explain) }).first(where: { !$0.isEmpty }) else { return "" }
+        return bare.prefix(1).uppercased() + bare.dropFirst()
+    }
+
     /// Le mot vers lequel un résumé renvoie, s'il ne fait que ça :
     /// « Số nhiều của that » rend « that ». Un vrai sens peut aussi finir
     /// par « của » (« Vợ của vua ») : c'est le lexique qui tranche, en

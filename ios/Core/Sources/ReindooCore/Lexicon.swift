@@ -260,9 +260,16 @@ public enum LexiconBuilder {
                     }
 
                     if line._collection == "dictionary", let word = line.word {
+                        // Un sens vide (« (Danh từ) . ») part, sauf s'il porte des exemples.
+                        let senses = (line.explains ?? []).filter {
+                            !Text.isWikiResidue($0.explain)
+                                && (!Text.bareSense($0.explain).isEmpty || !$0.exampleSentences.isEmpty)
+                        }
+                        var translated = Text.cleanGloss(line.translated ?? "")
+                        if translated.isEmpty { translated = Text.summary(from: senses) }
                         let entry = Entry(
-                            word: word, language: language, translated: Text.cleanGloss(line.translated ?? ""),
-                            explains: (line.explains ?? []).filter { !Text.isWikiResidue($0.explain) },
+                            word: word, language: language, translated: translated,
+                            explains: senses,
                             ipa: line.ipa ?? [], audio: line.audio,
                             wiki: line.wiki, derived: line.derived ?? []
                         )
