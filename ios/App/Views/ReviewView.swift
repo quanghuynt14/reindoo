@@ -62,8 +62,7 @@ struct ReviewView: View {
             }
             .frame(width: page.size.width, height: height, alignment: .top)
             .contentShape(.rect)
-            .gesture(pageTurn(state, height: height))
-            .simultaneousGesture(hold)
+            .simultaneousGesture(pageTurn(state, height: height))
             .accessibilityScrollAction { edge in
                 switch edge {
                 case .bottom: turn(state, by: 1)
@@ -223,16 +222,14 @@ extension ReviewView {
         }
     }
 
-    /// Dès que le doigt se pose, le trait s'arrête, jusqu'à ce qu'on lâche.
-    private var hold: some Gesture {
+    /// Le geste, du premier point : dès que le doigt se pose, le trait
+    /// s'arrête ; dès qu'il bouge, la page le suit, sans seuil à franchir.
+    /// Lâchée, elle avance d'une carte si le doigt est allé au-delà d'un
+    /// dixième, ou s'il l'a lancée. À côté des boutons et des touchers de la
+    /// carte, pas à leur place : ils répondent toujours.
+    private func pageTurn(_ state: ReviewViewModel.State, height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .updating($held) { _, held, _ in held = true }
-    }
-
-    /// Le geste : le doigt tire la page ; lâchée, elle avance d'une carte si
-    /// le doigt est allé au-delà d'un dixième, ou s'il l'a lancée.
-    private func pageTurn(_ state: ReviewViewModel.State, height: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 12)
             .onChanged { value in
                 // Un geste de côté n'est pas pour le reel.
                 guard abs(value.translation.height) > abs(value.translation.width) || drag != 0 else { return }
