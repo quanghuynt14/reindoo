@@ -35,7 +35,6 @@ struct ReindeerHerd: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .sensoryFeedback(.impact(weight: .light), trigger: onRight)
         .onAppear { bobbing = true }
         .onChange(of: hops) { onRight.toggle() }
         .onChange(of: tricks) { spins += 1 }

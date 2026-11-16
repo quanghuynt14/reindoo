@@ -16,8 +16,10 @@ struct ReviewView: View {
     @State private var pageHeight: CGFloat = 0
     /// Un doigt posé et tenu met le trait en pause, comme une story.
     @GestureState private var held = false
-    /// Lâcher après avoir tenu n'est pas un toucher : le sens ne vient pas.
-    @State private var justHeld = false
+    /// Quand le doigt s'est posé. Lâcher après avoir tenu n'est pas un
+    /// toucher : le sens ne vient pas.
+    @State private var pressedAt: Date?
+    @State private var presses = 0
 
     /// Le temps laissé pour deviner avant que le sens se montre seul.
     private static let revealAfter = 2.2
@@ -50,7 +52,7 @@ struct ReviewView: View {
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
                         revealAfter: Self.revealAfter,
-                        reveal: { if !justHeld { model.send(.reveal(card.id)) } },
+                        reveal: { if !wasHolding { model.send(.reveal(card.id)) } },
                         unveil: { model.send(.unveil(card.id)) },
                         like: { model.send(.like(card.id)) },
                         open: { model.send(.open(card.id)) },
@@ -173,12 +175,16 @@ struct ReviewView: View {
             if aloud { Speaker.shared.say(shown.word, in: shown.language) }
         }
         .onChange(of: held) { _, now in
+            presses += 1
             if now {
-                justHeld = true
+                pressedAt = .now
             } else {
+                // Le toucher qui suit le lever arrive après : on garde l'heure
+                // un instant, le temps qu'il la lise.
+                let press = presses
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(0.3))
-                    justHeld = false
+                    if presses == press { pressedAt = nil }
                 }
             }
         }
@@ -235,13 +241,17 @@ extension ReviewView {
         }
     }
 
-    /// Tenir le doigt un instant : le trait s'arrête jusqu'à ce qu'on lâche.
+    /// Dès que le doigt se pose, le trait s'arrête, jusqu'à ce qu'on lâche.
     private var hold: some Gesture {
-        LongPressGesture(minimumDuration: 0.2)
-            .sequenced(before: DragGesture(minimumDistance: 0))
-            .updating($held) { value, held, _ in
-                if case .second(true, _) = value { held = true }
-            }
+        DragGesture(minimumDistance: 0)
+            .updating($held) { _, held, _ in held = true }
+    }
+
+    /// Un doigt resté posé plus d'un quart de seconde tenait la carte : en
+    /// le levant, on ne la touche pas.
+    private var wasHolding: Bool {
+        guard let pressedAt else { return false }
+        return Date.now.timeIntervalSince(pressedAt) > 0.25
     }
 
     /// Le geste : le doigt tire la page ; lâchée, elle avance d'une carte si
@@ -594,7 +604,6 @@ private struct ReelCard: View {
         }
         .padding(.horizontal, Theme.section)
         .animation(.smooth(duration: 0.5), value: isCurrent)
-        .sensoryFeedback(.success, trigger: isCurrent) { _, now in now }
     }
 }
 
