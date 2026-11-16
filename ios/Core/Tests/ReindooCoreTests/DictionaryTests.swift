@@ -220,11 +220,23 @@ import Testing
         #expect(try app.state("items.3.word") == "élève")
 
         // Ouvrir depuis l'historique empile sur cet onglet, dans la bonne
-        // langue ; et le mot revu remonte en tête.
+        // langue ; le mot revu garde sa place, et rien ne part au serveur.
+        let queued = try app.app.user.pendingCount()
         try app.do("open", #"{"word":"go","language":"english"}"#)
         #expect(try app.screen == "entry")
         #expect(try app.state("translated") == "đi")
+        try app.do("open", #"{"word":"aller"}"#)
         try app.do("back")
+        try app.do("back")
+        #expect(try app.state("items.0.word") == "aller")
+        #expect(try app.state("items.1.word") == "go", "revoir un mot ne le fait pas remonter")
+        #expect(try app.app.user.pendingCount() == queued)
+
+        // Le chercher, si : il remonte en tête.
+        try app.do("selectTab", #"{"name":"search"}"#)
+        try app.do("setLanguage", #"{"name":"english"}"#)
+        try app.search("go")
+        try app.do("selectTab", #"{"name":"history"}"#)
         #expect(try app.state("items.0.word") == "go")
     }
 

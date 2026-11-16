@@ -52,14 +52,17 @@ public final class AppModel: Introspectable {
         self.lexicon = lexicon
         self.user = user
         self.copy = copy
-        let open: (String, Language) -> Void = { [weak self] word, language in
+        // Seule la recherche date un mot. Le revoir depuis l'historique ou le
+        // reel ne le fait pas remonter : la liste garde l'ordre des recherches.
+        let looksUp: (String, Language) -> Void = { [weak self] word, language in
             self?.push(word, language, remembers: true)
         }
-        search = SearchViewModel(lexicon: lexicon, user: user, copy: copy, open: open)
-        review = ReviewViewModel(lexicon: lexicon, user: user, copy: copy, shuffle: shuffle, chance: chance) { [weak self] word, language in
+        let revisits: (String, Language) -> Void = { [weak self] word, language in
             self?.push(word, language, remembers: false)
         }
-        history = HistoryViewModel(lexicon: lexicon, user: user, copy: copy, open: open) { [weak self] in self?.countPending() }
+        search = SearchViewModel(lexicon: lexicon, user: user, copy: copy, open: looksUp)
+        review = ReviewViewModel(lexicon: lexicon, user: user, copy: copy, shuffle: shuffle, chance: chance, open: revisits)
+        history = HistoryViewModel(lexicon: lexicon, user: user, copy: copy, open: revisits) { [weak self] in self?.countPending() }
         refresh()
     }
 
