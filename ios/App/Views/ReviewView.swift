@@ -14,6 +14,10 @@ struct ReviewView: View {
     /// Le doigt tire la page de tant de points ; vers le haut, c'est négatif.
     @State private var drag: CGFloat = 0
     @State private var pageHeight: CGFloat = 0
+    /// Un doigt posé et tenu met le trait en pause, comme une story.
+    @GestureState private var held = false
+    /// Lâcher après avoir tenu n'est pas un toucher : le sens ne vient pas.
+    @State private var justHeld = false
 
     /// Le temps laissé pour deviner avant que le sens se montre seul.
     private static let revealAfter = 2.2
@@ -37,18 +41,24 @@ struct ReviewView: View {
             ZStack {
                 ForEach(window(state)) { card in
                     let index = state.cards.firstIndex { $0.id == card.id } ?? state.position
+                    let offset = CGFloat(index - state.position) * height + drag
                     ReelCard(
                         card: card, isCurrent: card.id == shown?.id,
+                        // La carte qui monte s'efface à mesure ; celle qui
+                        // arrive d'en bas est là tout entière.
+                        presence: height > 0 && offset < 0 ? max(0, 1 + offset / height) : 1,
+                        held: held,
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
                         revealAfter: Self.revealAfter,
-                        reveal: { model.send(.reveal(card.id)) },
+                        reveal: { if !justHeld { model.send(.reveal(card.id)) } },
+                        unveil: { model.send(.unveil(card.id)) },
                         like: { model.send(.like(card.id)) },
                         open: { model.send(.open(card.id)) },
                         choose: { model.send(.choose(card.id, $0)) }
                     )
                     .frame(width: page.size.width, height: height)
-                    .offset(y: CGFloat(index - state.position) * height + drag)
+                    .offset(y: offset)
                     .transition(.identity)
                     .accessibilityHidden(card.id != current?.id)
                 }
@@ -56,6 +66,7 @@ struct ReviewView: View {
             .frame(width: page.size.width, height: height, alignment: .top)
             .contentShape(.rect)
             .gesture(pageTurn(state, height: height))
+            .simultaneousGesture(hold)
             .accessibilityScrollAction { edge in
                 switch edge {
                 case .bottom: turn(state, by: 1)
@@ -65,15 +76,16 @@ struct ReviewView: View {
             }
         }
         .background {
-            if let shown {
-                if let name = shown.scene, let theme = SceneTheme.named(name) {
-                    ZStack {
-                        SceneBackdrop(theme: theme, paused: scrolling || !visible)
-                        SceneVeil(glass: theme.glass)
-                    }
-                    .ignoresSafeArea()
-                } else {
-                    ReelBackdrop(hue: shown.hue).ignoresSafeArea()
+            // Les décors s'empilent dans l'ordre des cartes. Celui d'en haut
+            // se montre à mesure que sa carte monte : l'ancien se fond dans
+            // le nouveau au rythme du doigt.
+            let turned = state.position - (pageHeight > 0 ? drag / pageHeight : 0)
+            ZStack {
+                ForEach(backdrops(state)) { card in
+                    let index = state.cards.firstIndex { $0.id == card.id } ?? state.position
+                    backdrop(card, paused: scrolling || !visible || card.id != current?.id)
+                        .opacity(min(1, max(0, turned - CGFloat(index) + 1)))
+                        .transition(.identity)
                 }
             }
         }
@@ -153,14 +165,21 @@ struct ReviewView: View {
             visible = false
             Speaker.shared.stop()
         }
-        // Une carte arrive : on dit le mot, on laisse deviner, puis le sens
-        // vient seul. Changer de carte annule l'attente.
+        // Une carte arrive : on dit le mot. Le trait de la carte compte le
+        // temps laissé pour deviner, puis montre le sens.
         .task(id: shown?.id) { @MainActor in
             guard let shown, shown.kind == .word || shown.kind == .discovery else { return }
             if aloud { Speaker.shared.say(shown.word, in: shown.language) }
-            guard !shown.isRevealed else { return }
-            try? await Task.sleep(for: .seconds(Self.revealAfter))
-            if !Task.isCancelled { model.send(.unveil(shown.id)) }
+        }
+        .onChange(of: held) { _, now in
+            if now {
+                justHeld = true
+            } else {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.3))
+                    justHeld = false
+                }
+            }
         }
     }
 }
@@ -178,6 +197,37 @@ extension ReviewView {
     /// sont loin hors de l'écran.
     private func window(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
         (state.position - 1...state.position + 1).compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
+    }
+
+    /// Les décors à poser : celui de la carte à l'écran, et ses voisins
+    /// pendant qu'une page tourne.
+    private func backdrops(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
+        guard scrolling else {
+            return state.cards.indices.contains(state.position) ? [state.cards[state.position]] : []
+        }
+        return window(state)
+    }
+
+    @ViewBuilder
+    private func backdrop(_ card: ReviewViewModel.Card, paused: Bool) -> some View {
+        if let name = card.scene, let theme = SceneTheme.named(name) {
+            ZStack {
+                SceneBackdrop(theme: theme, paused: paused)
+                SceneVeil(glass: theme.glass)
+            }
+            .ignoresSafeArea()
+        } else {
+            ReelBackdrop(hue: card.hue).ignoresSafeArea()
+        }
+    }
+
+    /// Tenir le doigt un instant : le trait s'arrête jusqu'à ce qu'on lâche.
+    private var hold: some Gesture {
+        LongPressGesture(minimumDuration: 0.2)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .updating($held) { value, held, _ in
+                if case .second(true, _) = value { held = true }
+            }
     }
 
     /// Le geste : le doigt tire la page ; lâchée, elle avance d'une carte si
@@ -293,12 +343,16 @@ private struct ReelBackdrop: View {
 private struct ReelCard: View {
     let card: ReviewViewModel.Card
     let isCurrent: Bool
+    /// 1 quand la carte est en place, 0 quand elle est montée hors de l'écran.
+    let presence: Double
+    let held: Bool
     let hint: String
     let openLabel: String
     let likeLabel: String
     let listenLabel: String
     let revealAfter: Double
     let reveal: () -> Void
+    let unveil: () -> Void
     let like: () -> Void
     let open: () -> Void
     let choose: (Int) -> Void
@@ -326,17 +380,6 @@ private struct ReelCard: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(alignment: .top) {
-            // Comme une story : le trait se remplit, puis le sens vient.
-            // Seule la carte à l'écran le porte : celui de la suivante se
-            // verrait sous la barre d'onglets.
-            if hasMeaning, isCurrent, !card.isRevealed {
-                ProgressLine(running: isCurrent, duration: revealAfter, ink: ReviewView.ink(card))
-                    .padding(.horizontal, Theme.margin)
-                    .padding(.top, 6)
-                    .transition(.opacity)
-            }
-        }
         .overlay(alignment: .bottom) {
             // Ceux de la carte qui part s'effacent : ils se verraient sous
             // l'heure, en haut de la suivante.
@@ -344,6 +387,20 @@ private struct ReelCard: View {
                 actions
                     .opacity(isCurrent ? 1 : 0)
                     .animation(.easeOut(duration: 0.2), value: isCurrent)
+            }
+        }
+        .opacity(presence)
+        .overlay(alignment: .top) {
+            // Comme une story : le trait se remplit, puis le sens vient.
+            // Seule la carte à l'écran le porte : celui de la suivante se
+            // verrait sous la barre d'onglets. Il s'efface trois fois plus
+            // vite que la carte.
+            if hasMeaning, isCurrent, !card.isRevealed {
+                ProgressLine(duration: revealAfter, held: held, ink: ReviewView.ink(card), done: unveil)
+                    .padding(.horizontal, Theme.margin)
+                    .padding(.top, 6)
+                    .opacity(max(0, 1 - 3 * (1 - presence)))
+                    .transition(.opacity)
             }
         }
         .foregroundStyle(ReviewView.ink(card))
@@ -408,7 +465,8 @@ private struct ReelCard: View {
             Spacer()
         }
         .padding(.horizontal, Theme.section)
-        .animation(.spring(duration: 0.5, bounce: 0.3), value: isCurrent)
+        // Sans rebond : le mot grandit et s'arrête, il ne dépasse pas.
+        .animation(.smooth(duration: 0.4), value: isCurrent)
     }
 
     /// Le mot arrive en grandissant, puis flotte doucement.
@@ -480,7 +538,7 @@ private struct ReelCard: View {
             }
         }
         .padding(.horizontal, Theme.section)
-        .animation(.spring(duration: 0.5, bounce: 0.3), value: isCurrent)
+        .animation(.smooth(duration: 0.4), value: isCurrent)
         .animation(.snappy, value: card.picked)
         .sensoryFeedback(trigger: card.picked) { _, picked in
             guard let picked, card.choices.indices.contains(picked) else { return nil }
@@ -514,7 +572,7 @@ private struct ReelCard: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, Theme.section)
-        .animation(.spring(duration: 0.6, bounce: 0.55), value: isCurrent)
+        .animation(.smooth(duration: 0.5), value: isCurrent)
         .sensoryFeedback(.success, trigger: isCurrent) { _, now in now }
     }
 }
@@ -544,30 +602,50 @@ private struct ReelButton: View {
     }
 }
 
-/// Le trait qui se remplit pendant qu'on devine.
+/// Le trait qui se remplit pendant qu'on devine. Un doigt tenu l'arrête ;
+/// plein, il montre le sens.
 private struct ProgressLine: View {
-    let running: Bool
     let duration: Double
+    let held: Bool
     var ink: Color = .white
+    let done: () -> Void
 
-    @State private var fill: CGFloat = 0
+    @State private var started = Date.now
+    @State private var pausedAt: Date?
+    @State private var pausedFor: TimeInterval = 0
+
+    /// Le temps passé à deviner, sans les pauses.
+    private func elapsed(at now: Date) -> TimeInterval {
+        now.timeIntervalSince(started) - pausedFor - (pausedAt.map { now.timeIntervalSince($0) } ?? 0)
+    }
 
     var body: some View {
-        Capsule()
-            .fill(ink.opacity(0.25))
-            .frame(height: 3)
-            .overlay {
-                Capsule()
-                    .fill(ink)
-                    .scaleEffect(x: fill, y: 1, anchor: .leading)
-            }
-            .onChange(of: running, initial: true) { _, now in
-                if now {
-                    withAnimation(.linear(duration: duration)) { fill = 1 }
-                } else {
-                    fill = 0
+        TimelineView(.animation(paused: held)) { context in
+            let fill = min(1, max(0, elapsed(at: context.date) / duration))
+            Capsule()
+                .fill(ink.opacity(0.25))
+                .frame(height: 3)
+                .overlay {
+                    Capsule()
+                        .fill(ink)
+                        .scaleEffect(x: fill, y: 1, anchor: .leading)
                 }
+        }
+        .onChange(of: held, initial: true) { _, now in
+            if now {
+                pausedAt = .now
+            } else if let at = pausedAt {
+                pausedFor += Date.now.timeIntervalSince(at)
+                pausedAt = nil
             }
-            .accessibilityHidden(true)
+        }
+        .task { @MainActor in
+            while !Task.isCancelled {
+                let left = duration - elapsed(at: .now)
+                if left <= 0, pausedAt == nil { done(); return }
+                try? await Task.sleep(for: .seconds(min(max(left, 0.05), 0.1)))
+            }
+        }
+        .accessibilityHidden(true)
     }
 }

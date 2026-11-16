@@ -168,6 +168,16 @@ final class GestureTests: XCTestCase {
         XCTAssertEqual(app.buttons["herd"].value as? String, "right", "une carte, un saut des rennes")
     }
 
+    /// Tenir le doigt arrête le trait : le sens attend qu'on lâche.
+    func testHoldingPausesTheReveal() {
+        let app = launch("-fixture", "returning", "-tab", "review")
+        let word = app.staticTexts["aller"]
+        XCTAssertTrue(word.waitForExistence(timeout: 15))
+        word.press(forDuration: 4)
+        XCTAssertFalse(app.staticTexts["Tôi đi học."].exists, "tenu plus longtemps que l'attente, le sens n'est pas venu")
+        XCTAssertTrue(app.staticTexts["Tôi đi học."].waitForExistence(timeout: 8), "lâché, le trait reprend et le sens vient")
+    }
+
     func testTheReelOptionsChangeTheOrder() {
         let app = launch("-fixture", "returning", "-tab", "review")
         XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))
