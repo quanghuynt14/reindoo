@@ -435,6 +435,8 @@ public final class ReviewViewModel: Introspectable {
         for other in (try? lexicon.sample(target.language, limit: 12, pick: draw)) ?? [] {
             let gloss = other.translated
             if other.word == target.word || gloss.isEmpty || gloss == target.gloss || wrong.contains(gloss) { continue }
+            // « Số nhiều của 1ère » se voit de loin : ce n'est pas un piège.
+            if lexicon.pointsElsewhere(other) { continue }
             wrong.append(gloss)
             if wrong.count == 3 { break }
         }
@@ -462,6 +464,7 @@ public final class ReviewViewModel: Introspectable {
         let known = Set((dealtFrom ?? []).map(\.key))
         let found = ((try? lexicon.sample(language, limit: 8, pick: draw)) ?? []).first { entry in
             !entry.translated.isEmpty
+                && !lexicon.pointsElsewhere(entry)
                 && !known.contains(WordKey(language, entry.word))
                 && !state.cards.contains { $0.kind == .discovery && $0.word == entry.word && $0.language == language }
         }

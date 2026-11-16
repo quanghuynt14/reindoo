@@ -57,6 +57,15 @@ public final class Lexicon {
         ) { ($0.text(0), $0.text(1)) }.first.map { try decode($0.1, word: $0.0, language: language) }
     }
 
+    /// Vrai quand le sens de l'entrée n'est qu'un renvoi vers une autre
+    /// vedette : un pluriel, un temps, une abréviation. Un dixième du
+    /// lexique. Bon pour la recherche, pas pour un quiz ni une découverte.
+    public func pointsElsewhere(_ entry: Entry) -> Bool {
+        guard let target = Text.pointer(in: entry.translated), target != entry.word else { return false }
+        return ((try? self.entry(target, in: entry.language)) ?? nil) != nil
+            || ((try? self.entry(target.lowercased(), in: entry.language)) ?? nil) != nil
+    }
+
     /// Ce que l'utilisateur complète pendant qu'il tape. Les plus fréquents d'abord.
     public func completions(for prefix: String, in language: Language, limit: Int = 20) throws -> [String] {
         let folded = Text.fold(prefix.trimmingCharacters(in: .whitespacesAndNewlines))

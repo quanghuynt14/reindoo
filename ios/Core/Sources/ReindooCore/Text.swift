@@ -20,6 +20,19 @@ enum Text {
             .joined(separator: " / ")
     }
 
+    /// Le mot vers lequel un résumé renvoie, s'il ne fait que ça :
+    /// « Số nhiều của that » rend « that ». Un vrai sens peut aussi finir
+    /// par « của » (« Vợ của vua ») : c'est le lexique qui tranche, en
+    /// vérifiant que le mot visé est une de ses vedettes.
+    static func pointer(in gloss: String) -> String? {
+        guard let range = gloss.range(of: " của ", options: .backwards) else { return nil }
+        let head = gloss[..<range.lowerBound]
+        var tail = gloss[range.upperBound...].trimmingCharacters(in: .whitespaces)
+        if tail.hasSuffix(".") { tail.removeLast() }
+        guard !tail.isEmpty, !tail.contains(" "), head.count <= 60, !head.contains(" / ") else { return nil }
+        return tail
+    }
+
     /// Distance de Levenshtein bornée : au-delà de `max`, on rend `max + 1`.
     /// Portée telle quelle de `searchWord.usecase.ts`.
     static func editDistance(_ a: String, _ b: String, max: Int) -> Int {

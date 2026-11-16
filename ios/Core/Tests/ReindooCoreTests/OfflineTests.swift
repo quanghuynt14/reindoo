@@ -185,6 +185,30 @@ actor FakeServer: SyncClient {
         #expect(vide.translated.isEmpty)
         #expect(vide.explains.isEmpty)
     }
+
+    @Test func aGlossThatOnlyPointsToAnotherHeadwordIsRecognised() throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("reindoo-pointer-\(UUID().uuidString).sqlite").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let source = [
+            #"{"_collection":"dictionary","word":"1ère","sourceLanguage":"french","translated":"Thứ nhất"}"#,
+            #"{"_collection":"dictionary","word":"1ères","sourceLanguage":"french","translated":"Số nhiều của 1ère"}"#,
+            #"{"_collection":"dictionary","word":"kilo","sourceLanguage":"french","translated":"Viết tắt của Kilogramme."}"#,
+            #"{"_collection":"dictionary","word":"kilogramme","sourceLanguage":"french","translated":"Ki-lô-gam"}"#,
+            #"{"_collection":"dictionary","word":"reine","sourceLanguage":"french","translated":"Vợ của vua"}"#,
+            #"{"_collection":"dictionary","word":"orphelin","sourceLanguage":"french","translated":"Số nhiều của absent"}"#,
+        ].joined(separator: "\n")
+        _ = try LexiconBuilder.build(ndjson: [source], to: path)
+        let lexicon = try Lexicon(path: path)
+        let points = { (word: String) in lexicon.pointsElsewhere(try #require(try lexicon.entry(word, in: .french))) }
+
+        #expect(try points("1ères"))
+        #expect(try points("kilo"))
+        // « vua » n'est pas une vedette française : c'est un vrai sens.
+        #expect(try !points("reine"))
+        // Le mot visé n'existe pas : rien ne dit que c'est un renvoi.
+        #expect(try !points("orphelin"))
+        #expect(try !points("1ère"))
+    }
 }
 
 @Suite struct Primitives {
