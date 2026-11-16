@@ -12,6 +12,10 @@ on:
         description: Construire l'app sur macOS et capturer les écrans
         type: boolean
         default: true
+      store:
+        description: Capturer les écrans de l'App Store (iPhone 6,9 pouces)
+        type: boolean
+        default: false
 
 jobs:
   # Rapide et bon marché : tourne à chaque push.
@@ -201,6 +205,63 @@ jobs:
         with:
           name: screenshots
           path: ios/shots
+
+  # Les captures de la fiche App Store : le vrai lexique, un iPhone de
+  # 6,9 pouces, une série par langue. À la main seulement.
+  store:
+    if: github.event_name == 'workflow_dispatch' && inputs.store
+    needs: [core, lexicon]
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lexicon
+          path: ios/App/Resources
+      - run: brew install xcodegen
+      - name: Construire
+        working-directory: ios
+        run: |
+          xcodegen generate
+          xcodebuild -project Reindoo.xcodeproj -scheme Reindoo \
+            -sdk iphonesimulator -configuration Debug \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Capturer
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          device=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if 'Pro Max' in x['name']))")
+          xcrun simctl list devices available | grep "$device"
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl ui "$device" appearance light
+          xcrun simctl status_bar "$device" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          app=build/Build/Products/Debug-iphonesimulator/Reindoo.app
+          run() {
+            xcrun simctl terminate "$device" com.reindoo.app 2>/dev/null || true
+            xcrun simctl launch "$device" com.reindoo.app "$@" -AppleLanguages "($ui)" -AppleLocale "$locale"
+            sleep 5
+          }
+          shoot() { name=$1; shift; run "$@"; xcrun simctl io "$device" screenshot "store/$dir/$name.png"; }
+          for pair in en-US:en:en_US vi:vi:vi_VN fr-FR:fr:fr_FR; do
+            IFS=: read -r dir ui locale <<< "$pair"
+            mkdir -p "store/$dir"
+            # Un historique neuf par langue, rempli par de vraies recherches.
+            xcrun simctl uninstall "$device" com.reindoo.app 2>/dev/null || true
+            xcrun simctl install "$device" "$app"
+            for word in bonjour went maison heureux thought prendre; do run -open "$word"; done
+            shoot 1-entry   -open allions
+            shoot 2-search  -query mang
+            shoot 3-reel    -tab review -scene aurora-snow
+            shoot 4-meaning -tab review -scene snow-pines -do reveal
+            shoot 5-history -tab history
+          done
+          sips -g pixelWidth -g pixelHeight store/en-US/1-entry.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-screenshots
+          path: ios/store
 
   # Une étiquette `ios-vX.Y.Z` : archiver, signer, envoyer sur TestFlight.
   # La signature est automatique, avec une clé d'API App Store Connect : aucun
