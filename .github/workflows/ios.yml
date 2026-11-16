@@ -86,7 +86,9 @@ jobs:
   # Les minutes macOS coûtent dix fois plus : à la demande seulement.
   app:
     # À la main, ou par un commit dont le message contient [shots].
-    if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]')
+    # Pas sur une étiquette : le commit étiqueté a déjà été essayé, et
+    # TestFlight construit l'app de son côté.
+    if: ((github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]')) && !startsWith(github.ref, 'refs/tags/')
     needs: [core, lexicon]
     runs-on: macos-latest
     steps:
@@ -103,7 +105,10 @@ jobs:
           xcodebuild -project Reindoo.xcodeproj -scheme Reindoo \
             -sdk iphonesimulator -configuration Debug \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      # Provisoire : les captures et les gestes prennent vingt-cinq minutes.
+      # On construit seulement. Retirer `if: false` pour les retrouver.
       - name: Capturer les écrans
+        if: false
         working-directory: ios
         run: |
           set -euo pipefail
@@ -161,7 +166,7 @@ jobs:
           shoot real-review    -tab review -do reveal
           ls -la build/Build/Products/Debug-iphonesimulator/Reindoo.app/lexicon.sqlite
       - name: Essayer les gestes
-        if: always()
+        if: false
         working-directory: ios
         run: |
           device=$(xcrun simctl list devices booted -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in d for x in d[k] if x['state']=='Booted'))")
@@ -192,7 +197,7 @@ jobs:
           PY
           exit $status
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: false
         with:
           name: screenshots
           path: ios/shots
