@@ -41,12 +41,11 @@ struct ReviewView: View {
             ZStack {
                 ForEach(window(state)) { card in
                     let index = state.cards.firstIndex { $0.id == card.id } ?? state.position
-                    let offset = CGFloat(index - state.position) * height + drag
+                    let offset: CGFloat = CGFloat(index - state.position) * height + drag
+                    let presence: Double = Self.presence(offset: offset, height: height)
                     ReelCard(
                         card: card, isCurrent: card.id == shown?.id,
-                        // La carte qui monte s'efface à mesure ; celle qui
-                        // arrive d'en bas est là tout entière.
-                        presence: height > 0 && offset < 0 ? max(0, 1 + offset / height) : 1,
+                        presence: presence,
                         held: held,
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
@@ -79,12 +78,14 @@ struct ReviewView: View {
             // Les décors s'empilent dans l'ordre des cartes. Celui d'en haut
             // se montre à mesure que sa carte monte : l'ancien se fond dans
             // le nouveau au rythme du doigt.
-            let turned = state.position - (pageHeight > 0 ? drag / pageHeight : 0)
+            let pulled: CGFloat = pageHeight > 0 ? drag / pageHeight : 0
+            let turned: CGFloat = CGFloat(state.position) - pulled
             ZStack {
                 ForEach(backdrops(state)) { card in
                     let index = state.cards.firstIndex { $0.id == card.id } ?? state.position
-                    backdrop(card, paused: scrolling || !visible || card.id != current?.id)
-                        .opacity(min(1, max(0, turned - CGFloat(index) + 1)))
+                    let paused = scrolling || !visible || card.id != current?.id
+                    backdrop(card, paused: paused)
+                        .opacity(Self.layer(index, turned: turned))
                         .transition(.identity)
                 }
             }
@@ -197,6 +198,19 @@ extension ReviewView {
     /// sont loin hors de l'écran.
     private func window(_ state: ReviewViewModel.State) -> [ReviewViewModel.Card] {
         (state.position - 1...state.position + 1).compactMap { state.cards.indices.contains($0) ? state.cards[$0] : nil }
+    }
+
+    /// La carte qui monte s'efface à mesure ; celle qui arrive d'en bas est
+    /// là tout entière.
+    private static func presence(offset: CGFloat, height: CGFloat) -> Double {
+        guard height > 0, offset < 0 else { return 1 }
+        return Double(max(0, 1 + offset / height))
+    }
+
+    /// L'opacité d'un décor : ceux des cartes déjà passées couvrent tout,
+    /// celui de la carte qui monte se montre à mesure.
+    private static func layer(_ index: Int, turned: CGFloat) -> Double {
+        Double(min(1, max(0, turned - CGFloat(index) + 1)))
     }
 
     /// Les décors à poser : celui de la carte à l'écran, et ses voisins
