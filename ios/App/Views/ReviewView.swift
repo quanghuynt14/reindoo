@@ -245,7 +245,7 @@ extension ReviewView {
     }
 
     /// Le geste : le doigt tire la page ; lâchée, elle avance d'une carte si
-    /// le doigt est allé au-delà d'un quart, ou s'il a lancé la page assez fort.
+    /// le doigt est allé au-delà d'un dixième, ou s'il l'a lancée.
     private func pageTurn(_ state: ReviewViewModel.State, height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
@@ -262,10 +262,17 @@ extension ReviewView {
             }
             .onEnded { value in
                 guard drag != 0 else { return }
+                // Comme une story : un petit coup suffit. Lâchée en vol, la
+                // page suit le sens du dernier élan ; lâchée à l'arrêt, elle
+                // avance si le doigt l'a tirée d'un dixième.
                 let pulled = value.translation.height
-                let thrown = value.predictedEndTranslation.height
-                let step = pulled < -height / 4 || thrown < -height / 2 ? 1
-                    : pulled > height / 4 || thrown > height / 2 ? -1 : 0
+                let speed = value.velocity.height
+                let step: Int
+                if abs(speed) > 300 {
+                    step = speed < 0 ? 1 : -1
+                } else {
+                    step = pulled < -height / 10 ? 1 : pulled > height / 10 ? -1 : 0
+                }
                 turn(state, by: step)
             }
     }
