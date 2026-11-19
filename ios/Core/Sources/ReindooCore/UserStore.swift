@@ -69,6 +69,26 @@ public final class UserStore {
           value TEXT NOT NULL
         ) WITHOUT ROWID;
         """,
+        """
+        CREATE TABLE memory (
+          language   TEXT NOT NULL,
+          word       TEXT NOT NULL,
+          stability  REAL NOT NULL,
+          difficulty REAL NOT NULL,
+          reviewedAt REAL NOT NULL,
+          due        REAL NOT NULL,
+          reviews    INTEGER NOT NULL,
+          lapses     INTEGER NOT NULL,
+          PRIMARY KEY (language, word)
+        ) WITHOUT ROWID;
+        CREATE TABLE recall (
+          seq      INTEGER PRIMARY KEY AUTOINCREMENT,
+          language TEXT NOT NULL,
+          word     TEXT NOT NULL,
+          at       REAL NOT NULL,
+          answer   TEXT NOT NULL
+        );
+        """,
     ]
 
     /// `path` vaut `":memory:"` pour une base jetable.
@@ -155,6 +175,74 @@ public final class UserStore {
 
     public func setSetting(_ key: String, _ value: String) throws {
         try database.run("INSERT OR REPLACE INTO setting (key, value) VALUES (?, ?)", [.text(key), .text(value)])
+    }
+
+    // MARK: Mémoire
+
+    /// L'heure de l'appareil, celle que les fixtures remplacent.
+    public func currentTime() -> Date { now() }
+
+    /// Retient la réponse et calcule quand le mot reviendra. Chaque réponse
+    /// reste aussi dans `recall` : c'est ce qui permettra un jour de mesurer
+    /// ce qui aide vraiment à retenir.
+    ///
+    /// Rien ne part au serveur : il ne connaît pas encore la mémoire d'un mot,
+    /// et une `Change` ne porte pas de réponse. Comme les réglages, cela reste
+    /// sur l'appareil pour l'instant.
+    @discardableResult
+    public func recall(_ key: WordKey, _ answer: Recall) throws -> Memory {
+        let at = now()
+        var result: Memory!
+        try database.transaction {
+            let next = try memory(key).map { FSRS.next($0, answer, at: at) } ?? FSRS.first(answer, at: at)
+            try database.run(
+                """
+                INSERT OR REPLACE INTO memory (language, word, stability, difficulty, reviewedAt, due, reviews, lapses)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                arguments(key) + [
+                    .real(next.stability), .real(next.difficulty),
+                    .real(next.reviewedAt.timeIntervalSince1970), .real(next.due.timeIntervalSince1970),
+                    .int(Int64(next.reviews)), .int(Int64(next.lapses)),
+                ]
+            )
+            try database.run(
+                "INSERT INTO recall (language, word, at, answer) VALUES (?, ?, ?, ?)",
+                arguments(key) + [.real(at.timeIntervalSince1970), .text(answer.rawValue)]
+            )
+            result = next
+        }
+        return result
+    }
+
+    public func memory(_ key: WordKey) throws -> Memory? {
+        try memories("WHERE language = ? AND word = ?", arguments(key))[key]
+    }
+
+    public func memories() throws -> [WordKey: Memory] {
+        try memories("", [])
+    }
+
+    /// Les réponses données, la plus ancienne d'abord.
+    public func recalls() throws -> [(key: WordKey, at: Date, answer: Recall)] {
+        try database.query("SELECT language, word, at, answer FROM recall ORDER BY seq") { row -> (key: WordKey, at: Date, answer: Recall)? in
+            guard let language = Language(rawValue: row.text(0)), let answer = Recall(rawValue: row.text(3)) else { return nil }
+            return (WordKey(language, row.text(1)), Date(timeIntervalSince1970: row.real(2)), answer)
+        }.compactMap { $0 }
+    }
+
+    private func memories(_ filter: String, _ values: [Value]) throws -> [WordKey: Memory] {
+        let rows = try database.query(
+            "SELECT language, word, stability, difficulty, reviewedAt, due, reviews, lapses FROM memory \(filter)", values
+        ) { row -> (WordKey, Memory)? in
+            guard let language = Language(rawValue: row.text(0)) else { return nil }
+            return (WordKey(language, row.text(1)), Memory(
+                stability: row.real(2), difficulty: row.real(3),
+                reviewedAt: Date(timeIntervalSince1970: row.real(4)), due: Date(timeIntervalSince1970: row.real(5)),
+                reviews: Int(row.int(6)), lapses: Int(row.int(7))
+            ))
+        }
+        return Dictionary(rows.compactMap { $0 }, uniquingKeysWith: { first, _ in first })
     }
 
     // MARK: File d'envoi

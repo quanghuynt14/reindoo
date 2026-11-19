@@ -30,6 +30,9 @@ public final class ReviewViewModel: Introspectable {
         public var listenLabel = ""
         public var readAloudLabel = ""
         public var optionsLabel = ""
+        /// Les deux réponses, une fois le sens montré.
+        public var knewLabel = ""
+        public var forgotLabel = ""
         public var emptyMessage: String?
         /// Le décor choisi : `word` (un par mot), `colours`, ou un thème.
         public var scene = "word"
@@ -75,6 +78,11 @@ public final class ReviewViewModel: Introspectable {
         public var choices: [Choice]
         /// Le choix fait. On ne répond qu'une fois.
         public var picked: Int?
+        /// Ce que l'utilisateur a dit de ce mot sur cette carte. On ne répond
+        /// qu'une fois par carte.
+        public var recall: Recall? = nil
+        /// La carte attend une réponse : un mot de l'historique, sens montré.
+        public var asksRecall: Bool { kind == .word && isRevealed && recall == nil }
     }
 
     public struct Choice: Codable, Equatable, Sendable {
@@ -112,6 +120,9 @@ public final class ReviewViewModel: Introspectable {
         case restart
         /// `word`, `colours`, ou l'identifiant d'un thème.
         case setScene(String)
+        /// « Je savais » ou « pas encore », après avoir vu le sens. Le mot
+        /// reviendra selon la réponse.
+        case answer(String?, Recall)
     }
 
     /// Un décor par mot : le mot choisit son thème, et le garde.
@@ -160,6 +171,8 @@ public final class ReviewViewModel: Introspectable {
         state.listenLabel = copy.listen
         state.readAloudLabel = copy.readAloud
         state.optionsLabel = copy.options
+        state.knewLabel = copy.knewIt
+        state.forgotLabel = copy.notYet
         state.sceneTitle = copy.sceneTitle
         if let saved = try? user.setting(Self.sceneSetting), Self.isScene(saved) { state.scene = saved }
         state.scenes = sceneOptions()
@@ -254,6 +267,18 @@ public final class ReviewViewModel: Introspectable {
             state.cards[index].picked = choice
             state.cards[index].isRevealed = true
             state.cards[index].wasRevealed = true
+            // Une question réussie ou manquée est aussi un rappel : elle compte.
+            let card = state.cards[index]
+            let answer: Recall = card.choices[choice].isCorrect ? .knew : .forgot
+            if (try? user.recall(WordKey(card.language, card.word), answer)) != nil {
+                state.cards[index].recall = answer
+            }
+        case .answer(let id, let answer):
+            guard let index = index(of: id), state.cards[index].asksRecall else { return }
+            let card = state.cards[index]
+            guard (try? user.recall(WordKey(card.language, card.word), answer)) != nil else { return }
+            state.cards[index].recall = answer
+            if answer == .forgot { bringBack(card, after: index) }
         case .open(let id):
             guard let index = index(of: id), state.cards[index].kind != .streak else { return }
             open(state.cards[index].word, state.cards[index].language)
@@ -322,15 +347,34 @@ public final class ReviewViewModel: Introspectable {
         }
     }
 
-    /// Un tour : chaque mot une fois, les mots aimés deux fois.
+    /// Un tour : chaque mot une fois, les mots aimés deux fois. D'abord ceux
+    /// que le calendrier attend, le plus près d'être oublié en tête ; puis ceux
+    /// qui n'ont jamais reçu de réponse, dans l'ordre choisi ; puis ceux qui
+    /// peuvent attendre. Le reel ne finit pas, mais on le quitte avant d'arriver
+    /// aux mots déjà sus.
     private func appendLap() {
         let kept = (dealtFrom ?? []).filter { filter == nil || $0.key.language == filter }
-        var lap: [SavedWord]
-        switch state.sort {
-        case .random: lap = shuffle(kept)
-        case .newest: lap = kept
-        case .oldest: lap = kept.reversed()
+        let memories = (try? user.memories()) ?? [:]
+        let now = user.currentTime()
+        var due: [(word: SavedWord, chance: Double)] = [], fresh: [SavedWord] = [], waiting: [(word: SavedWord, chance: Double)] = []
+        for word in kept {
+            guard let memory = memories[word.key] else {
+                fresh.append(word)
+                continue
+            }
+            let chance = memory.retrievability(at: now)
+            if memory.due <= now { due.append((word, chance)) } else { waiting.append((word, chance)) }
         }
+        // À chance égale, l'ordre de l'historique : le tri reste stable.
+        func riskiestFirst(_ words: [(word: SavedWord, chance: Double)]) -> [SavedWord] {
+            words.enumerated().sorted { ($0.element.chance, $0.offset) < ($1.element.chance, $1.offset) }.map(\.element.word)
+        }
+        switch state.sort {
+        case .random: fresh = shuffle(fresh)
+        case .newest: break
+        case .oldest: fresh.reverse()
+        }
+        var lap = riskiestFirst(due) + fresh + riskiestFirst(waiting)
 
         // Le second passage d'un mot aimé tombe loin du premier.
         let liked = (try? user.liked()) ?? []
@@ -362,6 +406,29 @@ public final class ReviewViewModel: Introspectable {
             }
         }
     }
+
+    /// Un mot oublié revient quelques cartes plus loin, caché : le retrouver
+    /// peu après l'avoir manqué le fixe (Rawson et Dunlosky, réapprentissage
+    /// successif). Jamais juste à côté d'une autre carte du même mot.
+    private func bringBack(_ card: Card, after index: Int) {
+        let same = { (other: Card) in other.word == card.word && other.language == card.language }
+        let count = state.cards.count
+        var at = min(index + Self.bringBackAfter, count)
+        while at < count, same(state.cards[at - 1]) || same(state.cards[at]) { at += 1 }
+        if at == count, same(state.cards[at - 1]) { return }
+        var again = card
+        again.id = issue("\(card.language.rawValue)/\(card.word)")
+        again.kind = .word
+        again.isRevealed = false
+        again.wasRevealed = false
+        again.recall = nil
+        again.badge = nil
+        again.choices = []
+        again.picked = nil
+        state.cards.insert(again, at: at)
+    }
+
+    private static let bringBackAfter = 5
 
     private func card(_ kind: Card.Kind, for entry: Entry, liked: Set<WordKey>, badge: String? = nil) -> Card {
         let key = "\(entry.language.rawValue)/\(entry.word)"
@@ -454,6 +521,7 @@ public final class ReviewViewModel: Introspectable {
         card.badge = copy.quizPrompt
         card.choices = choices
         card.picked = nil
+        card.recall = nil
         return card
     }
 
@@ -494,6 +562,7 @@ public final class ReviewViewModel: Introspectable {
             ("setFilter", "{name: all|french|english}"), ("setPosition", "{index}"),
             ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("like", "[{id}]"), ("choose", "{index}"),
             ("open", "[{id}]"), ("restart", ""), ("setScene", "{name: word|colours|<theme>}"),
+            ("answer", "{name: knew|forgot, id?}"),
         ]
     }
 
@@ -528,6 +597,14 @@ public final class ReviewViewModel: Introspectable {
         case "choose":
             send(.choose(nil, try Input.decode(Index.self, input, action: action, expected: "{index}").index))
         case "open": send(.open(try optionalID()))
+        case "answer":
+            struct Answer: Decodable { var name: String; var id: String? }
+            let expected = "{name: knew|forgot, id?}"
+            let input = try Input.decode(Answer.self, input, action: action, expected: expected)
+            guard let answer = Recall(rawValue: input.name) else {
+                throw IntrospectionError.badInput(action: action, expected: expected)
+            }
+            send(.answer(input.id, answer))
         case "setScene":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard Self.isScene(name) else {
