@@ -47,12 +47,14 @@ struct ReviewView: View {
                         held: held,
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
+                        knewLabel: state.knewLabel, forgotLabel: state.forgotLabel,
                         revealAfter: Self.revealAfter,
                         reveal: { model.send(.reveal(card.id)) },
                         unveil: { model.send(.unveil(card.id)) },
                         like: { model.send(.like(card.id)) },
                         open: { model.send(.open(card.id)) },
-                        choose: { model.send(.choose(card.id, $0)) }
+                        choose: { model.send(.choose(card.id, $0)) },
+                        answer: { model.send(.answer(card.id, $0)) }
                     )
                     .frame(width: page.size.width, height: height)
                     .offset(y: offset)
@@ -353,12 +355,15 @@ private struct ReelCard: View {
     let openLabel: String
     let likeLabel: String
     let listenLabel: String
+    let knewLabel: String
+    let forgotLabel: String
     let revealAfter: Double
     let reveal: () -> Void
     let unveil: () -> Void
     let like: () -> Void
     let open: () -> Void
     let choose: (Int) -> Void
+    let answer: (Recall) -> Void
 
     @State private var heart = false
     @State private var floating = false
@@ -459,6 +464,7 @@ private struct ReelCard: View {
                                     .opacity(0.8)
                             }
                         }
+                        if card.kind == .word { answers }
                     }
                     .multilineTextAlignment(.center)
                     .transition(.blurReplace)
@@ -472,6 +478,37 @@ private struct ReelCard: View {
         .padding(.horizontal, Theme.section)
         // Sans rebond : le mot grandit et s'arrête, il ne dépasse pas.
         .animation(.smooth(duration: 0.4), value: isCurrent)
+    }
+
+    /// Le sens montré, on dit si on le savait. La réponse donnée reste
+    /// marquée ; l'autre s'efface.
+    private var answers: some View {
+        HStack(spacing: 12) {
+            answerButton(.forgot, forgotLabel, image: "arrow.counterclockwise")
+            answerButton(.knew, knewLabel, image: "checkmark")
+        }
+        .padding(.top, 4)
+        .animation(.snappy, value: card.recall)
+        .sensoryFeedback(.selection, trigger: card.recall)
+    }
+
+    private func answerButton(_ recall: Recall, _ label: String, image: String) -> some View {
+        let ink = ReviewView.ink(card)
+        let chosen = card.recall == recall
+        return Button {
+            answer(recall)
+        } label: {
+            Label(label, systemImage: image)
+                .font(.headline)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 18)
+                .frame(minWidth: 130)
+                .background(ink.opacity(chosen ? 0.32 : 0.16), in: .capsule)
+                .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .opacity(card.recall == nil || chosen ? 1 : 0.35)
+        .allowsHitTesting(card.recall == nil)
     }
 
     /// Le mot arrive en grandissant, puis flotte doucement.
