@@ -112,6 +112,7 @@ jobs:
       # Provisoire : les captures et les gestes prennent vingt-cinq minutes.
       # On construit seulement. Retirer `if: false` pour les retrouver.
       - name: Capturer les écrans
+        if: false
         working-directory: ios
         run: |
           set -euo pipefail
@@ -133,17 +134,41 @@ jobs:
               xcrun simctl io "$device" screenshot "shots/$name-$look.png"
             done
           }
-          # Branche spaced-review seulement : les réponses du reel.
-          shoot reel-meaning   -fixture returning -tab review -do reveal
-          shoot reel-knew      -fixture returning -tab review -do reveal -answer knew
-          shoot reel-forgot    -fixture returning -tab review -do reveal -answer forgot
+          shoot search-empty    -fixture sample
+          shoot search-recents  -fixture returning
+          shoot search-typing   -fixture sample -query all
+          shoot entry-found     -fixture returning -open allions
+          shoot entry-missing   -fixture sample -open alller
+          shoot entry-elsewhere -fixture sample -open goes
+          shoot reel-word       -fixture returning -tab review
+          shoot review-empty    -fixture sample -tab review
+          shoot history         -fixture returning -tab history
+          shoot history-empty   -fixture sample -tab history
+          # Les deux autres langues de l'interface, en clair seulement.
           looks="light"
           for ui in en fr; do
-            shoot $ui-reel-meaning -fixture returning -tab review -do reveal
+            shoot $ui-search   -fixture returning
+            shoot $ui-missing  -fixture sample -open alller
+            shoot $ui-review   -fixture returning -tab review -do reveal
+            shoot $ui-history  -fixture returning -tab history
           done
           ui=vi
-          shoot scene-honu-lagoon  -fixture returning -tab review -scene honu-lagoon -do reveal
-          shoot scene-snow-pines   -fixture returning -tab review -scene snow-pines -do reveal -answer knew
+          # Chaque décor du reel, une fois : ils ne suivent pas l'apparence.
+          looks="light"
+          for scene in aurora-snow aurora snow-pines honu-lagoon koi-mosaic halftone-dawn halftone-dusk \
+            plotter-tide plotter-tide-night dither-dunes dither-dunes-night paper-garden paper-garden-kraft \
+            night-reef braille-stars teletext-clouds vector-range departure-board blueprint deep-water ember; do
+            shoot scene-$scene -fixture returning -tab review -scene $scene -do reveal
+          done
+          looks="light dark"
+          # Le vrai lexique, sans fixture. L'historique s'y accumule d'un
+          # lancement à l'autre : la révision vient en dernier.
+          shoot real-typing    -query mang
+          shoot real-entry     -open allions
+          shoot real-long      -open prendre
+          shoot real-english   -open went
+          shoot real-review    -tab review -do reveal
+          ls -la build/Build/Products/Debug-iphonesimulator/Reindoo.app/lexicon.sqlite
       - name: Essayer les gestes
         if: false
         working-directory: ios
@@ -176,6 +201,7 @@ jobs:
           PY
           exit $status
       - uses: actions/upload-artifact@v4
+        if: false
         with:
           name: screenshots
           path: ios/shots
