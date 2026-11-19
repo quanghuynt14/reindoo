@@ -52,6 +52,8 @@ struct Launch {
         if let scene = argument("-scene") { try? session.perform("setScene", input: json(["name": scene])) }
         // `-position 5` : fait défiler le reel carte par carte, comme un doigt.
         if let action = argument("-do") { try? session.perform(action, input: nil) }
+        // `-answer knew|forgot` : la réponse sur la carte à l'écran, après `-do reveal`.
+        if let answer = argument("-answer") { try? session.perform("answer", input: json(["name": answer])) }
         #endif
         return app
     }
