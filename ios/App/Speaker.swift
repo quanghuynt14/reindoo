@@ -66,6 +66,7 @@ final class Speaker: NSObject, AVSpeechSynthesizerDelegate, @unchecked Sendable 
         let code: String = switch language {
         case .french: "fr-FR"
         case .english: "en-US"
+        case .vietnamese: "vi-VN"
         }
         let found = AVSpeechSynthesisVoice(language: code)
         voices[language] = found

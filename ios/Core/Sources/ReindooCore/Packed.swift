@@ -41,11 +41,15 @@ struct Packed: Codable {
     static func wiki(for word: String, in language: Language) -> String {
         let title = word.replacingOccurrences(of: " ", with: "_")
             .addingPercentEncoding(withAllowedCharacters: unreserved) ?? word
-        let section = switch language {
-        case .french: "Ti%E1%BA%BFng_Ph%C3%A1p"
-        case .english: "Ti%E1%BA%BFng_Anh"
+        // Le français et l'anglais viennent du Wiktionnaire vietnamien ; le
+        // vietnamien, du français d'abord. Une entrée que seul le Wiktionnaire
+        // anglais connaît garde son adresse en entier, dans `w`.
+        let (host, section) = switch language {
+        case .french: ("vi", "Ti%E1%BA%BFng_Ph%C3%A1p")
+        case .english: ("vi", "Ti%E1%BA%BFng_Anh")
+        case .vietnamese: ("fr", "Vietnamien")
         }
-        return "https://vi.wiktionary.org/wiki/\(title)#\(section)"
+        return "https://\(host).wiktionary.org/wiki/\(title)#\(section)"
     }
 
     private static let unreserved = CharacterSet(

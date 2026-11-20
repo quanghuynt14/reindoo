@@ -146,7 +146,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
     public var nodeName: String { "entry" }
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var childNode: (any Introspectable)? { nil }
-    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english}"), ("like", "")] }
+    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english|vietnamese}"), ("like", "")] }
 
     public func perform(_ action: String, input: Data?) throws -> Bool {
         switch action {
@@ -154,7 +154,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
         case "openElsewhere":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let language = Language(rawValue: name) else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: french|english}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: french|english|vietnamese}")
             }
             send(.openElsewhere(language))
         case "like": send(.like)

@@ -35,6 +35,7 @@ public struct Copy: Equatable, Sendable {
         switch language {
         case .french: pick("French", "Français", "Pháp")
         case .english: pick("English", "Anglais", "Anh")
+        case .vietnamese: pick("Vietnamese", "Vietnamien", "Việt")
         }
     }
 
@@ -43,6 +44,7 @@ public struct Copy: Equatable, Sendable {
         switch language {
         case .french: pick("French", "français", "tiếng Pháp")
         case .english: pick("English", "anglais", "tiếng Anh")
+        case .vietnamese: pick("Vietnamese", "vietnamien", "tiếng Việt")
         }
     }
 

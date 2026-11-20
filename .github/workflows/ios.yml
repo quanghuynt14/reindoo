@@ -35,7 +35,7 @@ jobs:
     if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]') || startsWith(github.ref, 'refs/tags/ios-v')
     runs-on: ubuntu-24.04
     env:
-      DICTIONNAIRE_REF: 6ca5ca115f86ea0c2845331f234cb4f205e708c8
+      DICTIONNAIRE_REF: 069757f666f66ac45a112f6452ff5e6cea242fc4
     steps:
       - uses: actions/checkout@v4
       - id: cache
@@ -73,13 +73,15 @@ jobs:
           python3 scripts/fetch.py
           make mongo LANG=fr
           make mongo LANG=en
+          make mongo LANG=vi
           ls -la build
       - name: SQLite
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           docker run --rm -v "$PWD:/w" -w /w swift:6.4.2-noble \
             swift run --package-path ios/Core -c release reindoo-cli build-lexicon \
-            lexicon.sqlite work/dictionnaire/build/mongo-fr.ndjson work/dictionnaire/build/mongo-en.ndjson
+            lexicon.sqlite work/dictionnaire/build/mongo-fr.ndjson work/dictionnaire/build/mongo-en.ndjson \
+            work/dictionnaire/build/mongo-vi.ndjson
           ls -la lexicon.sqlite
       - uses: actions/upload-artifact@v4
         with:

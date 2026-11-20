@@ -112,7 +112,7 @@ actor FakeServer: SyncClient {
         // Le lexique est remplacé en entier, sans « aller » cette fois.
         let smaller = Fixture.sampleNDJSON.split(separator: "\n").filter { !$0.contains(#""word":"aller""#) }.joined(separator: "\n")
         let report = try LexiconBuilder.build(ndjson: [smaller], to: lexiconPath)
-        #expect(report.entries == 11)
+        #expect(report.entries == 18)
 
         let session = Session(app: AppModel(lexicon: try Lexicon(path: lexiconPath), user: try UserStore(path: userPath), copy: Harness.copy))
         try session.perform("selectTab", input: #"{"name":"history"}"#)
@@ -161,8 +161,9 @@ actor FakeServer: SyncClient {
         defer { try? FileManager.default.removeItem(atPath: path) }
         let source = Fixture.sampleNDJSON + "\n" + #"{"_collection":"dictionary","word":"hola","sourceLanguage":"spanish"}"# + "\npas du json\n"
         let report = try LexiconBuilder.build(ndjson: [source], to: path)
-        #expect(report == LexiconBuilder.Report(entries: 12, forms: 5, skipped: 2))
+        #expect(report == LexiconBuilder.Report(entries: 19, forms: 6, skipped: 2))
         #expect(try Lexicon(path: path).count(.french) == 9)
+        #expect(try Lexicon(path: path).count(.vietnamese) == 7)
     }
 
     @Test func theBuilderDropsWikiTemplatesLeftInTheSource() throws {

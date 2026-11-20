@@ -92,7 +92,7 @@ public final class SearchViewModel: Introspectable {
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var childNode: (any Introspectable)? { nil }
     public var nodeActions: [(name: String, input: String)] {
-        [("appear", ""), ("setQuery", "{text}"), ("setLanguage", "{name: french|english}"), ("submit", ""), ("open", "{word}"), ("clear", "")]
+        [("appear", ""), ("setQuery", "{text}"), ("setLanguage", "{name: french|english|vietnamese}"), ("submit", ""), ("open", "{word}"), ("clear", "")]
     }
 
     public func perform(_ action: String, input: Data?) throws -> Bool {
@@ -102,7 +102,7 @@ public final class SearchViewModel: Introspectable {
         case "setLanguage":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let language = Language(rawValue: name) else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: french|english}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: french|english|vietnamese}")
             }
             send(.setLanguage(language))
         case "submit": send(.submit)

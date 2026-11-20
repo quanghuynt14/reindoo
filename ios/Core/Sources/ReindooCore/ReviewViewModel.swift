@@ -560,7 +560,7 @@ public final class ReviewViewModel: Introspectable {
     public var nodeActions: [(name: String, input: String)] {
         [
             ("appear", ""), ("cycleSort", ""), ("setSort", "{name: random|newest|oldest}"),
-            ("setFilter", "{name: all|french|english}"), ("setPosition", "{index}"),
+            ("setFilter", "{name: all|french|english|vietnamese}"), ("setPosition", "{index}"),
             ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("like", "[{id}]"), ("choose", "{index}"),
             ("open", "[{id}]"), ("restart", ""), ("setScene", "{name: word|colours|<theme>}"),
             ("answer", "{name: knew|forgot, id?}"),
@@ -587,7 +587,7 @@ public final class ReviewViewModel: Introspectable {
         case "setFilter":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard name == "all" || Language(rawValue: name) != nil else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: all|french|english}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: all|french|english|vietnamese}")
             }
             send(.setFilter(Language(rawValue: name)))
         case "setPosition":

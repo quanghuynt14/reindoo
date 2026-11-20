@@ -1,10 +1,13 @@
 import Foundation
 
-/// Les langues que le dictionnaire sert. Les gloses sont en vietnamien.
-/// Mêmes valeurs que `DICTIONARY_SOURCE_LANGUAGES` côté serveur.
+/// Les langues que le dictionnaire sert : celle du mot cherché.
+/// Le français et l'anglais sont expliqués en vietnamien ; le vietnamien,
+/// en français — et en anglais, marqué [EN], là où le Wiktionnaire français
+/// n'a rien. Mêmes valeurs que `DICTIONARY_SOURCE_LANGUAGES` côté serveur.
 public enum Language: String, Codable, Sendable, CaseIterable {
     case french
     case english
+    case vietnamese
 
     /// Le code de la langue dans le fichier du lexique : un octet par ligne
     /// au lieu d'un mot.
@@ -12,8 +15,13 @@ public enum Language: String, Codable, Sendable, CaseIterable {
         switch self {
         case .french: 0
         case .english: 1
+        case .vietnamese: 2
         }
     }
+
+    /// Le vietnamien se tape souvent sans accents, faute de clavier : « an »
+    /// veut dire « ăn » plus souvent que « an ». La recherche le sait.
+    var isOftenTypedBare: Bool { self == .vietnamese }
 }
 
 public struct Example: Codable, Equatable, Sendable {

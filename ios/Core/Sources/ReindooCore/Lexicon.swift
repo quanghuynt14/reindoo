@@ -35,6 +35,17 @@ public final class Lexicon {
         // qu'un renvoi vers « go ».
         let lemmas = try self.lemmas(forForm: typed, in: language)
 
+        // Tapé sans accents, un mot vietnamien en a souvent plusieurs : « an »
+        // est ăn, án, ấn, an… Le plus fréquent d'abord, les autres à côté —
+        // même si « an » existe tel quel, il est rarement ce qu'on cherchait.
+        if language.isOftenTypedBare, Text.isBare(typed) {
+            let candidates = try entries(folded: Text.fold(typed), in: language)
+            if let best = candidates.first {
+                let others = candidates.dropFirst().map(\.word) + lemmas
+                return .found(best, matchedForm: nil, alsoFrom: Array(unique(others, except: best.word).prefix(Self.alsoFromLimit)))
+            }
+        }
+
         if let direct = try entry(matching: typed, in: language) {
             return .found(direct, matchedForm: nil, alsoFrom: lemmas.filter { $0 != direct.word })
         }
@@ -42,7 +53,10 @@ public final class Lexicon {
         if !lemmas.isEmpty {
             let entries = try self.entries(lemmas, in: language)
             if let best = entries.first {
-                return .found(best, matchedForm: typed, alsoFrom: entries.dropFirst().map(\.word))
+                // « hoà » mène à « hòa » : le même mot, le ton posé ailleurs.
+                // Ce n'est pas « une forme de », il n'y a rien à en dire.
+                let note = Text.fold(typed) == Text.fold(best.word) ? nil : typed
+                return .found(best, matchedForm: note, alsoFrom: entries.dropFirst().map(\.word))
             }
         }
 
@@ -83,6 +97,23 @@ public final class Lexicon {
 
     // MARK: Les trois temps
 
+    /// Assez pour choisir, pas assez pour noyer : « no » a quatorze lectures.
+    static let alsoFromLimit = 8
+
+    private func unique(_ words: [String], except first: String) -> [String] {
+        var seen: Set<String> = [first]
+        return words.filter { seen.insert($0).inserted }
+    }
+
+    /// Toutes les vedettes qu'une clé repliée peut vouloir dire, la plus
+    /// fréquente d'abord.
+    private func entries(folded: String, in language: Language) throws -> [Entry] {
+        try database.query(
+            "SELECT word, body FROM entry WHERE language = ? AND folded = ? ORDER BY rank DESC, word LIMIT 20",
+            [.int(language.code), .text(folded)]
+        ) { ($0.text(0), $0.text(1)) }.map { try decode($0.1, word: $0.0, language: language) }
+    }
+
     /// La vedette telle que tapée ; sinon sans majuscules ; sinon sans accents.
     /// Le site ne fait que le premier. Un téléphone met une majuscule en début
     /// de saisie et rend les accents pénibles : on pardonne les deux.
@@ -90,6 +121,10 @@ public final class Lexicon {
         if let exact = try entry(typed, in: language) { return exact }
         let lowered = typed.lowercased()
         if lowered != typed, let entry = try entry(lowered, in: language) { return entry }
+        // En vietnamien, l'accent tapé est un choix : « hoà » ne veut pas dire
+        // « hoa », la fleur. Il passe par l'index des formes, qui connaît
+        // l'autre place du ton.
+        if language.isOftenTypedBare { return nil }
         return try database.query(
             "SELECT word, body FROM entry WHERE language = ? AND folded = ? ORDER BY rank DESC LIMIT 1",
             [.int(language.code), .text(Text.fold(typed))]

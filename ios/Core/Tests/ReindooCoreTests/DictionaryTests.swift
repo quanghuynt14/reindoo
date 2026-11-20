@@ -375,7 +375,7 @@ import Testing
         #expect(throws: IntrospectionError.badInput(action: "setSort", expected: "{name: random|newest|oldest}")) {
             try app.do("setSort", #"{"name":"alphabetical"}"#)
         }
-        #expect(throws: IntrospectionError.badInput(action: "setFilter", expected: "{name: all|french|english}")) {
+        #expect(throws: IntrospectionError.badInput(action: "setFilter", expected: "{name: all|french|english|vietnamese}")) {
             try app.do("setFilter", #"{"name":"german"}"#)
         }
     }
@@ -657,7 +657,7 @@ import Testing
         #expect(throws: IntrospectionError.badInput(action: "setQuery", expected: "{text}")) {
             try app.do("setQuery", #"{"word":"x"}"#)
         }
-        #expect(throws: IntrospectionError.badInput(action: "setLanguage", expected: "{name: french|english}")) {
+        #expect(throws: IntrospectionError.badInput(action: "setLanguage", expected: "{name: french|english|vietnamese}")) {
             try app.do("setLanguage", #"{"name":"german"}"#)
         }
     }

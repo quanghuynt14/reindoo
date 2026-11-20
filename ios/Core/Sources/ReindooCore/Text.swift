@@ -3,8 +3,18 @@ import Foundation
 enum Text {
     /// La clé de recherche : sans casse ni accents. « Élève » et « eleve » se
     /// rejoignent, ce qui compte sur un clavier de téléphone.
+    ///
+    /// « đ » n'est pas un d accentué pour Unicode, mais une lettre à part :
+    /// le repli de Foundation le laisse. Un Vietnamien sans clavier tape
+    /// pourtant « dep » pour « đẹp ».
     static func fold(_ text: String) -> String {
         text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+            .replacingOccurrences(of: "đ", with: "d")
+    }
+
+    /// Vrai quand le texte n'a ni accent ni « đ » : tapé sans clavier.
+    static func isBare(_ text: String) -> Bool {
+        fold(text) == text.lowercased()
     }
 
     /// Un modèle du wiki que l'extraction n'a pas déplié, comme `{{rfdef}}`.

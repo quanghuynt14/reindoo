@@ -57,20 +57,38 @@ greffon, mis en pause au même instant dans un navigateur. Les mises en page
 ## Le lexique
 
 L'app cherche `App/Resources/lexicon.sqlite` (ignoré par git). Absent, elle se
-rabat sur l'échantillon de Core, une quinzaine de mots. Pour le vrai :
+rabat sur l'échantillon de Core, une vingtaine de mots. Pour le vrai :
 
 ```sh
-# dans le dépôt dictionnaire : make mongo LANG=fr && make mongo LANG=en
+# dans le dépôt dictionnaire : make mongo LANG=fr && make mongo LANG=en && make mongo LANG=vi
 swift run --package-path ios/Core -c release reindoo-cli build-lexicon \
-  ios/App/Resources/lexicon.sqlite ../dictionnaire/build/mongo-fr.ndjson ../dictionnaire/build/mongo-en.ndjson
+  ios/App/Resources/lexicon.sqlite ../dictionnaire/build/mongo-fr.ndjson ../dictionnaire/build/mongo-en.ndjson \
+  ../dictionnaire/build/mongo-vi.ndjson
 ```
 
 C'est le même NDJSON que `seedLexicon.ts` charge dans Mongo : le site et l'app
 ne peuvent pas diverger.
 
-Le fichier pèse 59 Mo pour 165 430 entrées et 446 469 formes. Chaque entrée y
+Pháp–Việt et Anh–Việt pèsent 59 Mo pour 165 430 entrées et 446 469 formes ;
+Việt–Pháp ajoute 16,7 Mo pour 32 717 entrées et 28 165 formes. Chaque entrée y
 est rangée au plus court (`Packed.swift`) : ni le mot, ni la langue, ni
 l'adresse du Wiktionnaire, qui se déduisent tous trois.
+
+## Việt–Pháp
+
+Le troisième dictionnaire va dans l'autre sens : un mot vietnamien, expliqué
+en français. Les sens viennent du Wiktionnaire français ; là où il se tait ou
+date, de l'anglais, tel quel et marqué [EN]. Rien n'est traduit
+automatiquement.
+
+La recherche y suit une règle à part (`Language.isOftenTypedBare`) :
+
+- tapé **sans accents**, un mot ouvre sa lecture la plus fréquente, les autres
+  à côté : « an » ouvre « ăn », avec an, án, ấn… Même quand « an » existe tel
+  quel ;
+- tapé **avec** un accent, il n'est jamais replié : « ẳn » n'ouvre pas « ăn »,
+  il le propose ;
+- « đ » se replie en « d » : « dep » ouvre « đẹp ».
 
 ## Règles
 
