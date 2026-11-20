@@ -82,11 +82,11 @@ l'adresse du Wiktionnaire, qui se déduisent tous trois.
 - Le reel ne finit pas. Un cœur fait revenir un mot deux fois par tour. Entre les mots viennent des
   surprises : une question, un mot nouveau, le compte de la série. Leur tirage passe par `chance`,
   que les fixtures remplacent : les tests ne doivent rien au hasard.
-- Le sens montré, l'utilisateur dit s'il le savait. FSRS-5 (`Memory.swift`) en tire quand le mot
-  revient : chaque tour commence par les mots dus, le plus près d'être oublié en tête, puis ceux sans
-  réponse, puis ceux qui peuvent attendre. Un mot oublié revient caché cinq cartes plus loin. Une
-  question du reel compte aussi comme réponse. La mémoire et le journal des réponses (`recall`)
-  restent sur l'appareil : le serveur ne les connaît pas encore.
+- Un mot se balaie de côté, sens montré ou non. Vers la gauche, « je sais » : il saute les deux tours
+  suivants et revient au troisième. Vers la droite, « à revoir » : il passe deux fois par tour jusqu'à
+  ce qu'on le sache. Le geste passe à la carte suivante. Le numéro du tour survit au lancement.
+  Chaque geste compte aussi pour FSRS (`Memory.swift`) et le journal `recall`, qui restent sur
+  l'appareil : le serveur ne les connaît pas encore.
 - Chaque écriture locale pose son changement dans la file, dans la même transaction.
 - Un comportement nouveau arrive avec son test, cas d'échec compris.
 

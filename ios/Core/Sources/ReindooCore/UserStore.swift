@@ -89,6 +89,15 @@ public final class UserStore {
           answer   TEXT NOT NULL
         );
         """,
+        """
+        CREATE TABLE mark (
+          language  TEXT NOT NULL,
+          word      TEXT NOT NULL,
+          hard      INTEGER NOT NULL,
+          returnLap INTEGER NOT NULL,
+          PRIMARY KEY (language, word)
+        ) WITHOUT ROWID;
+        """,
     ]
 
     /// `path` vaut `":memory:"` pour une base jetable.
@@ -191,9 +200,37 @@ public final class UserStore {
     /// sur l'appareil pour l'instant.
     @discardableResult
     public func recall(_ key: WordKey, _ answer: Recall) throws -> Memory {
+        var result: Memory!
+        try database.transaction { result = try writeRecall(key, answer) }
+        return result
+    }
+
+    /// Le geste du reel : « à revoir » rend le mot difficile, « je sais » le
+    /// met de côté jusqu'au tour `returnLap`. La réponse compte aussi pour
+    /// la mémoire, dans la même transaction.
+    public func mark(_ key: WordKey, _ answer: Recall, returnLap: Int) throws {
+        try database.transaction {
+            try writeRecall(key, answer)
+            try database.run(
+                "INSERT OR REPLACE INTO mark (language, word, hard, returnLap) VALUES (?, ?, ?, ?)",
+                arguments(key) + [.int(answer == .forgot ? 1 : 0), .int(Int64(answer == .knew ? returnLap : 0))]
+            )
+        }
+    }
+
+    public func marks() throws -> [WordKey: Mark] {
+        let rows = try database.query("SELECT language, word, hard, returnLap FROM mark") { row -> (WordKey, Mark)? in
+            guard let language = Language(rawValue: row.text(0)) else { return nil }
+            return (WordKey(language, row.text(1)), Mark(isHard: row.int(2) != 0, returnLap: Int(row.int(3))))
+        }
+        return Dictionary(rows.compactMap { $0 }, uniquingKeysWith: { first, _ in first })
+    }
+
+    @discardableResult
+    private func writeRecall(_ key: WordKey, _ answer: Recall) throws -> Memory {
         let at = now()
         var result: Memory!
-        try database.transaction {
+        do {
             let next = try memory(key).map { FSRS.next($0, answer, at: at) } ?? FSRS.first(answer, at: at)
             try database.run(
                 """

@@ -8,6 +8,14 @@ public enum Recall: String, Codable, Sendable, CaseIterable {
     case knew
 }
 
+/// Ce que le geste du reel a dit d'un mot.
+public struct Mark: Equatable, Sendable {
+    /// Gardé « à revoir » : il revient deux fois par tour.
+    public var isHard: Bool
+    /// Su : il ne revient pas avant ce tour.
+    public var returnLap: Int
+}
+
 /// Ce que l'app sait de la mémoire d'un mot, au sens de FSRS.
 public struct Memory: Codable, Equatable, Sendable {
     /// En jours : le temps au bout duquel la chance de se souvenir tombe à 90 %.

@@ -146,8 +146,9 @@ public struct Copy: Equatable, Sendable {
 
     public var quizPrompt: String { pick("What does it mean?", "Que veut dire ce mot ?", "Từ này nghĩa là gì?") }
     public var newWord: String { pick("New word", "Nouveau mot", "Từ mới") }
-    public var knewIt: String { pick("I knew it", "Je savais", "Đã nhớ") }
-    public var notYet: String { pick("Not yet", "Pas encore", "Chưa nhớ") }
+    public var knewIt: String { pick("Got it", "Je sais", "Đã nhớ") }
+    public var again: String { pick("Again", "À revoir", "Ôn thêm") }
+    public var swipeHint: String { pick("← got it · again →", "← je sais · à revoir →", "← đã nhớ · ôn thêm →") }
     public func streak(_ count: Int) -> String {
         pick("\(count) words in a row", "\(count) mots d'affilée", "\(count) từ liên tiếp")
     }

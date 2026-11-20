@@ -73,79 +73,101 @@ import Testing
         for step in (from + 1)...index { try app.do("setPosition", #"{"index":\#(step)}"#) }
     }
 
-    @Test func anAnswerComesOnlyAfterTheMeaningAndOnlyOnce() throws {
+    private func laps(_ app: Harness) throws -> [Int: [String]] {
+        var laps: [Int: [String]] = [:]
+        for card in try cards(app) where card["kind"] as? String == "word" {
+            laps[card["lap"] as? Int ?? -1, default: []].append(card["word"] as? String ?? "")
+        }
+        return laps
+    }
+
+    @Test func aSwipeAnswersOnceAndMovesOn() throws {
         let app = try Harness(.returning)
         let queued = try app.app.user.pendingCount()
         try app.do("selectTab", #"{"name":"review"}"#)
         #expect(try app.state("knewLabel") == Harness.copy.knewIt)
-        #expect(try app.state("forgotLabel") == Harness.copy.notYet)
+        #expect(try app.state("forgotLabel") == Harness.copy.again)
+        #expect(try app.state("swipeHint") == Harness.copy.swipeHint)
 
+        // Pas besoin d'attendre le sens : on sait souvent dès le mot.
         try app.do("answer", #"{"name":"knew"}"#)
-        #expect(try app.app.user.recalls().isEmpty, "le sens caché, on ne répond pas")
-
-        try app.do("reveal")
-        try app.do("answer", #"{"name":"knew"}"#)
-        try app.do("answer", #"{"name":"forgot"}"#)
         #expect(try app.state("cards.0.recall") == "knew")
+        #expect(try app.state("position") == 1, "le geste passe à la carte suivante")
         #expect(try app.app.user.recalls().map(\.answer) == [.knew])
-        #expect(try app.app.user.memory(WordKey(.french, "aller")) != nil)
         #expect(try app.app.user.pendingCount() == queued, "la mémoire reste sur l'appareil")
+
+        // Une carte déjà répondue ne répond plus.
+        try app.do("answer", #"{"name":"forgot","id":"french/aller"}"#)
+        #expect(try app.app.user.recalls().count == 1)
 
         #expect(throws: IntrospectionError.badInput(action: "answer", expected: "{name: knew|forgot, id?}")) {
             try app.do("answer", #"{"name":"maybe"}"#)
         }
     }
 
-    @Test func aKnownWordWaitsAtTheBackUntilItIsDue() throws {
+    @Test func aKnownWordSkipsTwoLapsThenComesBack() throws {
         let app = try Harness(.returning)
         try app.do("selectTab", #"{"name":"review"}"#)
+        let first: Int = try #require(try app.state("cards.0.lap"))
         #expect(try words(app) == ["aller", "élève", "go", "venir"])
 
-        try app.do("reveal")
         try app.do("answer", #"{"name":"knew"}"#)
-        try app.do("restart")
-        #expect(try words(app) == ["élève", "go", "venir", "aller"], "les mots sans réponse d'abord")
-
-        // Trois jours plus tard, le calendrier l'attend : il passe en tête.
-        app.clock.now += 4 * 86_400
-        try app.do("restart")
-        #expect(try words(app) == ["aller", "élève", "go", "venir"])
+        try scroll(app, to: 20)
+        let laps = try laps(app)
+        #expect(laps[first + 1] == ["élève", "go", "venir"])
+        #expect(laps[first + 2] == ["élève", "go", "venir"])
+        #expect(laps[first + 3]?.contains("aller") == true, "il revient au troisième tour")
     }
 
-    @Test func theWordClosestToBeingForgottenComesFirst() throws {
+    @Test func aKnownWordLeavesALapAlreadyDealt() throws {
         let app = try Harness(.returning)
-        let user = app.app.user
-        // « venir » su il y a longtemps, « go » oublié : les deux sont dus.
-        try user.recall(WordKey(.french, "venir"), .knew)
-        try user.recall(WordKey(.english, "go"), .forgot)
-        app.clock.now += 30 * 86_400
         try app.do("selectTab", #"{"name":"review"}"#)
-        // Le paquet a été tiré au lancement, avant ces réponses.
-        try app.do("restart")
-        #expect(Array(try words(app).prefix(2)) == ["go", "venir"])
-        #expect(Array(try words(app).suffix(2)) == ["aller", "élève"])
+        let first: Int = try #require(try app.state("cards.0.lap"))
+        try scroll(app, to: 3)
+        #expect(try laps(app)[first + 1] != nil, "le tour suivant est déjà tiré")
+        let word = try #require(try app.state("cards.3.word", as: String.self))
+
+        try app.do("answer", #"{"name":"knew"}"#)
+        try scroll(app, to: 20)
+        let laps = try laps(app)
+        #expect(laps[first + 1]?.contains(word) == false)
+        #expect(laps[first + 2]?.contains(word) == false)
+        #expect(laps[first + 3]?.contains(word) == true)
     }
 
-    @Test func aForgottenWordComesBackHiddenAFewCardsLater() throws {
+    @Test func aHardWordComesTwiceInEveryLap() throws {
         let app = try Harness(.returning)
         try app.do("selectTab", #"{"name":"review"}"#)
-        try scroll(app, to: 7)
-        let at: Int = try #require(try app.state("position"))
-        let card = try cards(app)[at]
-        #expect(card["kind"] as? String == "word")
-        let word = try #require(card["word"] as? String)
-        let before = try cards(app).compactMap { $0["id"] as? String }
-
-        try app.do("reveal")
+        let first: Int = try #require(try app.state("cards.0.lap"))
         try app.do("answer", #"{"name":"forgot"}"#)
-        let after = try cards(app)
-        #expect(after.count == before.count + 1)
-        let inserted = try #require(after.indices.first { $0 >= before.count || after[$0]["id"] as? String != before[$0] })
-        #expect(inserted >= at + 5)
-        #expect(after[inserted]["word"] as? String == word)
-        #expect(after[inserted]["isRevealed"] as? Bool == false)
-        #expect(after[inserted - 1]["word"] as? String != word)
-        if inserted + 1 < after.count { #expect(after[inserted + 1]["word"] as? String != word) }
+        try scroll(app, to: 20)
+        let laps = try laps(app)
+        for number in (first + 1)...(first + 2) {
+            #expect(laps[number]?.filter { $0 == "aller" }.count == 2, "tour \(number)")
+        }
+        let words = try cards(app).filter { $0["kind"] as? String == "word" }.compactMap { $0["word"] as? String }
+        #expect(!zip(words, words.dropFirst()).contains { $0 == $1 }, "jamais deux fois de suite")
+
+        // Su ensuite, il n'est plus difficile.
+        try app.do("answer", #"{"name":"knew","id":"french/aller#2"}"#)
+        #expect(try app.app.user.marks()[WordKey(.french, "aller")]?.isHard == false)
+    }
+
+    @Test func whenEveryWordIsKnownTheReelStillGoesOn() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        for _ in 0..<4 { try app.do("answer", #"{"name":"knew"}"#) }
+        try scroll(app, to: 12)
+        #expect(try app.state("position") == 12)
+    }
+
+    @Test func theLapCountSurvivesARestart() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        let first: Int = try #require(try app.state("cards.0.lap"))
+        try app.do("restart")
+        #expect(try app.state("cards.0.lap") == first + 1)
+        #expect(try app.app.user.setting("reel.lap") == String(first + 1))
     }
 
     @Test func aQuizAnswerCountsAsARecall() throws {
@@ -161,7 +183,7 @@ import Testing
         let word = try #require(try cards(app)[quiz]["word"] as? String)
         #expect(try app.app.user.recalls().map(\.answer) == [.forgot])
         #expect(try app.app.user.recalls().first?.key.word == word)
-        // Une question n'attend pas de seconde réponse.
+        // Une question ne se balaie pas.
         try app.do("answer", #"{"name":"knew"}"#)
         #expect(try app.app.user.recalls().count == 1)
     }
@@ -172,8 +194,10 @@ import Testing
         let key = WordKey(.french, "aller")
         let first = try UserStore(path: path, now: { Date(timeIntervalSince1970: 1_800_000_000) })
         let memory = try first.recall(key, .knew)
+        try first.mark(WordKey(.english, "go"), .forgot, returnLap: 9)
         let again = try UserStore(path: path)
         #expect(try again.memory(key) == memory)
-        #expect(try again.recalls().count == 1)
+        #expect(try again.recalls().count == 2)
+        #expect(try again.marks()[WordKey(.english, "go")] == Mark(isHard: true, returnLap: 0))
     }
 }

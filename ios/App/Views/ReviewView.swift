@@ -48,13 +48,16 @@ struct ReviewView: View {
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
                         knewLabel: state.knewLabel, forgotLabel: state.forgotLabel,
+                        swipeHint: index == 0 ? state.swipeHint : nil,
                         revealAfter: Self.revealAfter,
                         reveal: { model.send(.reveal(card.id)) },
                         unveil: { model.send(.unveil(card.id)) },
                         like: { model.send(.like(card.id)) },
                         open: { model.send(.open(card.id)) },
                         choose: { model.send(.choose(card.id, $0)) },
-                        answer: { model.send(.answer(card.id, $0)) }
+                        answer: { recall in
+                            withAnimation(Self.pace) { model.send(.answer(card.id, recall)) }
+                        }
                     )
                     .frame(width: page.size.width, height: height)
                     .offset(y: offset)
@@ -357,6 +360,8 @@ private struct ReelCard: View {
     let listenLabel: String
     let knewLabel: String
     let forgotLabel: String
+    /// Sur la première carte seulement : le geste s'apprend une fois.
+    let swipeHint: String?
     let revealAfter: Double
     let reveal: () -> Void
     let unveil: () -> Void
@@ -365,6 +370,8 @@ private struct ReelCard: View {
     let choose: (Int) -> Void
     let answer: (Recall) -> Void
 
+    /// Le décalage de côté pendant le geste. Positif : vers la droite.
+    @State private var swipe: CGFloat = 0
     @State private var heart = false
     @State private var floating = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -374,11 +381,17 @@ private struct ReelCard: View {
 
     var body: some View {
         ZStack {
-            switch card.kind {
-            case .word, .discovery: word
-            case .quiz: quiz
-            case .streak: streak
+            Group {
+                switch card.kind {
+                case .word, .discovery: word
+                case .quiz: quiz
+                case .streak: streak
+                }
             }
+            // Comme une carte tenue par le bas : elle penche en suivant le doigt.
+            .offset(x: swipe)
+            .rotationEffect(.degrees(Double(swipe / 22)), anchor: .bottom)
+            .overlay(alignment: .top) { stamp }
             if heart {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 110))
@@ -417,11 +430,16 @@ private struct ReelCard: View {
         // Un toucher ne montre pas le sens : on devine jusqu'au bout du
         // trait. Deux touchers posent un cœur.
         .onTapGesture(count: 2) { doubleTap() }
+        .simultaneousGesture(swipeGesture)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .sensoryFeedback(.impact(weight: .light), trigger: pastThreshold)
         .animation(.smooth(duration: 0.5), value: card.isRevealed)
         .sensoryFeedback(.impact(weight: .medium), trigger: card.isLiked)
         .onAppear { floating = true }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: hint) { if hasMeaning { reveal() } }
+        .accessibilityAction(named: knewLabel) { if card.asksRecall { answer(.knew) } }
+        .accessibilityAction(named: forgotLabel) { if card.asksRecall { answer(.forgot) } }
     }
 
     private func doubleTap() {
@@ -440,7 +458,7 @@ private struct ReelCard: View {
         VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 12) {
-                tag(card.badge ?? card.languageLabel)
+                tag(answeredLabel ?? card.badge ?? card.languageLabel)
                 headword
                 if !card.ipa.isEmpty {
                     Text(card.ipa)
@@ -464,7 +482,6 @@ private struct ReelCard: View {
                                     .opacity(0.8)
                             }
                         }
-                        if card.kind == .word { answers }
                     }
                     .multilineTextAlignment(.center)
                     .transition(.blurReplace)
@@ -472,6 +489,12 @@ private struct ReelCard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 150, alignment: .top)
             .padding(.top, Theme.section)
+            if let swipeHint, card.kind == .word, card.recall == nil {
+                Text(swipeHint)
+                    .font(.footnote.weight(.medium))
+                    .opacity(isCurrent && swipe == 0 ? 0.6 : 0)
+                    .animation(.easeOut(duration: 0.2), value: swipe == 0)
+            }
             Spacer()
             Spacer()
         }
@@ -480,35 +503,75 @@ private struct ReelCard: View {
         .animation(.smooth(duration: 0.4), value: isCurrent)
     }
 
-    /// Le sens montré, on dit si on le savait. La réponse donnée reste
-    /// marquée ; l'autre s'efface.
-    private var answers: some View {
-        HStack(spacing: 12) {
-            answerButton(.forgot, forgotLabel, image: "arrow.counterclockwise")
-            answerButton(.knew, knewLabel, image: "checkmark")
-        }
-        .padding(.top, 4)
-        .animation(.snappy, value: card.recall)
-        .sensoryFeedback(.selection, trigger: card.recall)
+    // MARK: Le geste de côté
+
+    /// Le seuil : un quart de l'écran, ou un coup vif.
+    private static let threshold: CGFloat = 0.25
+
+    @State private var width: CGFloat = 390
+    private var pastThreshold: Bool { abs(swipe) > width * Self.threshold }
+
+    /// Vers la gauche « je sais », vers la droite « à revoir ».
+    private static func recall(for offset: CGFloat) -> Recall { offset < 0 ? .knew : .forgot }
+
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                // Un geste vertical est pour le reel ; seul un mot se balaie.
+                guard card.asksRecall, isCurrent,
+                      swipe != 0 || abs(value.translation.width) > abs(value.translation.height) * 1.2
+                else { return }
+                swipe = value.translation.width
+            }
+            .onEnded { value in
+                guard swipe != 0 else { return }
+                let flung = abs(value.velocity.width) > 700 && (value.velocity.width < 0) == (swipe < 0)
+                guard pastThreshold || flung else {
+                    withAnimation(.spring(duration: 0.3, bounce: 0.35)) { swipe = 0 }
+                    return
+                }
+                let recall = Self.recall(for: swipe)
+                withAnimation(.easeOut(duration: 0.22)) {
+                    swipe = (swipe < 0 ? -1 : 1) * width * 1.4
+                } completion: {
+                    answer(recall)
+                    // Revenue plus tard en remontant, la carte est à sa place.
+                    swipe = 0
+                }
+            }
     }
 
-    private func answerButton(_ recall: Recall, _ label: String, image: String) -> some View {
-        let ink = ReviewView.ink(card)
-        let chosen = card.recall == recall
-        return Button {
-            answer(recall)
-        } label: {
-            Label(label, systemImage: image)
-                .font(.headline)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 18)
-                .frame(minWidth: 130)
-                .background(ink.opacity(chosen ? 0.32 : 0.16), in: .capsule)
-                .contentShape(.capsule)
+    /// Le tampon qui dit ce que le geste va faire, de plus en plus net.
+    @ViewBuilder private var stamp: some View {
+        if swipe != 0 {
+            let knew = swipe < 0
+            Text(knew ? knewLabel : forgotLabel)
+                .font(.title2.weight(.heavy))
+                .textCase(.uppercase)
+                .foregroundStyle(knew ? Self.knewColour : Self.againColour)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(knew ? Self.knewColour : Self.againColour, lineWidth: 4))
+                .rotationEffect(.degrees(knew ? 12 : -12))
+                .opacity(min(1, Double(abs(swipe) / (width * Self.threshold))))
+                .frame(maxWidth: .infinity, alignment: knew ? .trailing : .leading)
+                .padding(.horizontal, 36)
+                .padding(.top, 150)
+                .allowsHitTesting(false)
         }
-        .buttonStyle(.plain)
-        .opacity(card.recall == nil || chosen ? 1 : 0.35)
-        .allowsHitTesting(card.recall == nil)
+    }
+
+    private static let knewColour = Color(red: 0.20, green: 0.74, blue: 0.45)
+    /// Orange, pas rouge : oublier n'est pas une faute.
+    private static let againColour = Color(red: 1.0, green: 0.62, blue: 0.20)
+
+    /// Sur une carte déjà balayée, revue en remontant : ce qu'on en a dit.
+    private var answeredLabel: String? {
+        switch card.recall {
+        case .knew where card.kind == .word: "✓ " + knewLabel
+        case .forgot where card.kind == .word: "↻ " + forgotLabel
+        default: nil
+        }
     }
 
     /// Le mot arrive en grandissant, puis flotte doucement.
