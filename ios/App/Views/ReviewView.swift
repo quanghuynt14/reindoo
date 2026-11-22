@@ -573,6 +573,9 @@ private struct ReelCard: View {
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(knew ? Self.knewColour : Self.againColour, lineWidth: 4))
                 .rotationEffect(.degrees(knew ? 8 : -8))
+                // Il suit la carte à moitié : il reste sur le mot sans sortir
+                // de l'écran avec elle.
+                .offset(x: -swipe / 2)
                 .opacity(min(1, Double(abs(swipe) / (width * Self.threshold))))
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
