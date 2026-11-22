@@ -563,6 +563,10 @@ private struct ReelCard: View {
                 .font(.title2.weight(.heavy))
                 .textCase(.uppercase)
                 .foregroundStyle(knew ? Self.knewColour : Self.againColour)
+                // Posé sur le mot, il ne doit pas prendre sa largeur : « đi »
+                // le coupait en « ĐÃ… ».
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
                 // Un fond, pour qu'il se lise par-dessus le mot.
