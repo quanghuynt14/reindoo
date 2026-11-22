@@ -29,14 +29,25 @@ jobs:
       - name: Tests de comportement
         run: swift test --package-path ios/Core
 
-  # Le vrai lexique : les mêmes sources, épinglées, que le site et Dictionary.app.
+  # Le vrai lexique : les mêmes sources que le site et Dictionary.app.
   # Trop gros pour git et pour le VPS ; fabriqué ici, puis gardé en cache.
+  #
+  # Il suit la branche `main` de dictionnaire, et non plus un commit épinglé :
+  # un mot ajouté par l'outil MCP `dico_ajouter` y arrive en commit, et doit
+  # entrer dans le build suivant sans qu'on touche ce fichier. La branche est
+  # résolue en SHA au début du job : c'est lui qui nomme le cache, si bien
+  # qu'un nouveau commit sur dictionnaire reconstruit le lexique, et lui seul.
   lexicon:
     if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]') || startsWith(github.ref, 'refs/tags/ios-v')
     runs-on: ubuntu-24.04
-    env:
-      DICTIONNAIRE_REF: 7f235704586abfe9e254d6f51d23b5124ce1523b
     steps:
+      - name: dictionnaire, main
+        run: |
+          set -euo pipefail
+          sha=$(git ls-remote https://github.com/quanghuynt14/dictionnaire.git refs/heads/main | cut -f1)
+          test -n "$sha"
+          echo "DICTIONNAIRE_REF=$sha" >> "$GITHUB_ENV"
+          echo "dictionnaire @ $sha" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
       - id: cache
         uses: actions/cache@v4
