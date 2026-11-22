@@ -45,6 +45,8 @@ struct Launch {
         // `-tab review -query all -open aller -do reveal` : un état reproductible pour les
         // captures d'écran. Compilé hors des versions publiées.
         let session = Session(app: app)
+        // `-language vietnamese` : le côté du dictionnaire, avant de chercher.
+        if let language = argument("-language") { try? session.perform("setLanguage", input: json(["name": language])) }
         if let tab = argument("-tab") { try? session.perform("selectTab", input: json(["name": tab])) }
         if let query = argument("-query") { try? session.perform("setQuery", input: json(["text": query])) }
         if let word = argument("-open") { try? session.perform("open", input: json(["word": word])) }

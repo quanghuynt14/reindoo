@@ -78,8 +78,17 @@ l'adresse du Wiktionnaire, qui se déduisent tous trois.
 
 Le troisième dictionnaire va dans l'autre sens : un mot vietnamien, expliqué
 en français. Les sens viennent du Wiktionnaire français ; là où il se tait ou
-date, de l'anglais, tel quel et marqué [EN]. Rien n'est traduit
-automatiquement.
+date, de l'anglais, tel quel et marqué [EN]. Le Wiktionnaire n'est pas
+traduit automatiquement.
+
+Les 1 000 mots les plus fréquents ont en plus une entrée reindoo, sous le
+titre « Reindoo » et avant les sens du Wiktionnaire. Elle donne des
+équivalents français, des étiquettes, des exemples et une note par sens.
+Claude Opus l'a rédigée à partir des Wiktionnaires et de vraies phrases ; elle
+n'a pas encore été relue par un humain. Dans le lexique, un sens reindoo porte
+`r: true`, et sa note `o` (`Packed.swift`). Les sens du Wiktionnaire suivent
+sous leur propre titre, et leurs numéros repartent de 1. Un mot sans entrée
+reindoo n'a pas de titre.
 
 La recherche y suit une règle à part (`Language.isOftenTypedBare`) :
 

@@ -39,12 +39,26 @@ public struct Sense: Codable, Equatable, Sendable {
     public var synonyms: [String]
     public var antonyms: [String]
     public var exampleSentences: [Example]
+    /// Ce qu'un francophone se trompe à faire avec ce sens. Seules les
+    /// entrées reindoo en ont.
+    public var note: String?
+    /// « reindoo » pour les entrées écrites pour l'app ; rien pour un sens
+    /// du Wiktionnaire.
+    public var source: String?
 
-    public init(explain: String, synonyms: [String] = [], antonyms: [String] = [], exampleSentences: [Example] = []) {
+    public var isOwn: Bool { source == Self.own }
+    public static let own = "reindoo"
+
+    public init(
+        explain: String, synonyms: [String] = [], antonyms: [String] = [], exampleSentences: [Example] = [],
+        note: String? = nil, source: String? = nil
+    ) {
         self.explain = explain
         self.synonyms = synonyms
         self.antonyms = antonyms
         self.exampleSentences = exampleSentences
+        self.note = note
+        self.source = source
     }
 
     // Le lexique compilé omet les listes vides.
@@ -54,6 +68,8 @@ public struct Sense: Codable, Equatable, Sendable {
         synonyms = try container.decodeIfPresent([String].self, forKey: .synonyms) ?? []
         antonyms = try container.decodeIfPresent([String].self, forKey: .antonyms) ?? []
         exampleSentences = try container.decodeIfPresent([Example].self, forKey: .exampleSentences) ?? []
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        source = try container.decodeIfPresent(String.self, forKey: .source)
     }
 }
 

@@ -8,6 +8,16 @@ The dictionary entries come from the [Vietnamese Wiktionary](https://vi.wiktiona
 
 No dictionary data is stored in this repository beyond a few sample entries used by tests. The iOS build downloads the compiled data and bundles it in the app, and the app links each entry back to its Wiktionary page.
 
+### Reindoo entries (Việt–Pháp)
+
+For the 1,000 most frequent Vietnamese words, the app shows an entry written for Reindoo above the Wiktionary senses. Claude Opus drafted these entries from the French and English Wiktionaries and from real sentence pairs. Of their 4,922 examples, 2,450 are real sentences, quoted whole or shortened, from the French–Vietnamese parallel corpora of [OPUS](https://opus.nlpl.eu):
+
+- [OpenSubtitles](https://www.opensubtitles.org) (1,408 examples): subtitles contributed by users of opensubtitles.org, from P. Lison and J. Tiedemann, *OpenSubtitles2016: Extracting Large Parallel Corpora from Movie and TV Subtitles*, LREC 2016. OPUS redistributes them without a license of its own.
+- [TED Talks](https://www.ted.com) (1,038 examples), from the NeuLab-TedTalks and TED2020 corpora: transcripts and volunteer translations under the [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License](https://creativecommons.org/licenses/by-nc-nd/4.0/).
+- [Tatoeba](https://tatoeba.org) (4 examples), under the [Creative Commons Attribution 2.0 France License](https://creativecommons.org/licenses/by/2.0/fr/).
+
+The data lives in [dictionnaire](https://github.com/quanghuynt14/dictionnaire) (`data/reindoo-vi.jsonl`).
+
 ## SQLite
 
 `ios/Core/Sources/CSQLite` contains the [SQLite](https://sqlite.org) amalgamation, which its authors have placed in the public domain.

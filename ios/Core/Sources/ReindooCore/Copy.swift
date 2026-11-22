@@ -107,6 +107,9 @@ public struct Copy: Equatable, Sendable {
     public var synonyms: String { pick("Synonyms", "Synonymes", "Đồng nghĩa") }
     public var antonyms: String { pick("Antonyms", "Antonymes", "Trái nghĩa") }
     public var derived: String { pick("Derived words", "Dérivés", "Từ phái sinh") }
+    /// Au-dessus des sens écrits pour l'app, puis de ceux du Wiktionnaire.
+    public var ownSenses: String { "Reindoo" }
+    public var wiktionarySenses: String { pick("From Wiktionary", "Du Wiktionnaire", "Từ Wiktionary") }
 
     // MARK: Historique
 

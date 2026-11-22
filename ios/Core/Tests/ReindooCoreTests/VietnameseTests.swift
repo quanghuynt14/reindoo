@@ -34,6 +34,30 @@ import Testing
         #expect(try app.state("word") == "án")
     }
 
+    @Test func reindooSensesComeFirstAndWiktionaryFollowsUnderItsOwnTitle() throws {
+        let app = try vietnamese()
+        try app.search("đẹp")
+        #expect(try app.state("translated") == "beau, joli / bon")
+        #expect(try app.state("senses.0.heading") == Harness.copy.ownSenses)
+        #expect(try app.state("senses.0.number") == 1)
+        #expect(try app.state("senses.0.note") == "Pour un homme, on dit plutôt « đẹp trai ».")
+        #expect(try app.state("senses.0.examples.0.targetTranslation") == "Elle est très belle.")
+        #expect(try app.state("senses.1.heading", as: String.self) == nil)
+        #expect(try app.state("senses.1.explain") == "(Adjectif) [familier] bon, réussi")
+        // Le Wiktionnaire suit, tel quel, et ses numéros repartent de 1.
+        #expect(try app.state("senses.2.heading") == Harness.copy.wiktionarySenses)
+        #expect(try app.state("senses.2.number") == 1)
+        #expect(try app.state("senses.2.explain") == "(Adjectif) Beau.")
+        #expect(try app.state("senses.2.note", as: String.self) == nil)
+    }
+
+    @Test func anEntryWithoutReindooSensesHasNoTitles() throws {
+        let app = try vietnamese()
+        try app.search("tham nhũng")
+        #expect(try app.state("senses.0.heading", as: String.self) == nil)
+        #expect(try app.state("senses.2.number") == 3)
+    }
+
     @Test func dIsFoldedLikeAnAccent() throws {
         let app = try vietnamese()
         try app.search("dep")

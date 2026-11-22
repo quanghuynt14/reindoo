@@ -45,8 +45,15 @@ public final class EntryViewModel: Introspectable, Identifiable {
     }
 
     public struct SenseState: Codable, Equatable, Sendable {
+        /// Sa place dans l'entrée, de 0 : les numéros recommencent à 1 sous
+        /// le titre du Wiktionnaire, l'index, lui, ne se répète pas.
+        public var index: Int
         public var number: Int
+        /// Le titre à poser au-dessus de ce sens, quand une partie commence :
+        /// les sens reindoo d'abord, ceux du Wiktionnaire ensuite.
+        public var heading: String?
         public var explain: String
+        public var note: String?
         public var examples: [Example]
         public var synonymsTitle: String
         public var synonyms: [String]
@@ -93,9 +100,16 @@ public final class EntryViewModel: Introspectable, Identifiable {
             state.translated = entry.translated
             state.matchedNote = matchedForm.map { copy.matchedForm($0, entry.word) }
             state.alsoFrom = alsoFrom
+            // Sans entrée reindoo, rien ne change : pas de titre, une seule suite.
+            let hasOwn = entry.explains.contains(where: \.isOwn)
+            var number = 0
             state.senses = entry.explains.enumerated().map { index, sense in
-                SenseState(
-                    number: index + 1, explain: sense.explain, examples: sense.exampleSentences,
+                let starts = index == 0 || entry.explains[index - 1].isOwn != sense.isOwn
+                number = starts ? 1 : number + 1
+                return SenseState(
+                    index: index, number: number,
+                    heading: hasOwn && starts ? (sense.isOwn ? copy.ownSenses : copy.wiktionarySenses) : nil,
+                    explain: sense.explain, note: sense.note, examples: sense.exampleSentences,
                     synonymsTitle: copy.synonyms, synonyms: sense.synonyms,
                     antonymsTitle: copy.antonyms, antonyms: sense.antonyms
                 )

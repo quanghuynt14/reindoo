@@ -62,12 +62,16 @@ struct PackedSense: Codable {
     var y: [String]?     // synonyms
     var n: [String]?     // antonyms
     var x: [[String]]?   // exemples : [phrase, traduction]
+    var o: String?       // note
+    var r: Bool?         // vrai : entrée reindoo
 
     init(_ sense: Sense) {
         e = sense.explain
         y = sense.synonyms.isEmpty ? nil : sense.synonyms
         n = sense.antonyms.isEmpty ? nil : sense.antonyms
         x = sense.exampleSentences.isEmpty ? nil : sense.exampleSentences.map { [$0.sourceSentence, $0.targetTranslation] }
+        o = sense.note?.isEmpty == false ? sense.note : nil
+        r = sense.isOwn ? true : nil
     }
 
     var sense: Sense {
@@ -75,7 +79,8 @@ struct PackedSense: Codable {
             explain: e, synonyms: y ?? [], antonyms: n ?? [],
             exampleSentences: (x ?? []).compactMap { pair in
                 pair.count == 2 ? Example(sourceSentence: pair[0], targetTranslation: pair[1]) : nil
-            }
+            },
+            note: o, source: r == true ? Sense.own : nil
         )
     }
 }

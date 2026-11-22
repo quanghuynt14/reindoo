@@ -391,7 +391,6 @@ private struct ReelCard: View {
             // Comme une carte tenue par le bas : elle penche en suivant le doigt.
             .offset(x: swipe)
             .rotationEffect(.degrees(Double(swipe / 22)), anchor: .bottom)
-            .overlay(alignment: .top) { stamp }
             if heart {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 110))
@@ -435,7 +434,18 @@ private struct ReelCard: View {
         .sensoryFeedback(.impact(weight: .light), trigger: pastThreshold)
         .animation(.smooth(duration: 0.5), value: card.isRevealed)
         .sensoryFeedback(.impact(weight: .medium), trigger: card.isLiked)
-        .onAppear { floating = true }
+        .onAppear {
+            floating = true
+            #if DEBUG
+            // `-drag -120` : la carte à l'écran reste tenue de côté, pour
+            // photographier le tampon. Hors des versions publiées.
+            let arguments = ProcessInfo.processInfo.arguments
+            if isCurrent, let index = arguments.firstIndex(of: "-drag"), index + 1 < arguments.count,
+               let offset = Double(arguments[index + 1]) {
+                swipe = offset
+            }
+            #endif
+        }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: hint) { if hasMeaning { reveal() } }
         .accessibilityAction(named: knewLabel) { if card.asksRecall { answer(.knew) } }
@@ -459,7 +469,11 @@ private struct ReelCard: View {
             Spacer()
             VStack(spacing: 12) {
                 tag(answeredLabel ?? card.badge ?? card.languageLabel)
+                // Le tampon se pose sur le mot, là où l'œil regarde : dans un
+                // coin, le pouce et le bord de l'écran le cachaient.
                 headword
+                    .overlay { stamp }
+                    .zIndex(1)
                 if !card.ipa.isEmpty {
                     Text(card.ipa)
                         .font(.title3)
@@ -549,15 +563,15 @@ private struct ReelCard: View {
                 .font(.title2.weight(.heavy))
                 .textCase(.uppercase)
                 .foregroundStyle(knew ? Self.knewColour : Self.againColour)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                // Un fond, pour qu'il se lise par-dessus le mot.
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(knew ? Self.knewColour : Self.againColour, lineWidth: 4))
-                .rotationEffect(.degrees(knew ? 12 : -12))
+                .rotationEffect(.degrees(knew ? 8 : -8))
                 .opacity(min(1, Double(abs(swipe) / (width * Self.threshold))))
-                .frame(maxWidth: .infinity, alignment: knew ? .trailing : .leading)
-                .padding(.horizontal, 36)
-                .padding(.top, 150)
                 .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 

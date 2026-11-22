@@ -35,7 +35,7 @@ jobs:
     if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]') || startsWith(github.ref, 'refs/tags/ios-v')
     runs-on: ubuntu-24.04
     env:
-      DICTIONNAIRE_REF: 069757f666f66ac45a112f6452ff5e6cea242fc4
+      DICTIONNAIRE_REF: 7f235704586abfe9e254d6f51d23b5124ce1523b
     steps:
       - uses: actions/checkout@v4
       - id: cache

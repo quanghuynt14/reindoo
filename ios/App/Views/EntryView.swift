@@ -85,8 +85,16 @@ struct EntryView: View {
             }
         }
 
-        ForEach(state.senses, id: \.number) { sense in
+        ForEach(state.senses, id: \.index) { sense in
             VStack(alignment: .leading, spacing: Theme.gap) {
+                if let heading = sense.heading {
+                    Text(heading)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.top, sense.index == 0 ? 0 : Theme.gap)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     if state.senses.count > 1 {
                         Text("\(sense.number)")
@@ -110,6 +118,12 @@ struct EntryView: View {
                         Capsule().fill(.quaternary).frame(width: 3)
                     }
                     .textSelection(.enabled)
+                }
+                if let note = sense.note {
+                    Label(note, systemImage: "lightbulb")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
                 if !sense.synonyms.isEmpty {
                     WordChips(title: sense.synonymsTitle, words: sense.synonyms) { model.send(.open($0)) }
