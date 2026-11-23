@@ -155,7 +155,7 @@ jobs:
           shoot entry-elsewhere -fixture sample -open goes
           shoot entry-memo      -fixture returning -open élève -do showMemo
           shoot reel-word       -fixture returning -tab review
-          shoot reel-meaning-first -fixture returning -tab review -do flipDirection
+          shoot reel-meaning-first -fixture returning -tab review -do flipDirection -revealAfter 60
           shoot review-empty    -fixture sample -tab review
           shoot history         -fixture returning -tab history
           shoot history-empty   -fixture sample -tab history

@@ -180,7 +180,8 @@ final class GestureTests: XCTestCase {
 
     /// Le sens d'abord : le mot attend la fin du trait, puis paraît à sa place.
     func testTheMeaningCanComeFirst() {
-        let app = launch("-fixture", "returning", "-tab", "review")
+        // Une attente longue : le simulateur répond trop lentement pour 2,2 s.
+        let app = launch("-fixture", "returning", "-tab", "review", "-revealAfter", "12")
         XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))
         let flip = app.buttons["Show the meaning first"]
         XCTAssertTrue(flip.exists, "le bouton est dans la barre, hors du menu")
@@ -188,13 +189,14 @@ final class GestureTests: XCTestCase {
         assertAlive(app, "l'app a planté en changeant de sens")
 
         XCTAssertTrue(app.staticTexts["Tôi đi học."].waitForExistence(timeout: 2), "le sens se montre tout de suite")
-        XCTAssertFalse(app.staticTexts["aller"].exists, "le mot attend")
-        XCTAssertFalse(app.staticTexts["Je vais à l'école."].exists, "la phrase source le donnerait : elle attend aussi")
-        XCTAssertTrue(app.buttons["Show the word first"].exists, "le bouton dit ce qu'il fera ensuite")
         snap("reel-meaning-first")
+        // Le mot caché garde sa place (opacité nulle), et XCUITest le liste
+        // quand même, comme la carte suivante. La phrase source, elle, n'est
+        // dessinée qu'avec le mot : c'est elle qui dit s'il est montré.
+        XCTAssertFalse(app.staticTexts["Je vais à l'école."].exists, "le mot et sa phrase attendent")
+        XCTAssertTrue(app.buttons["Show the word first"].exists, "le bouton dit ce qu'il fera ensuite")
 
-        XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 8), "au bout du trait, le mot paraît")
-        XCTAssertTrue(app.staticTexts["Je vais à l'école."].exists)
+        XCTAssertTrue(app.staticTexts["Je vais à l'école."].waitForExistence(timeout: 20), "au bout du trait, le mot paraît")
         snap("reel-meaning-first-revealed")
     }
 

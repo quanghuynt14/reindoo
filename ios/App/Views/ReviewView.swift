@@ -18,7 +18,18 @@ struct ReviewView: View {
     @GestureState private var held = false
 
     /// Le temps laissé pour deviner avant que le sens se montre seul.
-    private static let revealAfter = 2.2
+    private static let revealAfter: Double = {
+        #if DEBUG
+        // `-revealAfter 30` : le temps de photographier une carte avant
+        // qu'elle se montre. Le simulateur de CI répond trop lentement pour 2,2 s.
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-revealAfter"), index + 1 < arguments.count,
+           let seconds = Double(arguments[index + 1]) {
+            return seconds
+        }
+        #endif
+        return 2.2
+    }()
     /// Une page se pose toujours en ce temps, quel que soit l'élan : ni trop
     /// vite après un geste vif, ni trop lentement après un geste mou.
     private static let pace = Animation.smooth(duration: 0.38)
@@ -460,6 +471,9 @@ private struct ReelCard: View {
             // que la carte : parti avant qu'elle ait monté d'un dixième.
             if hasMeaning, isCurrent, !card.wasRevealed {
                 ProgressLine(duration: revealAfter, held: held, ink: ReviewView.ink(card), done: unveil)
+                    // Changer de sens relance l'attente : l'autre moitié a droit
+                    // à tout son temps.
+                    .id(meaningFirst)
                     .padding(.horizontal, Theme.margin)
                     .padding(.top, 6)
                     .opacity(max(0, 1 - 10 * (1 - presence)))
