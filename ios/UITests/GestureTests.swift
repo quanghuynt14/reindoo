@@ -178,6 +178,26 @@ final class GestureTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Tôi đi học."].waitForExistence(timeout: 8), "lâché, le trait reprend et le sens vient")
     }
 
+    /// Le sens d'abord : le mot attend la fin du trait, puis paraît à sa place.
+    func testTheMeaningCanComeFirst() {
+        let app = launch("-fixture", "returning", "-tab", "review")
+        XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))
+        let flip = app.buttons["Show the meaning first"]
+        XCTAssertTrue(flip.exists, "le bouton est dans la barre, hors du menu")
+        flip.tap()
+        assertAlive(app, "l'app a planté en changeant de sens")
+
+        XCTAssertTrue(app.staticTexts["Tôi đi học."].waitForExistence(timeout: 2), "le sens se montre tout de suite")
+        XCTAssertFalse(app.staticTexts["aller"].exists, "le mot attend")
+        XCTAssertFalse(app.staticTexts["Je vais à l'école."].exists, "la phrase source le donnerait : elle attend aussi")
+        XCTAssertTrue(app.buttons["Show the word first"].exists, "le bouton dit ce qu'il fera ensuite")
+        snap("reel-meaning-first")
+
+        XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 8), "au bout du trait, le mot paraît")
+        XCTAssertTrue(app.staticTexts["Je vais à l'école."].exists)
+        snap("reel-meaning-first-revealed")
+    }
+
     func testTheReelOptionsChangeTheOrder() {
         let app = launch("-fixture", "returning", "-tab", "review")
         XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))

@@ -139,6 +139,7 @@ actor FakeServer: SyncClient {
             let session = Session(app: AppModel(lexicon: try Lexicon(path: lexiconPath), user: user, copy: Harness.copy))
             try session.perform("selectTab", input: #"{"name":"review"}"#)
             try session.perform("setScene", input: #"{"name":"halftone-dusk"}"#)
+            try session.perform("flipDirection", input: nil)
             // Un réglage de l'appareil : rien ne part au serveur.
             #expect(try user.pendingCount() == 0)
         }
@@ -146,6 +147,7 @@ actor FakeServer: SyncClient {
         try session.perform("selectTab", input: #"{"name":"review"}"#)
         let state = try session.ls()["state"] as? [String: Any]
         #expect(state?["scene"] as? String == "halftone-dusk")
+        #expect(state?["direction"] as? String == "meaningFirst")
     }
 
     @Test func aLexiconOfTheWrongSchemaIsRefusedClearly() throws {

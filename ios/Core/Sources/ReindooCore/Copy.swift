@@ -142,6 +142,9 @@ public struct Copy: Equatable, Sendable {
     }
 
     public var revealHint: String { pick("Tap to see the meaning", "Touchez pour voir le sens", "Chạm để xem nghĩa") }
+    public var revealWordHint: String { pick("Tap to see the word", "Touchez pour voir le mot", "Chạm để xem từ") }
+    public var meaningFirst: String { pick("Show the meaning first", "Le sens d'abord", "Hiện nghĩa trước") }
+    public var wordFirst: String { pick("Show the word first", "Le mot d'abord", "Hiện từ trước") }
     public var openEntry: String { pick("Open the entry", "Ouvrir l'entrée", "Xem cả mục từ") }
     public var sortTitle: String { pick("Order", "Ordre", "Sắp xếp") }
     public var filterTitle: String { pick("Filter by language", "Filtrer par langue", "Lọc theo ngôn ngữ") }

@@ -2,12 +2,17 @@ import Foundation
 import Observation
 
 /// Le reel (« Lướt ôn ») : les mots déjà cherchés, une carte par écran, sans
-/// fin. Le mot d'abord, le sens ensuite. De temps en temps une surprise : une
-/// question, un mot nouveau, un compte de la série.
+/// fin. Le mot d'abord, le sens ensuite — ou l'inverse, au choix. De temps en
+/// temps une surprise : une question, un mot nouveau, un compte de la série.
 @MainActor
 @Observable
 public final class ReviewViewModel: Introspectable {
     public enum Sort: String, Codable, Sendable, CaseIterable { case random, newest, oldest }
+
+    /// Ce que la carte montre d'abord. Reconnaître un mot qu'on voit est plus
+    /// facile que le retrouver depuis son sens : `meaningFirst` fait travailler
+    /// le second, qui est celui dont on a besoin pour écrire et parler.
+    public enum Direction: String, Codable, Sendable, CaseIterable { case wordFirst, meaningFirst }
 
     public struct State: Codable, Equatable, Sendable {
         public var title = ""
@@ -25,6 +30,9 @@ public final class ReviewViewModel: Introspectable {
         public var filterTitle = ""
         public var filters: [Option] = []
         public var revealHint = ""
+        public var direction: Direction = .wordFirst
+        /// Le bouton qui change de sens : il dit ce qu'il va faire.
+        public var directionLabel = ""
         public var openLabel = ""
         public var likeLabel = ""
         public var listenLabel = ""
@@ -124,6 +132,9 @@ public final class ReviewViewModel: Introspectable {
         case restart
         /// `word`, `colours`, ou l'identifiant d'un thème.
         case setScene(String)
+        /// Le mot d'abord ↔ le sens d'abord. Les cartes pas encore passées
+        /// recachent leur moitié : elles repartent dans le nouveau sens.
+        case flipDirection
         /// Le geste sur un mot. `knew` (vers la gauche) : il ne revient pas
         /// avant deux tours. `forgot` (vers la droite) : il revient deux fois
         /// par tour. Le reel passe à la carte suivante.
@@ -135,6 +146,7 @@ public final class ReviewViewModel: Introspectable {
     /// La teinte du mot, sans décor : la plus légère pour la batterie.
     public nonisolated static let colours = "colours"
     static let sceneSetting = "reel.scene"
+    static let directionSetting = "reel.direction"
     /// Le numéro du dernier tour tiré. Il survit au lancement : un mot su
     /// ne revient pas parce que l'app a redémarré.
     static let lapSetting = "reel.lap"
@@ -176,7 +188,6 @@ public final class ReviewViewModel: Introspectable {
         state.title = copy.tabReview
         state.sortTitle = copy.sortTitle
         state.filterTitle = copy.filterTitle
-        state.revealHint = copy.revealHint
         state.openLabel = copy.openEntry
         state.likeLabel = copy.like
         state.listenLabel = copy.listen
@@ -186,10 +197,27 @@ public final class ReviewViewModel: Introspectable {
         state.forgotLabel = copy.again
         state.swipeHint = copy.swipeHint
         lap = (try? user.setting(Self.lapSetting)).flatMap { $0.flatMap(Int.init) } ?? 0
+        if let saved = try? user.setting(Self.directionSetting), let direction = Direction(rawValue: saved) {
+            state.direction = direction
+        }
+        labelDirection()
         state.sceneTitle = copy.sceneTitle
         if let saved = try? user.setting(Self.sceneSetting), Self.isScene(saved) { state.scene = saved }
         state.scenes = sceneOptions()
         deal()
+    }
+
+    /// Les textes qui dépendent du sens : ce que le toucher montre, et ce que
+    /// fera le bouton.
+    private func labelDirection() {
+        switch state.direction {
+        case .wordFirst:
+            state.revealHint = copy.revealHint
+            state.directionLabel = copy.meaningFirst
+        case .meaningFirst:
+            state.revealHint = copy.revealWordHint
+            state.directionLabel = copy.wordFirst
+        }
     }
 
     static func isScene(_ name: String) -> Bool {
@@ -250,6 +278,18 @@ public final class ReviewViewModel: Introspectable {
             state.scenes = sceneOptions()
             // Le choix est lu avant : lire `state` pendant qu'on le modifie arrête l'app.
             for index in state.cards.indices { Self.dress(&state.cards[index], in: name) }
+        case .flipDirection:
+            let direction: Direction = state.direction == .wordFirst ? .meaningFirst : .wordFirst
+            // Le choix reste sur l'appareil ; s'il ne s'écrit pas, il vaut pour la séance.
+            try? user.setSetting(Self.directionSetting, direction.rawValue)
+            state.direction = direction
+            labelDirection()
+            // La position est lue avant : lire `state` pendant qu'on le modifie arrête l'app.
+            let from = state.position
+            for index in state.cards.indices where index >= from && state.cards[index].kind != .quiz {
+                state.cards[index].isRevealed = false
+                state.cards[index].wasRevealed = false
+            }
         case .setPosition(let index):
             guard state.cards.indices.contains(index) else { return }
             state.position = index
@@ -561,7 +601,7 @@ public final class ReviewViewModel: Introspectable {
         [
             ("appear", ""), ("cycleSort", ""), ("setSort", "{name: random|newest|oldest}"),
             ("setFilter", "{name: all|french|english|vietnamese}"), ("setPosition", "{index}"),
-            ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("like", "[{id}]"), ("choose", "{index}"),
+            ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("flipDirection", ""), ("like", "[{id}]"), ("choose", "{index}"),
             ("open", "[{id}]"), ("restart", ""), ("setScene", "{name: word|colours|<theme>}"),
             ("answer", "{name: knew|forgot, id?}"),
         ]
@@ -578,6 +618,7 @@ public final class ReviewViewModel: Introspectable {
         case "appear": send(.appear)
         case "cycleSort": send(.cycleSort)
         case "restart": send(.restart)
+        case "flipDirection": send(.flipDirection)
         case "setSort":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let sort = Sort(rawValue: name) else {

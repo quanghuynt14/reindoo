@@ -30,6 +30,7 @@ struct ReviewView: View {
         // montre : le mot grandit, ses boutons viennent, le décor change.
         let shown = shownCard(state)
         let aloud = readAloud
+        let meaningFirst = state.direction == .meaningFirst
 
         // Le reel tourne ses pages lui-même. Une ScrollView pose la page à la
         // vitesse de l'élan, et un geste vif en sautait une : ici, le doigt
@@ -49,6 +50,7 @@ struct ReviewView: View {
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
                         knewLabel: state.knewLabel, forgotLabel: state.forgotLabel,
                         swipeHint: index == 0 ? state.swipeHint : nil,
+                        meaningFirst: meaningFirst,
                         revealAfter: Self.revealAfter,
                         reveal: { model.send(.reveal(card.id)) },
                         unveil: { model.send(.unveil(card.id)) },
@@ -115,6 +117,22 @@ struct ReviewView: View {
         .toolbar {
             // Les rennes suivent : un saut par carte, une pirouette toutes les dix.
             HerdToolbarItem(hops: state.position, tricks: state.position / 10)
+            // Le mot d'abord ↔ le sens d'abord. Un bouton à part, pas une ligne
+            // du menu : on change de sens en cours de séance, d'un toucher.
+            BareToolbarItem(placement: .topBarTrailing) {
+                let ink = shown.map(Self.ink) ?? Color.primary
+                Button {
+                    withAnimation(.smooth(duration: 0.4)) { model.send(.flipDirection) }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(ink)
+                        .frame(width: 40, height: 40)
+                        .background(ink.opacity(meaningFirst ? 0.32 : 0.16), in: .circle)
+                        .rotationEffect(.degrees(meaningFirst ? 180 : 0))
+                }
+                .accessibilityLabel(state.directionLabel)
+            }
             // Le même rond que les boutons des cartes : il se lit sur toutes les
             // couleurs, en clair comme en sombre.
             BareToolbarItem(placement: .topBarTrailing) {
@@ -160,6 +178,7 @@ struct ReviewView: View {
         }
         .sensoryFeedback(.selection, trigger: state.sort)
         .sensoryFeedback(.selection, trigger: state.filter)
+        .sensoryFeedback(.selection, trigger: state.direction)
         .onAppear {
             visible = true
             model.send(.appear)
@@ -172,7 +191,13 @@ struct ReviewView: View {
         // temps laissé pour deviner, puis montre le sens.
         .task(id: shown?.id) { @MainActor in
             guard let shown, shown.kind == .word || shown.kind == .discovery else { return }
-            if aloud { Speaker.shared.say(shown.word, in: shown.language) }
+            // Le sens d'abord : dire le mot le donnerait. Il se dit quand il paraît.
+            if aloud, !meaningFirst { Speaker.shared.say(shown.word, in: shown.language) }
+        }
+        .onChange(of: shown.map { "\($0.id)/\($0.isRevealed)" }) {
+            guard meaningFirst, aloud, let shown, shown.isRevealed,
+                  shown.kind == .word || shown.kind == .discovery else { return }
+            Speaker.shared.say(shown.word, in: shown.language)
         }
     }
 }
@@ -362,6 +387,8 @@ private struct ReelCard: View {
     let forgotLabel: String
     /// Sur la première carte seulement : le geste s'apprend une fois.
     let swipeHint: String?
+    /// Le sens se montre d'abord, et le mot à la fin du trait.
+    let meaningFirst: Bool
     let revealAfter: Double
     let reveal: () -> Void
     let unveil: () -> Void
@@ -378,6 +405,9 @@ private struct ReelCard: View {
     @ScaledMetric(relativeTo: .largeTitle) private var wordSize: CGFloat = 52
 
     private var hasMeaning: Bool { card.kind == .word || card.kind == .discovery }
+    /// Ce que la carte montre : d'abord une moitié, puis les deux.
+    private var showsWord: Bool { !meaningFirst || card.isRevealed }
+    private var showsMeaning: Bool { meaningFirst || card.isRevealed }
 
     var body: some View {
         ZStack {
@@ -471,26 +501,36 @@ private struct ReelCard: View {
                 tag(answeredLabel ?? card.badge ?? card.languageLabel)
                 // Le tampon se pose sur le mot, là où l'œil regarde : dans un
                 // coin, le pouce et le bord de l'écran le cachaient.
+                // Caché, le mot garde sa place : il paraît là où on l'attend,
+                // et rien ne bouge autour.
                 headword
+                    .blur(radius: showsWord ? 0 : 18)
+                    .opacity(showsWord ? 1 : 0)
+                    .accessibilityHidden(!showsWord)
                     .overlay { stamp }
                     .zIndex(1)
                 if !card.ipa.isEmpty {
                     Text(card.ipa)
                         .font(.title3)
-                        .opacity(isCurrent ? 0.85 : 0)
+                        .opacity(isCurrent && showsWord ? 0.85 : 0)
                         // La prononciation suit le mot d'un temps.
                         .animation(.easeOut(duration: 0.4).delay(isCurrent ? 0.35 : 0), value: isCurrent)
                 }
             }
             ZStack(alignment: .top) {
-                if card.isRevealed {
+                if showsMeaning {
                     VStack(spacing: Theme.gap) {
                         Text(card.gloss)
                             .font(.title.weight(.semibold))
                         if let example = card.example {
                             VStack(spacing: 4) {
-                                Text(example.sourceSentence)
-                                    .font(Theme.entryBody.italic())
+                                // La phrase source contient le mot : elle attend
+                                // avec lui. La traduction met déjà sur la voie.
+                                if showsWord {
+                                    Text(example.sourceSentence)
+                                        .font(Theme.entryBody.italic())
+                                        .transition(.blurReplace)
+                                }
                                 Text(example.targetTranslation)
                                     .font(.subheadline)
                                     .opacity(0.8)

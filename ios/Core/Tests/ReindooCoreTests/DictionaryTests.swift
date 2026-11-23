@@ -344,6 +344,49 @@ import Testing
         #expect(try app.state("cards.2.isRevealed") == true)
     }
 
+    @Test func theMeaningCanComeFirst() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        #expect(try app.state("direction") == "wordFirst")
+        #expect(try app.state("directionLabel") == Harness.copy.meaningFirst)
+
+        // La première carte est déjà vue ; la deuxième pas encore.
+        try app.do("reveal")
+        try app.do("setPosition", #"{"index":1}"#)
+        try app.do("flipDirection")
+        #expect(try app.state("direction") == "meaningFirst")
+        #expect(try app.state("directionLabel") == Harness.copy.wordFirst)
+        #expect(try app.state("revealHint") == Harness.copy.revealWordHint)
+        // Une carte passée garde ce qu'on y a vu ; celles qui viennent repartent cachées.
+        #expect(try app.state("cards.0.isRevealed") == true)
+        #expect(try app.state("cards.1.isRevealed") == false)
+        #expect(try app.state("cards.1.wasRevealed") == false)
+
+        // Le même geste montre la moitié cachée : ici, le mot.
+        try app.do("unveil")
+        #expect(try app.state("cards.1.isRevealed") == true)
+
+        // Changer encore recache la carte à l'écran, dans l'autre sens.
+        try app.do("flipDirection")
+        #expect(try app.state("direction") == "wordFirst")
+        #expect(try app.state("revealHint") == Harness.copy.revealHint)
+        #expect(try app.state("cards.1.isRevealed") == false)
+        #expect(try app.state("cards.0.isRevealed") == true)
+    }
+
+    @Test func aQuestionKeepsItsAnswerWhenTheDirectionChanges() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        try scroll(app, to: 24)
+        // La sixième carte est une question (voir `surprisesBreakTheRoutine`).
+        #expect(try app.state("cards.5.kind") == "quiz")
+        try app.do("setPosition", #"{"index":5}"#)
+        try app.do("choose", #"{"index":0}"#)
+        try app.do("flipDirection")
+        #expect(try app.state("cards.5.isRevealed") == true, "une réponse donnée ne se recache pas")
+        #expect(try app.state("cards.6.isRevealed") == false)
+    }
+
     @Test func orderAndLanguageAreTheUsersChoice() throws {
         let app = try Harness(.returning)
         try app.do("selectTab", #"{"name":"review"}"#)

@@ -154,6 +154,7 @@ jobs:
           shoot entry-missing   -fixture sample -open alller
           shoot entry-elsewhere -fixture sample -open goes
           shoot reel-word       -fixture returning -tab review
+          shoot reel-meaning-first -fixture returning -tab review -do flipDirection
           shoot review-empty    -fixture sample -tab review
           shoot history         -fixture returning -tab history
           shoot history-empty   -fixture sample -tab history
