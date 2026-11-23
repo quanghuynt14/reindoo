@@ -245,7 +245,8 @@ actor FakeServer: SyncClient {
                 Sense(explain: "Củ"),
             ],
             ipa: ["/pɔm də tɛʁ/"], audio: "https://example.org/a.mp3",
-            wiki: "https://vi.wiktionary.org/wiki/pomme_de_terre#Ti%E1%BA%BFng_Ph%C3%A1p", derived: ["pomme"]
+            wiki: "https://vi.wiktionary.org/wiki/pomme_de_terre#Ti%E1%BA%BFng_Ph%C3%A1p", derived: ["pomme"],
+            memo: Memo(origin: "Táo của **đất**.", tip: "pomme + terre")
         )
         var bare = Entry(word: "élève", language: .french, translated: "Học sinh")
         var elsewhere = bare
@@ -259,6 +260,9 @@ actor FakeServer: SyncClient {
         }
         // L'adresse qui se déduit du mot ne prend aucune place.
         #expect(Packed(full).w == nil)
+        // Une note vide ne vaut rien : elle ne se range pas.
+        #expect(Entry(word: "x", language: .french, translated: "y", memo: Memo(tip: " ")).memo == nil)
+        #expect(Packed(bare).m == nil)
         #expect(Packed.wiki(for: "élève", in: .english) == "https://vi.wiktionary.org/wiki/%C3%A9l%C3%A8ve#Ti%E1%BA%BFng_Anh")
     }
 

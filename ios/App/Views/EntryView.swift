@@ -20,6 +20,16 @@ struct EntryView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // Le cerveau, à côté du cœur : seulement pour un mot qui a une histoire.
+            if state.status == .found, state.memo != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { model.send(.showMemo) } label: {
+                        Image(systemName: "brain")
+                    }
+                    .accessibilityLabel(state.memoLabel)
+                    .accessibilityIdentifier("entry.memo")
+                }
+            }
             if state.status == .found {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { model.send(.like) } label: {
@@ -36,6 +46,14 @@ struct EntryView: View {
             }
         }
         .onDisappear { Speaker.shared.stop() }
+        .sheet(isPresented: Binding(
+            get: { model.state.isMemoShown },
+            set: { if !$0 { model.send(.hideMemo) } }
+        )) {
+            if let memo = model.state.memo {
+                MemoView(memo: memo, closeLabel: model.state.closeLabel) { model.send(.hideMemo) }
+            }
+        }
     }
 
     // MARK: Trouvé

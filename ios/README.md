@@ -99,6 +99,18 @@ La recherche y suit une règle à part (`Language.isOftenTypedBare`) :
   il le propose ;
 - « đ » se replie en « d » : « dep » ouvre « đẹp ».
 
+## Les notes pour retenir
+
+Un mot qui a une histoire porte une note : d'où il vient, ses mots voisins, un
+mémo. Elle s'écrit dans `dictionnaire`, `data/memo-<langue>.jsonl`, en
+vietnamien, une ligne par mot, marquée `"by": "huy"`. L'outil MCP `dico_meo`
+l'y écrit depuis une conversation. Un mot courant n'en a pas : pas de note,
+pas de bouton.
+
+Dans l'app, un cerveau se pose à côté du cœur, dans l'entrée et dans le reel,
+et ouvre la note en feuille (`MemoView`). Dans le reel, sens d'abord, il attend
+que le mot paraisse : la note le donnerait.
+
 ## Règles
 
 - Ce que l'utilisateur voit est dans `state`. Ce qu'il peut faire est une `Action`.

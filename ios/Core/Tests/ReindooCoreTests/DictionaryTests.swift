@@ -387,6 +387,58 @@ import Testing
         #expect(try app.state("cards.6.isRevealed") == false)
     }
 
+    @Test func aWordWithAStoryHasANoteToRememberIt() throws {
+        let app = try Harness(.returning)
+        try app.search("élève")
+        #expect(try app.screen == "entry")
+        #expect(try app.state("memo.title") == "élève")
+        #expect(try app.state("memoLabel") == Harness.copy.memo)
+        // Les parties vides tombent ; les autres gardent leur ordre et leur mise en forme.
+        let parts: [[String: Any]] = try #require(try app.state("memo.parts"))
+        #expect(parts.compactMap { $0["name"] as? String } == ["origin", "tip"])
+        #expect(try app.state("memo.parts.0.title") == Harness.copy.memoOrigin)
+        #expect(try app.state("memo.parts.0.text") == "Từ động từ *élever*, **nâng lên, nuôi dạy**.")
+
+        #expect(try app.state("isMemoShown") == false)
+        try app.do("showMemo")
+        #expect(try app.state("isMemoShown") == true)
+        try app.do("hideMemo")
+        #expect(try app.state("isMemoShown") == false)
+    }
+
+    @Test func aPlainWordHasNoNote() throws {
+        let app = try Harness(.returning)
+        try app.search("aller")
+        #expect(try app.state("memo", as: [String: Any].self) == nil)
+        // Sans note, le bouton n'existe pas et l'action ne fait rien.
+        try app.do("showMemo")
+        #expect(try app.state("isMemoShown") == false)
+    }
+
+    @Test func theReelOpensTheSameNote() throws {
+        let app = try Harness(.returning)
+        try app.do("selectTab", #"{"name":"review"}"#)
+        #expect(try words(app) == ["aller", "élève", "go", "venir"], "le hasard de la fixture")
+        #expect(try app.state("cards.0.memo", as: [String: Any].self) == nil)
+        #expect(try app.state("cards.1.memo.parts.1.text") == "Người được nâng lên.")
+
+        try app.do("showMemo")
+        #expect(try app.state("memoCard", as: String.self) == nil, "aller n'a pas de note")
+        try app.do("setPosition", #"{"index":1}"#)
+        try app.do("showMemo")
+        #expect(try app.state("memoCard") == "french/élève")
+        try app.do("hideMemo")
+        #expect(try app.state("memoCard", as: String.self) == nil)
+
+        // Le sens d'abord : la note porterait le mot, elle attend qu'il paraisse.
+        try app.do("flipDirection")
+        try app.do("showMemo")
+        #expect(try app.state("memoCard", as: String.self) == nil)
+        try app.do("unveil")
+        try app.do("showMemo")
+        #expect(try app.state("memoCard") == "french/élève")
+    }
+
     @Test func orderAndLanguageAreTheUsersChoice() throws {
         let app = try Harness(.returning)
         try app.do("selectTab", #"{"name":"review"}"#)

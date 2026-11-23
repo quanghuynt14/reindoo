@@ -48,6 +48,7 @@ struct ReviewView: View {
                         held: held,
                         hint: state.revealHint, openLabel: state.openLabel,
                         likeLabel: state.likeLabel, listenLabel: state.listenLabel,
+                        memoLabel: state.memoLabel,
                         knewLabel: state.knewLabel, forgotLabel: state.forgotLabel,
                         swipeHint: index == 0 ? state.swipeHint : nil,
                         meaningFirst: meaningFirst,
@@ -55,6 +56,7 @@ struct ReviewView: View {
                         reveal: { model.send(.reveal(card.id)) },
                         unveil: { model.send(.unveil(card.id)) },
                         like: { model.send(.like(card.id)) },
+                        showMemo: { model.send(.showMemo(card.id)) },
                         open: { model.send(.open(card.id)) },
                         choose: { model.send(.choose(card.id, $0)) },
                         answer: { recall in
@@ -179,6 +181,15 @@ struct ReviewView: View {
         .sensoryFeedback(.selection, trigger: state.sort)
         .sensoryFeedback(.selection, trigger: state.filter)
         .sensoryFeedback(.selection, trigger: state.direction)
+        .sheet(isPresented: Binding(
+            get: { model.state.memoCard != nil },
+            set: { if !$0 { model.send(.hideMemo) } }
+        )) {
+            let state = model.state
+            if let id = state.memoCard, let memo = state.cards.first(where: { $0.id == id })?.memo {
+                MemoView(memo: memo, closeLabel: state.closeLabel) { model.send(.hideMemo) }
+            }
+        }
         .onAppear {
             visible = true
             model.send(.appear)
@@ -383,6 +394,7 @@ private struct ReelCard: View {
     let openLabel: String
     let likeLabel: String
     let listenLabel: String
+    let memoLabel: String
     let knewLabel: String
     let forgotLabel: String
     /// Sur la première carte seulement : le geste s'apprend une fois.
@@ -393,6 +405,7 @@ private struct ReelCard: View {
     let reveal: () -> Void
     let unveil: () -> Void
     let like: () -> Void
+    let showMemo: () -> Void
     let open: () -> Void
     let choose: (Int) -> Void
     let answer: (Recall) -> Void
@@ -668,6 +681,11 @@ private struct ReelCard: View {
                 tint: card.isLiked ? Color(red: 1, green: 0.36, blue: 0.42) : ink, ink: ink,
                 bounce: card.isLiked, action: like
             )
+            // Le sens d'abord, la note donnerait le mot : le cerveau vient avec lui.
+            if card.memo != nil, showsWord {
+                ReelButton(image: "brain", label: memoLabel, tint: ink, ink: ink, action: showMemo)
+                    .transition(.opacity)
+            }
             ReelButton(image: "speaker.wave.2.fill", label: listenLabel, tint: ink, ink: ink) {
                 Speaker.shared.say(card.word, in: card.language, asked: true)
             }

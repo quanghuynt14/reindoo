@@ -198,6 +198,24 @@ final class GestureTests: XCTestCase {
         snap("reel-meaning-first-revealed")
     }
 
+    /// Le cerveau, à côté du cœur, ouvre la note ; un mot sans histoire n'en a pas.
+    func testTheBrainOpensTheNote() {
+        let app = launch("-fixture", "returning", "-open", "élève")
+        let brain = app.buttons["Remember it"]
+        XCTAssertTrue(brain.waitForExistence(timeout: 15), "élève a une note")
+        brain.tap()
+        XCTAssertTrue(app.staticTexts["Origin"].waitForExistence(timeout: 5), "la note s'ouvre")
+        XCTAssertTrue(app.staticTexts["Memory tip"].exists)
+        XCTAssertFalse(app.staticTexts["Related words"].exists, "une partie vide ne s'affiche pas")
+        snap("entry-memo")
+        app.buttons["Close"].tap()
+        assertAlive(app, "l'app a planté en fermant la note")
+
+        let plain = launch("-fixture", "returning", "-open", "aller")
+        XCTAssertTrue(plain.buttons["Like"].waitForExistence(timeout: 15))
+        XCTAssertFalse(plain.buttons["Remember it"].exists, "aller n'a rien à raconter : pas de cerveau")
+    }
+
     func testTheReelOptionsChangeTheOrder() {
         let app = launch("-fixture", "returning", "-tab", "review")
         XCTAssertTrue(app.staticTexts["aller"].waitForExistence(timeout: 15))

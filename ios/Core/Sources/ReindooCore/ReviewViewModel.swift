@@ -35,6 +35,10 @@ public final class ReviewViewModel: Introspectable {
         public var directionLabel = ""
         public var openLabel = ""
         public var likeLabel = ""
+        public var memoLabel = ""
+        public var closeLabel = ""
+        /// La carte dont la note est ouverte, par-dessus le reel.
+        public var memoCard: String?
         public var listenLabel = ""
         public var readAloudLabel = ""
         public var optionsLabel = ""
@@ -75,6 +79,8 @@ public final class ReviewViewModel: Introspectable {
         /// l'attente : deviner, c'est fini pour cette carte.
         public var wasRevealed = false
         public var isLiked: Bool
+        /// Ce qui aide à retenir le mot, la même note que dans l'entrée.
+        public var memo: MemoState? = nil
         /// La teinte du fond, de 0 à 1. Elle tient au mot : il garde sa couleur.
         public var hue: Double
         /// Le décor de la carte, un thème de `SceneTheme`, ou `nil` pour la
@@ -125,6 +131,9 @@ public final class ReviewViewModel: Introspectable {
         case unveil(String?)
         /// Poser ou retirer un cœur. Un mot aimé revient plus souvent.
         case like(String?)
+        /// Ouvrir la note d'un mot, s'il en a une. Sans identifiant : la carte à l'écran.
+        case showMemo(String?)
+        case hideMemo
         /// Répondre à une question.
         case choose(String?, Int)
         case open(String?)
@@ -190,6 +199,8 @@ public final class ReviewViewModel: Introspectable {
         state.filterTitle = copy.filterTitle
         state.openLabel = copy.openEntry
         state.likeLabel = copy.like
+        state.memoLabel = copy.memo
+        state.closeLabel = copy.close
         state.listenLabel = copy.listen
         state.readAloudLabel = copy.readAloud
         state.optionsLabel = copy.options
@@ -302,6 +313,13 @@ public final class ReviewViewModel: Introspectable {
             guard let index = index(of: id), Self.hasMeaning(state.cards[index]) else { return }
             state.cards[index].isRevealed = true
             state.cards[index].wasRevealed = true
+        case .showMemo(let id):
+            guard let index = index(of: id), state.cards[index].memo != nil else { return }
+            // Le sens d'abord, la note donnerait le mot : elle attend qu'il paraisse.
+            guard state.direction == .wordFirst || state.cards[index].isRevealed else { return }
+            state.memoCard = state.cards[index].id
+        case .hideMemo:
+            state.memoCard = nil
         case .like(let id):
             guard let index = index(of: id), state.cards[index].kind != .streak else { return }
             let card = state.cards[index]
@@ -482,6 +500,7 @@ public final class ReviewViewModel: Introspectable {
             isRevealed: false, isLiked: liked.contains(WordKey(entry.language, entry.word)),
             hue: Self.hue(of: key), badge: badge, choices: [], picked: nil
         )
+        card.memo = MemoState(entry.memo, word: entry.word, copy: copy)
         Self.dress(&card, in: state.scene)
         return card
     }
@@ -601,7 +620,7 @@ public final class ReviewViewModel: Introspectable {
         [
             ("appear", ""), ("cycleSort", ""), ("setSort", "{name: random|newest|oldest}"),
             ("setFilter", "{name: all|french|english|vietnamese}"), ("setPosition", "{index}"),
-            ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("flipDirection", ""), ("like", "[{id}]"), ("choose", "{index}"),
+            ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("flipDirection", ""), ("like", "[{id}]"), ("showMemo", "[{id}]"), ("hideMemo", ""), ("choose", "{index}"),
             ("open", "[{id}]"), ("restart", ""), ("setScene", "{name: word|colours|<theme>}"),
             ("answer", "{name: knew|forgot, id?}"),
         ]
@@ -636,6 +655,8 @@ public final class ReviewViewModel: Introspectable {
         case "reveal": send(.reveal(try optionalID()))
         case "unveil": send(.unveil(try optionalID()))
         case "like": send(.like(try optionalID()))
+        case "showMemo": send(.showMemo(try optionalID()))
+        case "hideMemo": send(.hideMemo)
         case "choose":
             send(.choose(nil, try Input.decode(Index.self, input, action: action, expected: "{index}").index))
         case "open": send(.open(try optionalID()))

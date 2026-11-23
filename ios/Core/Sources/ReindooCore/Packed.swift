@@ -14,6 +14,7 @@ struct Packed: Codable {
     var w: String?         // wiki, seulement quand il ne se déduit pas
     var n: Bool?           // vrai : pas de page Wiktionnaire
     var d: [String]?       // derived
+    var m: Memo?           // la note pour retenir, rare
 
     init(_ entry: Entry) {
         t = entry.translated
@@ -21,6 +22,7 @@ struct Packed: Codable {
         i = entry.ipa.isEmpty ? nil : entry.ipa
         a = entry.audio
         d = entry.derived.isEmpty ? nil : entry.derived
+        m = entry.memo
         if let wiki = entry.wiki {
             w = wiki == Self.wiki(for: entry.word, in: entry.language) ? nil : wiki
         } else {
@@ -33,7 +35,7 @@ struct Packed: Codable {
             word: word, language: language, translated: t,
             explains: (s ?? []).map(\.sense), ipa: i ?? [], audio: a,
             wiki: n == true ? nil : (w ?? Self.wiki(for: word, in: language)),
-            derived: d ?? []
+            derived: d ?? [], memo: m
         )
     }
 

@@ -245,6 +245,7 @@ public enum LexiconBuilder {
         var audio: String?
         var wiki: String?
         var derived: [String]?
+        var memo: Memo?
         var rank: Double?
         var form: String?
         var lemmas: [String]?
@@ -306,7 +307,7 @@ public enum LexiconBuilder {
                             word: word, language: language, translated: translated,
                             explains: senses,
                             ipa: line.ipa ?? [], audio: line.audio,
-                            wiki: line.wiki, derived: line.derived ?? []
+                            wiki: line.wiki, derived: line.derived ?? [], memo: line.memo
                         )
                         let body = String(decoding: try encoder.encode(Packed(entry)), as: UTF8.self)
                         // Une vedette en double : la plus fréquente gagne.

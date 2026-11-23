@@ -153,6 +153,7 @@ jobs:
           shoot entry-found     -fixture returning -open allions
           shoot entry-missing   -fixture sample -open alller
           shoot entry-elsewhere -fixture sample -open goes
+          shoot entry-memo      -fixture returning -open élève -do showMemo
           shoot reel-word       -fixture returning -tab review
           shoot reel-meaning-first -fixture returning -tab review -do flipDirection
           shoot review-empty    -fixture sample -tab review

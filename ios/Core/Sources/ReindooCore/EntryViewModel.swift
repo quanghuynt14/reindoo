@@ -29,6 +29,12 @@ public final class EntryViewModel: Introspectable, Identifiable {
         public var isLiked = false
         public var likeLabel = ""
         public var listenLabel = ""
+        /// Ce qui aide à retenir le mot. Absent : pas de bouton au cerveau.
+        public var memo: MemoState?
+        public var memoLabel = ""
+        public var closeLabel = ""
+        /// La note est ouverte, par-dessus l'entrée.
+        public var isMemoShown = false
 
         // Introuvable
         public var hint: String?
@@ -68,6 +74,9 @@ public final class EntryViewModel: Introspectable, Identifiable {
         case openElsewhere(Language)
         /// Poser ou retirer le cœur.
         case like
+        /// Ouvrir la note pour retenir le mot, s'il en a une.
+        case showMemo
+        case hideMemo
     }
 
     public private(set) var state = State()
@@ -87,6 +96,8 @@ public final class EntryViewModel: Introspectable, Identifiable {
         state.language = language
         state.likeLabel = copy.like
         state.listenLabel = copy.listen
+        state.memoLabel = copy.memo
+        state.closeLabel = copy.close
         state.alsoFromTitle = copy.alsoFrom
         state.derivedTitle = copy.derived
 
@@ -116,6 +127,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
             }
             state.derived = entry.derived
             state.wiki = entry.wiki
+            state.memo = MemoState(entry.memo, word: entry.word, copy: copy)
             state.isLiked = (try? user.liked().contains(WordKey(language, entry.word))) ?? false
             // Chercher un mot, c'est aussi s'en souvenir — comme sur le site.
             if remembers { try? user.remember(WordKey(language, entry.word)) }
@@ -152,6 +164,11 @@ public final class EntryViewModel: Introspectable, Identifiable {
             // S'il ne s'écrit pas, le cœur ne bouge pas : il ne ment pas.
             guard (try? user.setLiked(WordKey(state.language, state.word), liked)) != nil else { return }
             state.isLiked = liked
+        case .showMemo:
+            guard state.memo != nil else { return }
+            state.isMemoShown = true
+        case .hideMemo:
+            state.isMemoShown = false
         }
     }
 
@@ -160,7 +177,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
     public var nodeName: String { "entry" }
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var childNode: (any Introspectable)? { nil }
-    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english|vietnamese}"), ("like", "")] }
+    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english|vietnamese}"), ("like", ""), ("showMemo", ""), ("hideMemo", "")] }
 
     public func perform(_ action: String, input: Data?) throws -> Bool {
         switch action {
@@ -172,6 +189,8 @@ public final class EntryViewModel: Introspectable, Identifiable {
             }
             send(.openElsewhere(language))
         case "like": send(.like)
+        case "showMemo": send(.showMemo)
+        case "hideMemo": send(.hideMemo)
         default: return false
         }
         return true

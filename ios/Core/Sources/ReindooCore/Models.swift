@@ -75,6 +75,51 @@ public struct Sense: Codable, Equatable, Sendable {
 
 /// Une entrée du lexique. Même forme que `Word` dans `@practice/shared`,
 /// moins l'identifiant Mongo : ici la clé est (langue, mot).
+/// Ce qui aide à retenir un mot : d'où il vient, ses voisins, un mémo. Écrit
+/// à la main dans `dictionnaire` (`data/memo-<langue>.jsonl`), en vietnamien,
+/// pour les mots qui ont une histoire. Les trois parties sont facultatives ;
+/// `**gras**` et `*italique*` y sont permis.
+public struct Memo: Codable, Equatable, Sendable {
+    public var origin: String?
+    public var related: String?
+    public var tip: String?
+
+    public init(origin: String? = nil, related: String? = nil, tip: String? = nil) {
+        self.origin = origin
+        self.related = related
+        self.tip = tip
+    }
+
+    /// Une note sans aucun texte ne compte pas : pas de bouton pour rien.
+    public var isEmpty: Bool {
+        [origin, related, tip].allSatisfy { $0?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true }
+    }
+}
+
+/// La note telle que l'écran la montre : ses parties dans l'ordre, chacune
+/// avec son titre. Le mot et l'entrée la partagent, avec le reel.
+public struct MemoState: Codable, Equatable, Sendable {
+    public struct Part: Codable, Equatable, Sendable {
+        /// `origin`, `related` ou `tip` : la vue en tire son icône.
+        public var name: String
+        public var title: String
+        public var text: String
+    }
+
+    public var title: String
+    public var parts: [Part]
+
+    init?(_ memo: Memo?, word: String, copy: Copy) {
+        guard let memo, !memo.isEmpty else { return nil }
+        title = word
+        parts = [("origin", copy.memoOrigin, memo.origin), ("related", copy.memoRelated, memo.related), ("tip", copy.memoTip, memo.tip)]
+            .compactMap { name, title, text in
+                guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+                return Part(name: name, title: title, text: text)
+            }
+    }
+}
+
 public struct Entry: Codable, Equatable, Sendable {
     public var word: String
     public var language: Language
@@ -84,10 +129,12 @@ public struct Entry: Codable, Equatable, Sendable {
     public var audio: String?
     public var wiki: String?
     public var derived: [String]
+    public var memo: Memo?
 
     public init(
         word: String, language: Language, translated: String, explains: [Sense] = [],
-        ipa: [String] = [], audio: String? = nil, wiki: String? = nil, derived: [String] = []
+        ipa: [String] = [], audio: String? = nil, wiki: String? = nil, derived: [String] = [],
+        memo: Memo? = nil
     ) {
         self.word = word
         self.language = language
@@ -97,6 +144,7 @@ public struct Entry: Codable, Equatable, Sendable {
         self.audio = audio
         self.wiki = wiki
         self.derived = derived
+        self.memo = memo?.isEmpty == false ? memo : nil
     }
 }
 

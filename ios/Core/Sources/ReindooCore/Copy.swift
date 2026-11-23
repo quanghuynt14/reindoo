@@ -161,6 +161,12 @@ public struct Copy: Equatable, Sendable {
         pick("\(count) words in a row", "\(count) mots d'affilée", "\(count) từ liên tiếp")
     }
     public var like: String { pick("Like", "Aimer", "Thích") }
+    /// Le bouton au cerveau : ce qui aide à retenir le mot.
+    public var memo: String { pick("Remember it", "Pour retenir", "Mẹo nhớ") }
+    public var memoOrigin: String { pick("Origin", "Origine", "Nguồn gốc") }
+    public var memoRelated: String { pick("Related words", "Mots voisins", "Từ liên quan") }
+    public var memoTip: String { pick("Memory tip", "Pour s'en souvenir", "Mẹo nhớ") }
+    public var close: String { pick("Close", "Fermer", "Đóng") }
     public var listen: String { pick("Listen", "Écouter", "Nghe") }
     public var readAloud: String { pick("Read words aloud", "Lire les mots à voix haute", "Đọc to từng từ") }
     public var options: String { pick("Options", "Options", "Tuỳ chọn") }
