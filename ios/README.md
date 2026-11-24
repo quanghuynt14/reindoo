@@ -32,6 +32,8 @@ brew install xcodegen
 cd ios && xcodegen generate && open Reindoo.xcodeproj
 ```
 
+Deux schémas : `Reindoo` et `ReindooHan` (voir plus bas).
+
 Sans Mac : lancer le workflow « iOS » à la main sur GitHub. Il construit l'app
 et dépose les captures d'écran, claires et sombres, en artefact.
 
