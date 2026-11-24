@@ -16,6 +16,7 @@ struct Packed: Codable {
     var d: [String]?       // derived
     var m: Memo?           // la note pour retenir, rare
     var h: [String]?       // lecture Hán Việt, chinois seulement
+    var c: String?         // graphie traditionnelle, chinois seulement
 
     init(_ entry: Entry) {
         t = entry.translated
@@ -25,6 +26,7 @@ struct Packed: Codable {
         d = entry.derived.isEmpty ? nil : entry.derived
         m = entry.memo
         h = entry.hanViet.isEmpty ? nil : entry.hanViet
+        c = entry.traditional
         if let wiki = entry.wiki {
             w = wiki == Self.wiki(for: entry.word, in: entry.language) ? nil : wiki
         } else {
@@ -37,7 +39,7 @@ struct Packed: Codable {
             word: word, language: language, translated: t,
             explains: (s ?? []).map(\.sense), ipa: i ?? [], audio: a,
             wiki: n == true ? nil : (w ?? Self.wiki(for: word, in: language)),
-            derived: d ?? [], memo: m, hanViet: h ?? []
+            derived: d ?? [], memo: m, hanViet: h ?? [], traditional: c
         )
     }
 
@@ -52,9 +54,10 @@ struct Packed: Codable {
         case .french: ("vi", "Ti%E1%BA%BFng_Ph%C3%A1p")
         case .english: ("vi", "Ti%E1%BA%BFng_Anh")
         case .vietnamese: ("fr", "Vietnamien")
-        // Le chinois : la section « Chữ Hán » du Wiktionnaire vietnamien.
-        // Une autre adresse se garde en entier, comme ailleurs.
-        case .chinese: ("vi", "Ch%E1%BB%AF_H%C3%A1n")
+        // Le chinois : la section « Chinese » du Wiktionnaire anglais, d'où
+        // viennent 95 % des mots. Les 7 000 du vietnamien (« Tiếng Quan
+        // Thoại », « Tiếng Trung Quốc ») gardent leur adresse en entier.
+        case .chinese: ("en", "Chinese")
         }
         return "https://\(host).wiktionary.org/wiki/\(title)#\(section)"
     }
@@ -68,7 +71,7 @@ struct PackedSense: Codable {
     var e: String        // explain
     var y: [String]?     // synonyms
     var n: [String]?     // antonyms
-    var x: [[String]]?   // exemples : [phrase, traduction]
+    var x: [[String]]?   // exemples : [phrase, traduction] ou [phrase, traduction, pinyin]
     var o: String?       // note
     var r: Bool?         // vrai : entrée reindoo
 
@@ -76,7 +79,7 @@ struct PackedSense: Codable {
         e = sense.explain
         y = sense.synonyms.isEmpty ? nil : sense.synonyms
         n = sense.antonyms.isEmpty ? nil : sense.antonyms
-        x = sense.exampleSentences.isEmpty ? nil : sense.exampleSentences.map { [$0.sourceSentence, $0.targetTranslation] }
+        x = sense.exampleSentences.isEmpty ? nil : sense.exampleSentences.map { [$0.sourceSentence, $0.targetTranslation] + ($0.pinyin.map { [$0] } ?? []) }
         o = sense.note?.isEmpty == false ? sense.note : nil
         r = sense.isOwn ? true : nil
     }
@@ -85,7 +88,7 @@ struct PackedSense: Codable {
         Sense(
             explain: e, synonyms: y ?? [], antonyms: n ?? [],
             exampleSentences: (x ?? []).compactMap { pair in
-                pair.count == 2 ? Example(sourceSentence: pair[0], targetTranslation: pair[1]) : nil
+                pair.count >= 2 ? Example(sourceSentence: pair[0], targetTranslation: pair[1], pinyin: pair.count > 2 ? pair[2] : nil) : nil
             },
             note: o, source: r == true ? Sense.own : nil
         )

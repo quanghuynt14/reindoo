@@ -131,16 +131,21 @@ vietnamien expliqué en chinois. Cible XcodeGen `ReindooHan`, identifiant
   sans espaces, ü tapé v ou u. Le constructeur range chaque lecture sous deux
   clés de la table des formes (`Text.pinyinKey`, `Text.toneKey`). Un ton
   tapé est un choix : « shí » ouvre 十, « shi » ouvre le plus courant, 是.
-- La prononciation d'un mot chinois est son pinyin : le champ `ipa` du
-  NDJSON, ou `pinyin`. Sa lecture Hán Việt (`hanViet`) s'affiche dessous.
-  Les noms de champs sont reliés à l'app en un seul endroit,
-  `LexiconBuilder.Line`.
+- Le NDJSON chinois (`make mongo LANG=zh`, branche `han` de dictionnaire)
+  porte le pinyin dans `ipa`, la lecture Hán Việt dans `hanviet`, la graphie
+  traditionnelle dans `traditional`, et la lecture de chaque exemple dans
+  `pinyin`. L'entrée montre les trois sous le mot. `variants` n'est pas lu :
+  ces graphies sont déjà des formes. Les noms de champs sont reliés à l'app
+  en un seul endroit, `LexiconBuilder.Line`.
+- L'adresse Wiktionary d'un mot chinois se déduit quand elle vise la section
+  « Chinese » du Wiktionnaire anglais (95 % des mots) ; celles du
+  Wiktionnaire vietnamien se gardent en entier.
 - Le lexique va dans `Han/Resources/lexicon.sqlite` (ignoré par git),
   l'icône dans `Han/Assets.xcassets`, fabriquée par
   `python3 ios/scripts/han-icon.py` à partir de celle de reindoo.
 
 ```sh
-# dans dictionnaire, branche han : make mongo LANG=zh (et le fichier Việt–Trung, quand il existera)
+# dans dictionnaire, branche han : python3 scripts/fetch.py --lang zh && make mongo LANG=zh
 swift run --package-path ios/Core -c release reindoo-cli build-lexicon \
   ios/Han/Resources/lexicon.sqlite ../dictionnaire/build/mongo-zh.ndjson
 swift run --package-path ios/Core reindoo-cli --edition han 'do setQuery {"text":"nihao"} ; do submit'

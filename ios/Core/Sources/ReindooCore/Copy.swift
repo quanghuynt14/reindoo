@@ -110,6 +110,10 @@ public struct Copy: Equatable, Sendable {
         pick("Sino-Vietnamese: ", "Hán Việt : ", "Hán Việt: ") + readings.joined(separator: " · ")
     }
 
+    public func traditional(_ spelling: String) -> String {
+        pick("Traditional: ", "Traditionnel : ", "Phồn thể: ") + spelling
+    }
+
     public var alsoFrom: String { pick("Could also be", "Peut aussi être", "Cũng có thể là") }
     public var synonyms: String { pick("Synonyms", "Synonymes", "Đồng nghĩa") }
     public var antonyms: String { pick("Antonyms", "Antonymes", "Trái nghĩa") }

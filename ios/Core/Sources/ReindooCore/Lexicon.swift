@@ -279,10 +279,12 @@ public enum LexiconBuilder {
     /// Une ligne du NDJSON. Tout ce qui relie ses noms de champs à ceux de
     /// l'app est ici, et nulle part ailleurs.
     ///
-    /// Le chinois (`make mongo LANG=zh`) suit le même schéma, à deux
-    /// différences près : sa prononciation est du pinyin, et un mot peut
-    /// porter sa lecture Hán Việt. Tant que le dépôt `dictionnaire` n'a pas
-    /// fixé leurs noms, on accepte les plus probables, en texte ou en liste.
+    /// Le chinois (`make mongo LANG=zh`, branche `han` de dictionnaire) suit
+    /// le même schéma : son pinyin est dans `ipa`, sa lecture Hán Việt dans
+    /// `hanviet`, sa graphie traditionnelle dans `traditional`, la lecture
+    /// d'un exemple dans `pinyin`. `variants` n'est pas lu : ces graphies-là
+    /// sont déjà des formes. On accepte aussi des noms voisins, en texte ou
+    /// en liste.
     private struct Line: Decodable {
         var _collection: String
         var sourceLanguage: String
@@ -299,10 +301,11 @@ public enum LexiconBuilder {
         var lemmas: [String]?
         var pinyin: [String]?
         var hanViet: [String]?
+        var traditional: String?
 
         private enum Keys: String, CodingKey {
             case _collection, sourceLanguage, word, translated, explains, ipa, audio, wiki, derived, memo, rank, form, lemmas
-            case pinyin, hanViet, hanviet, han_viet, sinoVietnamese
+            case pinyin, hanViet, hanviet, han_viet, sinoVietnamese, traditional
         }
 
         init(from decoder: Decoder) throws {
@@ -321,6 +324,7 @@ public enum LexiconBuilder {
             form = try c.decodeIfPresent(String.self, forKey: .form)
             lemmas = try c.decodeIfPresent([String].self, forKey: .lemmas)
             pinyin = Self.texts(c, .pinyin)
+            traditional = Self.texts(c, .traditional)?.first
             hanViet = [Keys.hanViet, .hanviet, .han_viet, .sinoVietnamese].lazy.compactMap { Self.texts(c, $0) }.first
         }
 
@@ -394,7 +398,7 @@ public enum LexiconBuilder {
                             explains: senses,
                             ipa: line.pronunciation, audio: line.audio,
                             wiki: line.wiki, derived: line.derived ?? [], memo: line.memo,
-                            hanViet: line.hanViet ?? []
+                            hanViet: line.hanViet ?? [], traditional: line.traditional
                         )
                         if language.isTypedByReading {
                             for reading in line.pronunciation { readings.add(reading, for: word) }

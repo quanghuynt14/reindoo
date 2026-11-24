@@ -62,7 +62,29 @@ import Testing
         #expect(try app.state("hanViet") == Harness.copy.hanViet(["nhĩ hảo"]))
         #expect(try app.state("translated") == "xin chào")
         #expect(try app.state("senses.0.examples.0.sourceSentence") == "你好，我是老师。")
-        #expect(try app.state("wiki") == "https://vi.wiktionary.org/wiki/%E4%BD%A0%E5%A5%BD#Ch%E1%BB%AF_H%C3%A1n")
+        // Venu du Wiktionnaire vietnamien : l'adresse est gardée telle quelle.
+        #expect(try app.state("wiki") == "https://vi.wiktionary.org/wiki/%E4%BD%A0%E5%A5%BD#Ti%E1%BA%BFng_Quan_Tho%E1%BA%A1i")
+        #expect(try app.state("traditional", as: String.self) == nil, "même graphie : rien à montrer")
+    }
+
+    @Test func theTraditionalSpellingAndTheExamplePinyinAreShown() throws {
+        let app = try han()
+        try app.search("学生")
+        #expect(try app.state("traditional") == Harness.copy.traditional("學生"))
+        #expect(try app.state("senses.0.examples.0.pinyin") == "Wǒ shì xuésheng.")
+        #expect(try app.state("senses.0.examples.0.targetTranslation") == "Tôi là học sinh.")
+        // Venu du Wiktionnaire anglais : l'adresse se déduit, rien n'est rangé.
+        #expect(try app.state("wiki") == "https://en.wiktionary.org/wiki/%E5%AD%A6%E7%94%9F#Chinese")
+    }
+
+    @Test func aDeducibleChineseAddressIsNotStored() throws {
+        let entry = Entry(word: "学生", language: .chinese, translated: "học sinh",
+                          wiki: "https://en.wiktionary.org/wiki/%E5%AD%A6%E7%94%9F#Chinese", traditional: "學生")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let body = String(decoding: try encoder.encode(Packed(entry)), as: UTF8.self)
+        #expect(body == #"{"c":"學生","t":"học sinh"}"#)
+        #expect(Packed(entry).entry(word: "学生", language: .chinese) == entry)
     }
 
     @Test func aPinyinFieldOfItsOwnIsThePronunciation() throws {
@@ -70,6 +92,7 @@ import Testing
         try app.search("汉语")
         #expect(try app.state("ipa") == "hànyǔ")
         #expect(try app.state("hanViet") == Harness.copy.hanViet(["hán ngữ"]))
+        #expect(try app.state("traditional") == Harness.copy.traditional("漢語"))
     }
 
     @Test func aTraditionalCharacterLeadsToTheSimplifiedEntry() throws {

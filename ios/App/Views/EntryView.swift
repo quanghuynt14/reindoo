@@ -89,6 +89,11 @@ struct EntryView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            if let traditional = state.traditional {
+                Text(traditional)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             Text(state.translated)
                 .font(.title2.weight(.medium))
                 .foregroundStyle(.tint)
@@ -132,6 +137,11 @@ struct EntryView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(example.sourceSentence)
                             .font(Theme.entryBody.italic())
+                        if let pinyin = example.pinyin {
+                            Text(pinyin)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                         Text(example.targetTranslation)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)

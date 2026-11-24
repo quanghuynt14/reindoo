@@ -47,10 +47,13 @@ public enum Language: String, Codable, Sendable, CaseIterable {
 public struct Example: Codable, Equatable, Sendable {
     public var sourceSentence: String
     public var targetTranslation: String
+    /// La lecture d'une phrase chinoise. Rien ailleurs.
+    public var pinyin: String?
 
-    public init(sourceSentence: String, targetTranslation: String) {
+    public init(sourceSentence: String, targetTranslation: String, pinyin: String? = nil) {
         self.sourceSentence = sourceSentence
         self.targetTranslation = targetTranslation
+        self.pinyin = pinyin?.isEmpty == false ? pinyin : nil
     }
 }
 
@@ -153,11 +156,13 @@ public struct Entry: Codable, Equatable, Sendable {
     /// La lecture sino-vietnamienne d'un mot chinois : 你好, « nhĩ hảo ».
     /// Vide partout ailleurs.
     public var hanViet: [String]
+    /// La graphie traditionnelle d'un mot chinois, rangé sous la simplifiée.
+    public var traditional: String?
 
     public init(
         word: String, language: Language, translated: String, explains: [Sense] = [],
         ipa: [String] = [], audio: String? = nil, wiki: String? = nil, derived: [String] = [],
-        memo: Memo? = nil, hanViet: [String] = []
+        memo: Memo? = nil, hanViet: [String] = [], traditional: String? = nil
     ) {
         self.word = word
         self.language = language
@@ -169,6 +174,7 @@ public struct Entry: Codable, Equatable, Sendable {
         self.derived = derived
         self.memo = memo?.isEmpty == false ? memo : nil
         self.hanViet = hanViet
+        self.traditional = traditional?.isEmpty == false && traditional != word ? traditional : nil
     }
 }
 

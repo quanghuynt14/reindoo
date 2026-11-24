@@ -18,6 +18,8 @@ public final class EntryViewModel: Introspectable, Identifiable {
         public var ipa = ""
         /// « Hán Việt: nhĩ hảo », sous le pinyin d'un mot chinois. Absent ailleurs.
         public var hanViet: String?
+        /// « Phồn thể: 學 », la graphie traditionnelle. Absente ailleurs.
+        public var traditional: String?
         public var translated = ""
         /// « allions » est une forme de « aller ».
         public var matchedNote: String?
@@ -113,6 +115,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
             state.word = entry.word
             state.ipa = entry.ipa.joined(separator: " · ")
             state.hanViet = entry.hanViet.isEmpty ? nil : copy.hanViet(entry.hanViet)
+            state.traditional = entry.traditional.map(copy.traditional)
             state.translated = entry.translated
             state.matchedNote = matchedForm.map { copy.matchedForm($0, entry.word) }
             state.alsoFrom = alsoFrom
