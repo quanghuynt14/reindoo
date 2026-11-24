@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""L'icône de Reindoo Hán, tirée de celle de reindoo.
+"""L'icône de Reindoo Hán Việt, tirée de celle de reindoo.
 
 Le renne passe à l'encre, et un sceau rouge porte 漢 en bas à droite. Le
 caractère est tracé ici, trait par trait : aucune police, aucun fichier

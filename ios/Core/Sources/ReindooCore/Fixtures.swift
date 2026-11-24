@@ -41,7 +41,7 @@ public enum Fixture: String, Sendable, CaseIterable {
     {"_collection":"dictionary_forms","form":"hoà","sourceLanguage":"vietnamese","lemmas":["hòa"],"analysis":"dấu đặt chỗ khác"}
     """#
 
-    /// Le petit lexique de Reindoo Hán, au format de `make mongo LANG=zh` et
+    /// Le petit lexique de Reindoo Hán Việt, au format de `make mongo LANG=zh` et
     /// du fichier Việt–Trung. Des caractères simplifiés, leur forme
     /// traditionnelle, du pinyin écrit de plusieurs façons (le champ `ipa`,
     /// ou `pinyin`), une lecture Hán Việt, des homophones (« shi »), un ü, un

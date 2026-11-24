@@ -113,11 +113,11 @@ Dans l'app, un cerveau se pose à côté du cœur, dans l'entrée et dans le ree
 et ouvre la note en feuille (`MemoView`). Dans le reel, sens d'abord, il attend
 que le mot paraisse : la note le donnerait.
 
-## Reindoo Hán
+## Reindoo Hán Việt
 
 Une deuxième app, du même code : le chinois expliqué en vietnamien, le
 vietnamien expliqué en chinois. Cible XcodeGen `ReindooHan`, identifiant
-`com.reindoo.han`, nom « Reindoo Hán ».
+`com.reindoo.han`, nom « Reindoo Hán Việt ».
 
 - **L'édition** (`Edition.swift`) choisit les langues offertes, dans l'ordre
   du sélecteur, et le petit lexique de secours. L'app la lit dans la clé
@@ -154,7 +154,7 @@ swift run --package-path ios/Core reindoo-cli --edition han 'do setQuery {"text"
 En CI, le job `lexicon-han` suit la branche `DICTIONNAIRE_HAN_BRANCH`
 (variable du dépôt, `han` par défaut) et les LANG de `DICTIONNAIRE_HAN_LANGS`
 (`zh` par défaut ; ajouter celui du Việt–Trung, séparé par une espace). Une
-étiquette `han-vX.Y.Z` envoie Reindoo Hán sur TestFlight, avec les mêmes
+étiquette `han-vX.Y.Z` envoie Reindoo Hán Việt sur TestFlight, avec les mêmes
 secrets ; la fiche `com.reindoo.han` doit exister dans App Store Connect.
 
 ## Règles

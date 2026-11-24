@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import ReindooCore
 
-/// Reindoo Hán : le chinois expliqué en vietnamien, le vietnamien expliqué en
+/// Reindoo Hán Việt : le chinois expliqué en vietnamien, le vietnamien expliqué en
 /// chinois. Le même code que reindoo ; seule l'édition change.
 @MainActor
 @Suite struct HanEdition {

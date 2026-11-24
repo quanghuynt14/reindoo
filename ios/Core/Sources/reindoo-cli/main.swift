@@ -138,7 +138,7 @@ if arguments.first == "--ui" {
     arguments.removeFirst(2)
 }
 
-// `--edition han` : Reindoo Hán, le chinois et le vietnamien expliqué en chinois.
+// `--edition han` : Reindoo Hán Việt, le chinois et le vietnamien expliqué en chinois.
 var edition = Edition.reindoo
 if arguments.first == "--edition" {
     guard arguments.count >= 2, let chosen = Edition(rawValue: arguments[1]) else {

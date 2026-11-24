@@ -33,7 +33,7 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
-  # Reindoo Hán : le même code, une autre édition. Le chinois expliqué en
+  # Reindoo Hán Việt : le même code, une autre édition. Le chinois expliqué en
   # vietnamien, le vietnamien en chinois. Son lexique, son icône et son nom
   # sont dans Han/ ; l'Info.plist n'y déclare que l'édition (`ReindooEdition`),
   # Xcode y ajoute le reste.
@@ -65,7 +65,7 @@ targets:
         INFOPLIST_FILE: Han/Info.plist
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        INFOPLIST_KEY_CFBundleDisplayName: "Reindoo Hán"
+        INFOPLIST_KEY_CFBundleDisplayName: "Reindoo Hán Việt"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO

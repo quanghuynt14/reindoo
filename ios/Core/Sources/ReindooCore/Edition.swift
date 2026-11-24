@@ -4,7 +4,7 @@ import Foundation
 ///
 /// - `reindoo` : le français et l'anglais expliqués en vietnamien, le
 ///   vietnamien en français ;
-/// - `han` (Reindoo Hán) : le chinois expliqué en vietnamien, le vietnamien
+/// - `han` (Reindoo Hán Việt) : le chinois expliqué en vietnamien, le vietnamien
 ///   en chinois.
 ///
 /// L'app la lit au lancement, dans la clé `ReindooEdition` de son Info.plist.

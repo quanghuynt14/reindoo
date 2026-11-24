@@ -5,7 +5,7 @@ on:
     branches: ["**"]
     paths: ["ios/**", ".github/workflows/ios.yml"]
     # Une étiquette `ios-v0.1.0` envoie cette version de reindoo sur
-    # TestFlight ; `han-v0.1.0`, celle de Reindoo Hán.
+    # TestFlight ; `han-v0.1.0`, celle de Reindoo Hán Việt.
     tags: ["ios-v*", "han-v*"]
   workflow_dispatch:
     inputs:
@@ -18,7 +18,7 @@ on:
         type: boolean
         default: false
       han_branch:
-        description: Branche de dictionnaire pour Reindoo Hán (vide = variable DICTIONNAIRE_HAN_BRANCH, sinon han)
+        description: Branche de dictionnaire pour Reindoo Hán Việt (vide = variable DICTIONNAIRE_HAN_BRANCH, sinon han)
         type: string
         default: ""
 
@@ -105,7 +105,7 @@ jobs:
           path: lexicon.sqlite
           compression-level: 9
 
-  # Le lexique de Reindoo Hán : `make mongo LANG=zh` (chinois → vietnamien),
+  # Le lexique de Reindoo Hán Việt : `make mongo LANG=zh` (chinois → vietnamien),
   # puis, quand il existera, le fichier vietnamien → chinois. Les noms des
   # LANG sont dans DICTIONNAIRE_HAN_LANGS (variable du dépôt), « zh » par
   # défaut ; la branche dans DICTIONNAIRE_HAN_BRANCH, « han » tant qu'elle
@@ -186,7 +186,7 @@ jobs:
     # TestFlight construit l'app de son côté.
     #
     # Les deux apps se construisent. Sans lexique Hán (sa branche n'existe pas
-    # encore), Reindoo Hán se construit quand même, sur l'échantillon de Core :
+    # encore), Reindoo Hán Việt se construit quand même, sur l'échantillon de Core :
     # le job lexicon-han, lui, reste rouge.
     if: always() && needs.core.result == 'success' && needs.lexicon.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]')) && !startsWith(github.ref, 'refs/tags/')
     needs: [core, lexicon, lexicon-han]
@@ -213,7 +213,7 @@ jobs:
           xcodebuild -project Reindoo.xcodeproj -scheme Reindoo \
             -sdk iphonesimulator -configuration Debug \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-      - name: Construire Reindoo Hán
+      - name: Construire Reindoo Hán Việt
         working-directory: ios
         run: |
           xcodebuild -project Reindoo.xcodeproj -scheme ReindooHan \
@@ -438,7 +438,7 @@ jobs:
             -exportOptionsPlist build/export.plist -exportPath build/export "${auth[@]}"
           rm -f "$key"
 
-  # Une étiquette `han-vX.Y.Z` : la même chose pour Reindoo Hán
+  # Une étiquette `han-vX.Y.Z` : la même chose pour Reindoo Hán Việt
   # (com.reindoo.han), avec les mêmes secrets. Pas de lexique Hán, pas d'envoi.
   testflight-han:
     if: startsWith(github.ref, 'refs/tags/han-v')

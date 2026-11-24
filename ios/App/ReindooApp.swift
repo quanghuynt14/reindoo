@@ -35,7 +35,7 @@ struct Launch {
     /// `.lproj` de Resources.
     static let copy = Copy(UILanguage(code: Bundle.main.preferredLocalizations.first))
 
-    /// Reindoo ou Reindoo Hán : la cible Xcode le dit dans l'Info.plist
+    /// Reindoo ou Reindoo Hán Việt : la cible Xcode le dit dans l'Info.plist
     /// (`ReindooEdition`). L'app d'origine n'a pas la clé, et reste reindoo.
     static let edition = Edition(name: Bundle.main.object(forInfoDictionaryKey: Edition.infoKey) as? String)
 
