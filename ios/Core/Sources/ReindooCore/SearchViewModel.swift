@@ -108,7 +108,7 @@ public final class SearchViewModel: Introspectable {
         case "setQuery": send(.setQuery(try Input.decode(Input.Text.self, input, action: action, expected: "{text}").text))
         case "setLanguage":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
-            guard let language = Language(rawValue: name) else {
+            guard let language = Language(rawValue: name), languages.contains(language) else {
                 throw IntrospectionError.badInput(action: action, expected: "{name: \(names)}")
             }
             send(.setLanguage(language))

@@ -18,6 +18,10 @@ For the 1,000 most frequent Vietnamese words, the app shows an entry written for
 
 The data lives in [dictionnaire](https://github.com/quanghuynt14/dictionnaire) (`data/reindoo-vi.jsonl`).
 
+### Reindoo Hán
+
+Reindoo Hán, the Chinese–Vietnamese edition, bundles entries compiled by [dictionnaire](https://github.com/quanghuynt14/dictionnaire) in the same way, from Wiktionary, under the same license. Its app icon is derived from Reindoo's by `ios/scripts/han-icon.py`; the 漢 seal is drawn stroke by stroke, without a font.
+
 ## SQLite
 
 `ios/Core/Sources/CSQLite` contains the [SQLite](https://sqlite.org) amalgamation, which its authors have placed in the public domain.

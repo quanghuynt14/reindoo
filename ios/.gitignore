@@ -3,3 +3,4 @@
 DerivedData/
 build/
 App/Resources/lexicon.sqlite
+Han/Resources/lexicon.sqlite

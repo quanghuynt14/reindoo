@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Seulement l'édition : Xcode génère le reste (GENERATE_INFOPLIST_FILE) et le fusionne ici. -->
+<plist version="1.0">
+<dict>
+  <key>ReindooEdition</key>
+  <string>han</string>
+</dict>
+</plist>

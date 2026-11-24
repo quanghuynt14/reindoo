@@ -191,7 +191,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
         case "open": send(.open(try Input.decode(Input.Word.self, input, action: action, expected: "{word}").word))
         case "openElsewhere":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
-            guard let language = Language(rawValue: name) else {
+            guard let language = Language(rawValue: name), languages.contains(language) else {
                 throw IntrospectionError.badInput(action: action, expected: "{name: \(names)}")
             }
             send(.openElsewhere(language))

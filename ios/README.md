@@ -111,6 +111,45 @@ Dans l'app, un cerveau se pose à côté du cœur, dans l'entrée et dans le ree
 et ouvre la note en feuille (`MemoView`). Dans le reel, sens d'abord, il attend
 que le mot paraisse : la note le donnerait.
 
+## Reindoo Hán
+
+Une deuxième app, du même code : le chinois expliqué en vietnamien, le
+vietnamien expliqué en chinois. Cible XcodeGen `ReindooHan`, identifiant
+`com.reindoo.han`, nom « Reindoo Hán ».
+
+- **L'édition** (`Edition.swift`) choisit les langues offertes, dans l'ordre
+  du sélecteur, et le petit lexique de secours. L'app la lit dans la clé
+  `ReindooEdition` de son Info.plist (`Han/Info.plist`, la seule clé qu'il
+  porte ; Xcode génère le reste). Sans clé : reindoo. Le CLI prend
+  `--edition han`.
+- Une langue que le lexique ne sert pas n'est pas offerte : sans le fichier
+  Việt–Trung, Hán ne propose que le chinois.
+- **Le chinois se cherche** en caractères, simplifiés ou traditionnels (les
+  formes du NDJSON), et en pinyin : avec tons, avec chiffres, sans tons,
+  sans espaces, ü tapé v ou u. Le constructeur range chaque lecture sous deux
+  clés de la table des formes (`Text.pinyinKey`, `Text.toneKey`). Un ton
+  tapé est un choix : « shí » ouvre 十, « shi » ouvre le plus courant, 是.
+- La prononciation d'un mot chinois est son pinyin : le champ `ipa` du
+  NDJSON, ou `pinyin`. Sa lecture Hán Việt (`hanViet`) s'affiche dessous.
+  Les noms de champs sont reliés à l'app en un seul endroit,
+  `LexiconBuilder.Line`.
+- Le lexique va dans `Han/Resources/lexicon.sqlite` (ignoré par git),
+  l'icône dans `Han/Assets.xcassets`, fabriquée par
+  `python3 ios/scripts/han-icon.py` à partir de celle de reindoo.
+
+```sh
+# dans dictionnaire, branche han : make mongo LANG=zh (et le fichier Việt–Trung, quand il existera)
+swift run --package-path ios/Core -c release reindoo-cli build-lexicon \
+  ios/Han/Resources/lexicon.sqlite ../dictionnaire/build/mongo-zh.ndjson
+swift run --package-path ios/Core reindoo-cli --edition han 'do setQuery {"text":"nihao"} ; do submit'
+```
+
+En CI, le job `lexicon-han` suit la branche `DICTIONNAIRE_HAN_BRANCH`
+(variable du dépôt, `han` par défaut) et les LANG de `DICTIONNAIRE_HAN_LANGS`
+(`zh` par défaut ; ajouter celui du Việt–Trung, séparé par une espace). Une
+étiquette `han-vX.Y.Z` envoie Reindoo Hán sur TestFlight, avec les mêmes
+secrets ; la fiche `com.reindoo.han` doit exister dans App Store Connect.
+
 ## Règles
 
 - Ce que l'utilisateur voit est dans `state`. Ce qu'il peut faire est une `Action`.

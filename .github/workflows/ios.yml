@@ -4,8 +4,9 @@ on:
   push:
     branches: ["**"]
     paths: ["ios/**", ".github/workflows/ios.yml"]
-    # Une étiquette `ios-v0.1.0` envoie cette version sur TestFlight.
-    tags: ["ios-v*"]
+    # Une étiquette `ios-v0.1.0` envoie cette version de reindoo sur
+    # TestFlight ; `han-v0.1.0`, celle de Reindoo Hán.
+    tags: ["ios-v*", "han-v*"]
   workflow_dispatch:
     inputs:
       screenshots:
@@ -16,6 +17,10 @@ on:
         description: Capturer les écrans de l'App Store (iPhone 6,9 pouces)
         type: boolean
         default: false
+      han_branch:
+        description: Branche de dictionnaire pour Reindoo Hán (vide = variable DICTIONNAIRE_HAN_BRANCH, sinon han)
+        type: string
+        default: ""
 
 jobs:
   # Rapide et bon marché : tourne à chaque push.
@@ -100,13 +105,87 @@ jobs:
           path: lexicon.sqlite
           compression-level: 9
 
+  # Le lexique de Reindoo Hán : `make mongo LANG=zh` (chinois → vietnamien),
+  # puis, quand il existera, le fichier vietnamien → chinois. Les noms des
+  # LANG sont dans DICTIONNAIRE_HAN_LANGS (variable du dépôt), « zh » par
+  # défaut ; la branche dans DICTIONNAIRE_HAN_BRANCH, « han » tant qu'elle
+  # n'est pas fusionnée, puis main.
+  #
+  # Une branche absente, un NDJSON sans chinois : le job échoue et le dit.
+  # Il ne passe jamais à vide.
+  lexicon-han:
+    if: (github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]') || startsWith(github.ref, 'refs/tags/han-v')
+    runs-on: ubuntu-24.04
+    env:
+      HAN_BRANCH: ${{ inputs.han_branch || vars.DICTIONNAIRE_HAN_BRANCH || 'han' }}
+      HAN_LANGS: ${{ vars.DICTIONNAIRE_HAN_LANGS || 'zh' }}
+    steps:
+      - name: dictionnaire, branche Hán
+        run: |
+          set -euo pipefail
+          sha=$(git ls-remote https://github.com/quanghuynt14/dictionnaire.git "refs/heads/$HAN_BRANCH" | cut -f1)
+          if [ -z "$sha" ]; then
+            echo "::error::la branche « $HAN_BRANCH » n'existe pas dans dictionnaire : pas de lexique Hán. Régler DICTIONNAIRE_HAN_BRANCH."
+            exit 1
+          fi
+          echo "DICTIONNAIRE_REF=$sha" >> "$GITHUB_ENV"
+          echo "dictionnaire @ $HAN_BRANCH $sha, LANG=$HAN_LANGS" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v4
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: lexicon-han.sqlite
+          key: lexicon-han-${{ env.DICTIONNAIRE_REF }}-${{ env.HAN_LANGS }}-${{ hashFiles('ios/Core/Sources/ReindooCore/Lexicon.swift', 'ios/Core/Sources/ReindooCore/Packed.swift', 'ios/Core/Sources/ReindooCore/Models.swift', 'ios/Core/Sources/ReindooCore/Text.swift') }}
+      - name: Sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/quanghuynt14/dictionnaire.git work/dictionnaire
+          git -C work/dictionnaire checkout -q "$DICTIONNAIRE_REF"
+          # Les mêmes sources voisines que le lexique de reindoo : fetch.py les attend.
+          dir=work/conjugaison/data/sources
+          mkdir -p "$dir"
+          curl -fsSL -o "$dir/Lexique383.tsv" http://www.lexique.org/databases/Lexique383/Lexique383.tsv
+          curl -fsSL -o "$dir/verbs-fr.xml" https://raw.githubusercontent.com/bretttolbert/verbecc/8afdd68679b18e2fd58edf5324ca24ca68bfabdb/src/verbecc/data/xml/verbs/verbs-fr.xml
+          curl -fsSL -o "$dir/conjugations-fr.xml" https://raw.githubusercontent.com/bretttolbert/verbecc/8afdd68679b18e2fd58edf5324ca24ca68bfabdb/src/verbecc/data/xml/conjugations/conjugations-fr.xml
+      - name: NDJSON
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: work/dictionnaire
+        run: |
+          set -euo pipefail
+          python3 scripts/fetch.py
+          for lang in $HAN_LANGS; do make mongo LANG=$lang; done
+          ls -la build
+          # Sans une ligne chinoise, ce n'est pas le lexique Hán.
+          count=$(grep -c '"sourceLanguage": *"chinese"' build/mongo-*.ndjson | awk -F: '{s+=$2} END {print s+0}')
+          echo "lignes chinoises : $count" >> "$GITHUB_STEP_SUMMARY"
+          [ "$count" -gt 0 ] || { echo "::error::aucune ligne sourceLanguage=chinese dans build/mongo-{$HAN_LANGS}.ndjson"; exit 1; }
+      - name: SQLite
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          files=""
+          for lang in $HAN_LANGS; do files="$files work/dictionnaire/build/mongo-$lang.ndjson"; done
+          docker run --rm -v "$PWD:/w" -w /w swift:6.4.2-noble \
+            swift run --package-path ios/Core -c release reindoo-cli build-lexicon lexicon-han.sqlite $files
+          ls -la lexicon-han.sqlite
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lexicon-han
+          path: lexicon-han.sqlite
+          compression-level: 9
+
   # Les minutes macOS coûtent dix fois plus : à la demande seulement.
   app:
     # À la main, ou par un commit dont le message contient [shots].
     # Pas sur une étiquette : le commit étiqueté a déjà été essayé, et
     # TestFlight construit l'app de son côté.
-    if: ((github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]')) && !startsWith(github.ref, 'refs/tags/')
-    needs: [core, lexicon]
+    #
+    # Les deux apps se construisent. Sans lexique Hán (sa branche n'existe pas
+    # encore), Reindoo Hán se construit quand même, sur l'échantillon de Core :
+    # le job lexicon-han, lui, reste rouge.
+    if: always() && needs.core.result == 'success' && needs.lexicon.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.screenshots) || contains(github.event.head_commit.message, '[shots]')) && !startsWith(github.ref, 'refs/tags/')
+    needs: [core, lexicon, lexicon-han]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -114,6 +193,14 @@ jobs:
         with:
           name: lexicon
           path: ios/App/Resources
+      - uses: actions/download-artifact@v4
+        if: needs.lexicon-han.result == 'success'
+        with:
+          name: lexicon-han
+          path: ios/Han/Resources
+      - name: Lexique Hán à sa place
+        if: needs.lexicon-han.result == 'success'
+        run: mv ios/Han/Resources/lexicon-han.sqlite ios/Han/Resources/lexicon.sqlite
       - run: brew install xcodegen
       - name: Générer et construire
         working-directory: ios
@@ -122,6 +209,20 @@ jobs:
           xcodebuild -project Reindoo.xcodeproj -scheme Reindoo \
             -sdk iphonesimulator -configuration Debug \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Construire Reindoo Hán
+        working-directory: ios
+        run: |
+          xcodebuild -project Reindoo.xcodeproj -scheme ReindooHan \
+            -sdk iphonesimulator -configuration Debug \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          app=build/Build/Products/Debug-iphonesimulator/ReindooHan.app
+          # Ce que l'app lira au lancement : son édition, son nom, son icône.
+          /usr/libexec/PlistBuddy -c "Print :ReindooEdition" "$app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c "Print :ReindooEdition" "$app/Info.plist")" = han
+          ls "$app" | grep -E "AppIcon|lexicon|lproj" || true
       # Provisoire : les captures et les gestes prennent vingt-cinq minutes.
       # On construit seulement. Retirer `if: false` pour les retrouver.
       - name: Capturer les écrans
@@ -330,5 +431,59 @@ jobs:
           </dict></plist>
           PLIST
           xcodebuild -exportArchive -archivePath build/Reindoo.xcarchive \
+            -exportOptionsPlist build/export.plist -exportPath build/export "${auth[@]}"
+          rm -f "$key"
+
+  # Une étiquette `han-vX.Y.Z` : la même chose pour Reindoo Hán
+  # (com.reindoo.han), avec les mêmes secrets. Pas de lexique Hán, pas d'envoi.
+  testflight-han:
+    if: startsWith(github.ref, 'refs/tags/han-v')
+    needs: [core, lexicon-han]
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lexicon-han
+          path: ios/Han/Resources
+      - run: mv ios/Han/Resources/lexicon-han.sqlite ios/Han/Resources/lexicon.sqlite
+      - run: brew install xcodegen
+      - name: Archiver et envoyer
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || { echo "::error::secret $name manquant"; exit 1; }
+          done
+          version=${GITHUB_REF_NAME#han-v}
+          key="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s' "$ASC_KEY_P8" > "$key"
+          auth=(-allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+
+          xcodegen generate
+          # Comme pour reindoo : l'archive non signée, l'export la signe.
+          xcodebuild archive -project Reindoo.xcodeproj -scheme ReindooHan -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/ReindooHan.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+          test "$(/usr/libexec/PlistBuddy -c "Print :ReindooEdition" build/ReindooHan.xcarchive/Products/Applications/ReindooHan.app/Info.plist)" = han
+
+          cat > build/export.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/ReindooHan.xcarchive \
             -exportOptionsPlist build/export.plist -exportPath build/export "${auth[@]}"
           rm -f "$key"

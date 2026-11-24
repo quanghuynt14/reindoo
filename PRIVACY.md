@@ -2,7 +2,7 @@
 
 Last updated: 16 November 2026.
 
-This policy covers Reindoo for iOS.
+This policy covers Reindoo for iOS and Reindoo Hán, its Chinese–Vietnamese edition. Both work the same way.
 
 ## What the app collects
 
