@@ -119,7 +119,7 @@ jobs:
     timeout-minutes: 90
     env:
       HAN_BRANCH: ${{ inputs.han_branch || vars.DICTIONNAIRE_HAN_BRANCH || 'han' }}
-      HAN_LANGS: ${{ vars.DICTIONNAIRE_HAN_LANGS || 'zh' }}
+      HAN_LANGS: ${{ vars.DICTIONNAIRE_HAN_LANGS || 'zh vz' }}
     steps:
       - name: dictionnaire, branche Hán
         run: |
