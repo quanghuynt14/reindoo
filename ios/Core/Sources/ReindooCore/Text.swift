@@ -17,6 +17,41 @@ enum Text {
         fold(text) == text.lowercased()
     }
 
+    /// La clé d'une lecture pinyin : « nǐ hǎo », « ni3 hao3 », « Ni hao » et
+    /// « nihao » donnent tous « nihao ». Le ü se tape v ou u : les deux
+    /// rendent u. Rien pour un texte qui n'est pas du pinyin, des caractères
+    /// par exemple : ils ont leur propre recherche.
+    static func pinyinKey(_ text: String) -> String? {
+        var key = ""
+        for scalar in fold(text).unicodeScalars {
+            switch scalar {
+            case "a"..."z": key.unicodeScalars.append(scalar == "v" ? "u" : scalar)
+            case " ", "'", "’", "-", "·", "1"..."5": continue
+            default: return nil
+            }
+        }
+        return key.isEmpty ? nil : key
+    }
+
+    /// La même clé, tons gardés : « shí » rend « shí », qui mène à 十 avant
+    /// 是. Rien quand le texte n'a pas de ton : sa clé sans tons suffit.
+    static func toneKey(_ text: String) -> String? {
+        var key = ""
+        for scalar in text.precomposedStringWithCanonicalMapping.lowercased().unicodeScalars {
+            if " '’-·".unicodeScalars.contains(scalar) { continue }
+            guard scalar.properties.isAlphabetic, !scalar.properties.isIdeographic else { return nil }
+            key.unicodeScalars.append(scalar)
+        }
+        guard !key.isEmpty, key != pinyinKey(text) else { return nil }
+        return key
+    }
+
+    /// Vrai quand le texte contient un caractère chinois : tapé en hanzi, pas
+    /// en pinyin.
+    static func hasHanzi(_ text: String) -> Bool {
+        text.unicodeScalars.contains { $0.properties.isIdeographic }
+    }
+
     /// Un modèle du wiki que l'extraction n'a pas déplié, comme `{{rfdef}}`.
     /// Ce n'est pas un sens : c'est la page qui en réclame un.
     static func isWikiResidue(_ text: String) -> Bool {

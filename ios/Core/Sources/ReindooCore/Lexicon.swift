@@ -53,6 +53,13 @@ public final class Lexicon {
         if !lemmas.isEmpty {
             let entries = try self.entries(lemmas, in: language)
             if let best = entries.first {
+                if language.isTypedByReading {
+                    // « shi » a des dizaines de caractères : le plus courant,
+                    // quelques autres. Une lecture n'est pas « une forme de »
+                    // ; un caractère traditionnel, si.
+                    let note = Text.hasHanzi(typed) ? typed : nil
+                    return .found(best, matchedForm: note, alsoFrom: Array(entries.dropFirst().map(\.word).prefix(Self.alsoFromLimit)))
+                }
                 // « hoà » mène à « hòa » : le même mot, le ton posé ailleurs.
                 // Ce n'est pas « une forme de », il n'y a rien à en dire.
                 let note = Text.fold(typed) == Text.fold(best.word) ? nil : typed
@@ -84,6 +91,9 @@ public final class Lexicon {
     public func completions(for prefix: String, in language: Language, limit: Int = 20) throws -> [String] {
         let folded = Text.fold(prefix.trimmingCharacters(in: .whitespacesAndNewlines))
         guard !folded.isEmpty else { return [] }
+        if language.isTypedByReading, let key = Text.pinyinKey(folded) {
+            return try completions(reading: key, in: language, limit: limit)
+        }
         return try database.query(
             """
             SELECT word FROM entry
@@ -93,6 +103,33 @@ public final class Lexicon {
             """,
             [.int(language.code), .text(folded), .text(folded + "\u{10FFFF}"), .text(folded), .int(Int64(limit))]
         ) { $0.text(0) }
+    }
+
+    /// Les mots chinois dont la lecture commence par ce qui est tapé : « nih »
+    /// propose 你好. Les clés de lecture sont dans la table des formes.
+    private func completions(reading key: String, in language: Language, limit: Int) throws -> [String] {
+        let rows = try database.query(
+            "SELECT form, lemmas FROM form WHERE language = ? AND form >= ? AND form < ? ORDER BY length(form), form LIMIT 200",
+            [.int(language.code), .text(key), .text(key + "\u{10FFFF}")]
+        ) { ($0.text(0), $0.text(1)) }
+        // Seules les clés comptent : une forme en caractères ne commence pas
+        // par une lettre latine, mais une forme pinyin à accents, si.
+        let exact = Set(rows.filter { $0.0 == key }.flatMap { $0.1.split(separator: "\t").map(String.init) })
+        var words: [String] = []
+        var seen = Set<String>()
+        for (form, lemmas) in rows where Text.pinyinKey(form) == form {
+            for lemma in lemmas.split(separator: "\t").map(String.init) where seen.insert(lemma).inserted { words.append(lemma) }
+        }
+        guard !words.isEmpty else { return [] }
+        let ranks = try words.reduce(into: [String: Double]()) { ranks, word in
+            if let rank = try database.query(
+                "SELECT rank FROM entry WHERE language = ? AND word = ?", [.int(language.code), .text(word)]
+            ) { $0.real(0) }.first { ranks[word] = rank }
+        }
+        return words.filter { ranks[$0] != nil }
+            .sorted { (exact.contains($0) ? 1 : 0, ranks[$0]!, $1) > (exact.contains($1) ? 1 : 0, ranks[$1]!, $0) }
+            .prefix(limit)
+            .map { $0 }
     }
 
     // MARK: Les trois temps
@@ -132,7 +169,11 @@ public final class Lexicon {
     }
 
     private func lemmas(forForm form: String, in language: Language) throws -> [String] {
-        for candidate in [form, form.lowercased()] {
+        var candidates = [form, form.lowercased()]
+        if language.isTypedByReading {
+            candidates += [Text.toneKey(form), Text.pinyinKey(form)].compactMap { $0 }
+        }
+        for candidate in candidates {
             let found = try database.query(
                 "SELECT lemmas FROM form WHERE language = ? AND form = ?",
                 [.int(language.code), .text(candidate)]
@@ -235,6 +276,13 @@ public enum LexiconBuilder {
         public var skipped = 0
     }
 
+    /// Une ligne du NDJSON. Tout ce qui relie ses noms de champs à ceux de
+    /// l'app est ici, et nulle part ailleurs.
+    ///
+    /// Le chinois (`make mongo LANG=zh`) suit le même schéma, à deux
+    /// différences près : sa prononciation est du pinyin, et un mot peut
+    /// porter sa lecture Hán Việt. Tant que le dépôt `dictionnaire` n'a pas
+    /// fixé leurs noms, on accepte les plus probables, en texte ou en liste.
     private struct Line: Decodable {
         var _collection: String
         var sourceLanguage: String
@@ -249,6 +297,43 @@ public enum LexiconBuilder {
         var rank: Double?
         var form: String?
         var lemmas: [String]?
+        var pinyin: [String]?
+        var hanViet: [String]?
+
+        private enum Keys: String, CodingKey {
+            case _collection, sourceLanguage, word, translated, explains, ipa, audio, wiki, derived, memo, rank, form, lemmas
+            case pinyin, hanViet, hanviet, han_viet, sinoVietnamese
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: Keys.self)
+            _collection = try c.decode(String.self, forKey: ._collection)
+            sourceLanguage = try c.decode(String.self, forKey: .sourceLanguage)
+            word = try c.decodeIfPresent(String.self, forKey: .word)
+            translated = try c.decodeIfPresent(String.self, forKey: .translated)
+            explains = try c.decodeIfPresent([Sense].self, forKey: .explains)
+            ipa = try c.decodeIfPresent([String].self, forKey: .ipa)
+            audio = try c.decodeIfPresent(String.self, forKey: .audio)
+            wiki = try c.decodeIfPresent(String.self, forKey: .wiki)
+            derived = try c.decodeIfPresent([String].self, forKey: .derived)
+            memo = try c.decodeIfPresent(Memo.self, forKey: .memo)
+            rank = try c.decodeIfPresent(Double.self, forKey: .rank)
+            form = try c.decodeIfPresent(String.self, forKey: .form)
+            lemmas = try c.decodeIfPresent([String].self, forKey: .lemmas)
+            pinyin = Self.texts(c, .pinyin)
+            hanViet = [Keys.hanViet, .hanviet, .han_viet, .sinoVietnamese].lazy.compactMap { Self.texts(c, $0) }.first
+        }
+
+        /// Un texte ou une liste de textes ; rien de vide.
+        private static func texts(_ c: KeyedDecodingContainer<Keys>, _ key: Keys) -> [String]? {
+            let list = (try? c.decodeIfPresent([String].self, forKey: key)) ?? (try? c.decodeIfPresent(String.self, forKey: key)).flatMap { $0.map { [$0] } }
+            let kept = (list ?? []).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            return kept.isEmpty ? nil : kept
+        }
+
+        /// Ce que l'app montre comme prononciation : le pinyin s'il est à
+        /// part, sinon le champ `ipa`, qui le porte pour le chinois.
+        var pronunciation: [String] { pinyin ?? ipa ?? [] }
     }
 
     @MainActor
@@ -281,6 +366,7 @@ public enum LexiconBuilder {
         )
 
         var report = Report()
+        var readings = Readings()
         let decoder = JSONDecoder()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -306,9 +392,13 @@ public enum LexiconBuilder {
                         let entry = Entry(
                             word: word, language: language, translated: translated,
                             explains: senses,
-                            ipa: line.ipa ?? [], audio: line.audio,
-                            wiki: line.wiki, derived: line.derived ?? [], memo: line.memo
+                            ipa: line.pronunciation, audio: line.audio,
+                            wiki: line.wiki, derived: line.derived ?? [], memo: line.memo,
+                            hanViet: line.hanViet ?? []
                         )
+                        if language.isTypedByReading {
+                            for reading in line.pronunciation { readings.add(reading, for: word) }
+                        }
                         let body = String(decoding: try encoder.encode(Packed(entry)), as: UTF8.self)
                         // Une vedette en double : la plus fréquente gagne.
                         try database.run(
@@ -329,16 +419,50 @@ public enum LexiconBuilder {
                             [.int(language.code), .text(form), .text(body)]
                         )
                         report.forms += 1
+                        if language.isTypedByReading {
+                            for lemma in lemmas { readings.add(form, for: lemma) }
+                        }
                     } else {
                         report.skipped += 1
                     }
                 }
             }
+            try readings.write(into: database)
         }
 
         try database.execute("CREATE INDEX entry_folded ON entry (language, folded, rank DESC);")
         try database.run("INSERT INTO meta (key, value) VALUES ('schema', ?)", [.text(String(Lexicon.schemaVersion))])
         try database.execute("VACUUM;")
         return report
+    }
+}
+
+/// Les clés de lecture du chinois : chaque pinyin, ramené à `Text.pinyinKey`,
+/// mène à ses caractères. Rangées dans la table des formes, à côté des formes
+/// que le NDJSON donne, et fusionnées avec elles : « shi » en a des dizaines.
+private struct Readings {
+    private var lemmas: [String: [String]] = [:]
+
+    mutating func add(_ reading: String, for word: String) {
+        for key in [Text.toneKey(reading), Text.pinyinKey(reading)].compactMap({ $0 })
+        where !(lemmas[key]?.contains(word) ?? false) {
+            lemmas[key, default: []].append(word)
+        }
+    }
+
+    @MainActor
+    func write(into database: Database) throws {
+        let code = Language.chinese.code
+        for key in lemmas.keys.sorted() {
+            let existing = try database.query(
+                "SELECT lemmas FROM form WHERE language = ? AND form = ?", [.int(code), .text(key)]
+            ) { $0.text(0) }.first.map { $0.split(separator: "\t").map(String.init) } ?? []
+            var merged = existing
+            for word in lemmas[key] ?? [] where !merged.contains(word) { merged.append(word) }
+            try database.run(
+                "INSERT OR REPLACE INTO form (language, form, lemmas) VALUES (?, ?, ?)",
+                [.int(code), .text(key), .text(merged.joined(separator: "\t"))]
+            )
+        }
     }
 }

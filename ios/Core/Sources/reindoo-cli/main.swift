@@ -4,7 +4,7 @@ import ReindooCore
 // Le CLI de Reflex, en petit. Pas de couleurs, pas d'animation : il est fait
 // pour un agent.
 //
-//   reindoo-cli [--fixture sample|returning] [--ui en|fr|vi]   lit des commandes sur stdin
+//   reindoo-cli [--fixture sample|returning] [--ui en|fr|vi] [--edition reindoo|han]   lit des commandes sur stdin
 //   reindoo-cli [--fixture …] <commande> [; <commande>] les exécute puis sort
 //   reindoo-cli build-lexicon <sortie.sqlite> <entrée.ndjson>…
 //
@@ -138,9 +138,19 @@ if arguments.first == "--ui" {
     arguments.removeFirst(2)
 }
 
+// `--edition han` : Reindoo Hán, le chinois et le vietnamien expliqué en chinois.
+var edition = Edition.reindoo
+if arguments.first == "--edition" {
+    guard arguments.count >= 2, let chosen = Edition(rawValue: arguments[1]) else {
+        fail("édition inconnue. Disponibles : \(Edition.allCases.map(\.rawValue).joined(separator: ", "))")
+    }
+    edition = chosen
+    arguments.removeFirst(2)
+}
+
 let session: Session
 do {
-    session = Session(app: try fixture.makeApp(ui: ui))
+    session = Session(app: try fixture.makeApp(ui: ui, edition: edition))
 } catch {
     fail("\(error)")
 }

@@ -40,12 +40,15 @@ public final class SearchViewModel: Introspectable {
     private let user: UserStore
     private let open: (String, Language) -> Void
     private let copy: Copy
+    private let languages: [Language]
 
-    init(lexicon: Lexicon, user: UserStore, copy: Copy, open: @escaping (String, Language) -> Void) {
+    init(lexicon: Lexicon, user: UserStore, copy: Copy, languages: [Language], open: @escaping (String, Language) -> Void) {
         self.lexicon = lexicon
         self.user = user
         self.copy = copy
+        self.languages = languages
         self.open = open
+        state.language = languages.first ?? .french
         state.recentsTitle = copy.recents
         refresh()
     }
@@ -57,6 +60,8 @@ public final class SearchViewModel: Introspectable {
         case .setQuery(let text):
             state.query = text
         case .setLanguage(let language):
+            // Une langue que l'édition n'a pas n'existe pas pour l'écran.
+            guard languages.contains(language) else { return }
             state.language = language
         case .clear:
             state.query = ""
@@ -75,7 +80,7 @@ public final class SearchViewModel: Introspectable {
     private func refresh() {
         let language = state.language
         state.prompt = copy.searchPrompt(language)
-        state.languages = Language.allCases.map {
+        state.languages = languages.map {
             LanguageOption(language: $0, label: copy.languageShort($0), isSelected: $0 == language)
         }
         state.completions = (try? lexicon.completions(for: state.query, in: language)) ?? []
@@ -92,8 +97,10 @@ public final class SearchViewModel: Introspectable {
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var childNode: (any Introspectable)? { nil }
     public var nodeActions: [(name: String, input: String)] {
-        [("appear", ""), ("setQuery", "{text}"), ("setLanguage", "{name: french|english|vietnamese}"), ("submit", ""), ("open", "{word}"), ("clear", "")]
+        [("appear", ""), ("setQuery", "{text}"), ("setLanguage", "{name: \(names)}"), ("submit", ""), ("open", "{word}"), ("clear", "")]
     }
+
+    private var names: String { languages.map(\.rawValue).joined(separator: "|") }
 
     public func perform(_ action: String, input: Data?) throws -> Bool {
         switch action {
@@ -102,7 +109,7 @@ public final class SearchViewModel: Introspectable {
         case "setLanguage":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let language = Language(rawValue: name) else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: french|english|vietnamese}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: \(names)}")
             }
             send(.setLanguage(language))
         case "submit": send(.submit)

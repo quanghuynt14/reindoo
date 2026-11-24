@@ -16,6 +16,8 @@ public final class EntryViewModel: Introspectable, Identifiable {
         // Trouvé
         public var word = ""
         public var ipa = ""
+        /// « Hán Việt: nhĩ hảo », sous le pinyin d'un mot chinois. Absent ailleurs.
+        public var hanViet: String?
         public var translated = ""
         /// « allions » est une forme de « aller ».
         public var matchedNote: String?
@@ -83,16 +85,18 @@ public final class EntryViewModel: Introspectable, Identifiable {
 
     private let open: (String, Language) -> Void
     private let user: UserStore
+    private let languages: [Language]
     private var typed = ""
 
     /// `remembers` : chercher un mot l'inscrit à l'historique ; le revoir en
     /// révision, non — sinon réviser changerait l'ordre de ce qu'on révise.
     init(
-        query: String, language: Language, lexicon: Lexicon, user: UserStore, copy: Copy, remembers: Bool,
+        query: String, language: Language, languages: [Language], lexicon: Lexicon, user: UserStore, copy: Copy, remembers: Bool,
         open: @escaping (String, Language) -> Void
     ) {
         self.open = open
         self.user = user
+        self.languages = languages
         state.language = language
         state.likeLabel = copy.like
         state.listenLabel = copy.listen
@@ -108,6 +112,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
             state.title = entry.word
             state.word = entry.word
             state.ipa = entry.ipa.joined(separator: " · ")
+            state.hanViet = entry.hanViet.isEmpty ? nil : copy.hanViet(entry.hanViet)
             state.translated = entry.translated
             state.matchedNote = matchedForm.map { copy.matchedForm($0, entry.word) }
             state.alsoFrom = alsoFrom
@@ -137,7 +142,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
             self.typed = typed
             state.suggestions = suggestions
             // « went » tapé côté français : on ne l'invente pas, on dit où il est.
-            state.elsewhere = Language.allCases.filter { $0 != language }.compactMap { other in
+            state.elsewhere = languages.filter { $0 != language }.compactMap { other in
                 guard !typed.isEmpty, case .found(let entry, _, _)? = try? lexicon.lookUp(typed, in: other) else { return nil }
                 return Elsewhere(language: other, title: copy.foundElsewhere(other), word: entry.word, translated: entry.translated)
             }
@@ -177,7 +182,9 @@ public final class EntryViewModel: Introspectable, Identifiable {
     public var nodeName: String { "entry" }
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var childNode: (any Introspectable)? { nil }
-    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: french|english|vietnamese}"), ("like", ""), ("showMemo", ""), ("hideMemo", "")] }
+    public var nodeActions: [(name: String, input: String)] { [("open", "{word}"), ("openElsewhere", "{name: \(names)}"), ("like", ""), ("showMemo", ""), ("hideMemo", "")] }
+
+    private var names: String { languages.map(\.rawValue).joined(separator: "|") }
 
     public func perform(_ action: String, input: Data?) throws -> Bool {
         switch action {
@@ -185,7 +192,7 @@ public final class EntryViewModel: Introspectable, Identifiable {
         case "openElsewhere":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let language = Language(rawValue: name) else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: french|english|vietnamese}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: \(names)}")
             }
             send(.openElsewhere(language))
         case "like": send(.like)

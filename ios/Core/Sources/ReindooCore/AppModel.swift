@@ -40,18 +40,24 @@ public final class AppModel: Introspectable {
     private let lexicon: Lexicon
     public let user: UserStore
     public let copy: Copy
+    public let edition: Edition
+    /// Les langues offertes : celles de l'édition que le lexique sert.
+    public let languages: [Language]
 
     /// `shuffle` bat les cartes du reel, et `chance(n)` tire un nombre de 0 à
     /// n − 1 pour ses surprises. Les fixtures en passent qui ne doivent rien
     /// au hasard.
     public init(
-        lexicon: Lexicon, user: UserStore, copy: Copy,
+        lexicon: Lexicon, user: UserStore, copy: Copy, edition: Edition = .reindoo,
         shuffle: @escaping ([SavedWord]) -> [SavedWord] = { $0.shuffled() },
         chance: @escaping (Int) -> Int = { Int.random(in: 0..<max($0, 1)) }
     ) {
         self.lexicon = lexicon
         self.user = user
         self.copy = copy
+        self.edition = edition
+        let languages = edition.languages(in: lexicon)
+        self.languages = languages
         // Seule la recherche date un mot. Le revoir depuis l'historique ou le
         // reel ne le fait pas remonter : la liste garde l'ordre des recherches.
         let looksUp: (String, Language) -> Void = { [weak self] word, language in
@@ -60,8 +66,8 @@ public final class AppModel: Introspectable {
         let revisits: (String, Language) -> Void = { [weak self] word, language in
             self?.push(word, language, remembers: false)
         }
-        search = SearchViewModel(lexicon: lexicon, user: user, copy: copy, open: looksUp)
-        review = ReviewViewModel(lexicon: lexicon, user: user, copy: copy, shuffle: shuffle, chance: chance, open: revisits)
+        search = SearchViewModel(lexicon: lexicon, user: user, copy: copy, languages: languages, open: looksUp)
+        review = ReviewViewModel(lexicon: lexicon, user: user, copy: copy, languages: languages, shuffle: shuffle, chance: chance, open: revisits)
         history = HistoryViewModel(lexicon: lexicon, user: user, copy: copy, open: revisits) { [weak self] in self?.countPending() }
         refresh()
     }
@@ -89,7 +95,7 @@ public final class AppModel: Introspectable {
 
     private func push(_ word: String, _ language: Language, remembers: Bool) {
         let entry = EntryViewModel(
-            query: word, language: language, lexicon: lexicon, user: user, copy: copy, remembers: remembers,
+            query: word, language: language, languages: languages, lexicon: lexicon, user: user, copy: copy, remembers: remembers,
             // Un renvoi suivi depuis une entrée garde la règle de son onglet.
             open: { [weak self] word, language in self?.push(word, language, remembers: remembers) }
         )

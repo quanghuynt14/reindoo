@@ -4,10 +4,15 @@ import Foundation
 /// Le français et l'anglais sont expliqués en vietnamien ; le vietnamien,
 /// en français — et en anglais, marqué [EN], là où le Wiktionnaire français
 /// n'a rien. Mêmes valeurs que `DICTIONARY_SOURCE_LANGUAGES` côté serveur.
+///
+/// Le chinois n'existe que dans l'édition Hán, expliqué en vietnamien. Le
+/// vietnamien de cette édition-là est expliqué en chinois : chaque app livre
+/// son propre lexique, la langue d'un mot n'a donc pas à dire sa cible.
 public enum Language: String, Codable, Sendable, CaseIterable {
     case french
     case english
     case vietnamese
+    case chinese
 
     /// Le code de la langue dans le fichier du lexique : un octet par ligne
     /// au lieu d'un mot.
@@ -16,8 +21,23 @@ public enum Language: String, Codable, Sendable, CaseIterable {
         case .french: 0
         case .english: 1
         case .vietnamese: 2
+        case .chinese: 3
         }
     }
+
+    /// La voix du système qui lit un mot de cette langue.
+    public var speechCode: String {
+        switch self {
+        case .french: "fr-FR"
+        case .english: "en-US"
+        case .vietnamese: "vi-VN"
+        case .chinese: "zh-CN"
+        }
+    }
+
+    /// Un mot chinois se tape en pinyin bien plus souvent qu'en caractères :
+    /// la recherche range chaque lecture sous une clé sans tons ni espaces.
+    var isTypedByReading: Bool { self == .chinese }
 
     /// Le vietnamien se tape souvent sans accents, faute de clavier : « an »
     /// veut dire « ăn » plus souvent que « an ». La recherche le sait.
@@ -130,11 +150,14 @@ public struct Entry: Codable, Equatable, Sendable {
     public var wiki: String?
     public var derived: [String]
     public var memo: Memo?
+    /// La lecture sino-vietnamienne d'un mot chinois : 你好, « nhĩ hảo ».
+    /// Vide partout ailleurs.
+    public var hanViet: [String]
 
     public init(
         word: String, language: Language, translated: String, explains: [Sense] = [],
         ipa: [String] = [], audio: String? = nil, wiki: String? = nil, derived: [String] = [],
-        memo: Memo? = nil
+        memo: Memo? = nil, hanViet: [String] = []
     ) {
         self.word = word
         self.language = language
@@ -145,6 +168,7 @@ public struct Entry: Codable, Equatable, Sendable {
         self.wiki = wiki
         self.derived = derived
         self.memo = memo?.isEmpty == false ? memo : nil
+        self.hanViet = hanViet
     }
 }
 

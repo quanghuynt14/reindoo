@@ -16,14 +16,14 @@ struct Harness {
     /// Les tests lisent le vietnamien, sauf ceux qui portent sur la langue.
     static let copy = Copy(.vietnamese)
 
-    init(_ fixture: Fixture = .sample, ui: UILanguage = .vietnamese) throws {
+    init(_ fixture: Fixture = .sample, ui: UILanguage = .vietnamese, edition: Edition = .reindoo) throws {
         let clock = Clock()
         self.clock = clock
         // Chaque lecture avance d'une seconde : l'ordre des écritures est sûr.
         session = Session(app: try fixture.makeApp(ui: ui, now: {
             clock.now += 1
             return clock.now
-        }))
+        }, edition: edition))
     }
 
     var app: AppModel { session.app }

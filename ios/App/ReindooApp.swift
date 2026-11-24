@@ -35,6 +35,10 @@ struct Launch {
     /// `.lproj` de Resources.
     static let copy = Copy(UILanguage(code: Bundle.main.preferredLocalizations.first))
 
+    /// Reindoo ou Reindoo Hán : la cible Xcode le dit dans l'Info.plist
+    /// (`ReindooEdition`). L'app d'origine n'a pas la clé, et reste reindoo.
+    static let edition = Edition(name: Bundle.main.object(forInfoDictionaryKey: Edition.infoKey) as? String)
+
     init() {
         result = Result { try Self.makeApp() }
     }
@@ -74,7 +78,7 @@ struct Launch {
         #if DEBUG
         // `-fixture returning` : le petit lexique de Core et un passé inventé.
         if let name = argument("-fixture"), let fixture = Fixture(rawValue: name) {
-            return try fixture.makeApp(ui: copy.ui)
+            return try fixture.makeApp(ui: copy.ui, edition: edition)
         }
         #endif
 
@@ -86,10 +90,10 @@ struct Launch {
         // Le lexique complet est livré dans l'app. Tant qu'il n'y est pas,
         // l'échantillon de Core tient lieu de dictionnaire.
         if let path = Bundle.main.path(forResource: "lexicon", ofType: "sqlite") {
-            return AppModel(lexicon: try Lexicon(path: path), user: user, copy: copy)
+            return AppModel(lexicon: try Lexicon(path: path), user: user, copy: copy, edition: edition)
         }
         let sample = support.appendingPathComponent("sample-lexicon.sqlite").path
-        _ = try LexiconBuilder.build(ndjson: [Fixture.sampleNDJSON], to: sample)
-        return AppModel(lexicon: try Lexicon(path: sample), user: user, copy: copy)
+        _ = try LexiconBuilder.build(ndjson: [edition.sampleNDJSON], to: sample)
+        return AppModel(lexicon: try Lexicon(path: sample), user: user, copy: copy, edition: edition)
     }
 }

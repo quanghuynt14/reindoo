@@ -15,6 +15,7 @@ struct Packed: Codable {
     var n: Bool?           // vrai : pas de page Wiktionnaire
     var d: [String]?       // derived
     var m: Memo?           // la note pour retenir, rare
+    var h: [String]?       // lecture Hán Việt, chinois seulement
 
     init(_ entry: Entry) {
         t = entry.translated
@@ -23,6 +24,7 @@ struct Packed: Codable {
         a = entry.audio
         d = entry.derived.isEmpty ? nil : entry.derived
         m = entry.memo
+        h = entry.hanViet.isEmpty ? nil : entry.hanViet
         if let wiki = entry.wiki {
             w = wiki == Self.wiki(for: entry.word, in: entry.language) ? nil : wiki
         } else {
@@ -35,7 +37,7 @@ struct Packed: Codable {
             word: word, language: language, translated: t,
             explains: (s ?? []).map(\.sense), ipa: i ?? [], audio: a,
             wiki: n == true ? nil : (w ?? Self.wiki(for: word, in: language)),
-            derived: d ?? [], memo: m
+            derived: d ?? [], memo: m, hanViet: h ?? []
         )
     }
 
@@ -50,6 +52,9 @@ struct Packed: Codable {
         case .french: ("vi", "Ti%E1%BA%BFng_Ph%C3%A1p")
         case .english: ("vi", "Ti%E1%BA%BFng_Anh")
         case .vietnamese: ("fr", "Vietnamien")
+        // Le chinois : la section « Chữ Hán » du Wiktionnaire vietnamien.
+        // Une autre adresse se garde en entier, comme ailleurs.
+        case .chinese: ("vi", "Ch%E1%BB%AF_H%C3%A1n")
         }
         return "https://\(host).wiktionary.org/wiki/\(title)#\(section)"
     }

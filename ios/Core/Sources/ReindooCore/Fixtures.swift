@@ -41,9 +41,31 @@ public enum Fixture: String, Sendable, CaseIterable {
     {"_collection":"dictionary_forms","form":"hoà","sourceLanguage":"vietnamese","lemmas":["hòa"],"analysis":"dấu đặt chỗ khác"}
     """#
 
+    /// Le petit lexique de Reindoo Hán, au format de `make mongo LANG=zh` et
+    /// du fichier Việt–Trung. Des caractères simplifiés, leur forme
+    /// traditionnelle, du pinyin écrit de plusieurs façons (le champ `ipa`,
+    /// ou `pinyin`), une lecture Hán Việt, des homophones (« shi »), un ü, un
+    /// sens anglais marqué [EN], et trois mots vietnamiens expliqués en chinois.
+    public static let hanSampleNDJSON = #"""
+    {"_collection":"dictionary","word":"你好","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"xin chào","rank":900,"ipa":["nǐ hǎo"],"hanViet":"nhĩ hảo","wiki":"https://vi.wiktionary.org/wiki/%E4%BD%A0%E5%A5%BD#Ch%E1%BB%AF_H%C3%A1n","explains":[{"explain":"(Thán từ) Xin chào.","synonyms":["您好"],"antonyms":[],"exampleSentences":[{"sourceSentence":"你好，我是老师。","targetTranslation":"Xin chào, tôi là giáo viên."}]}]}
+    {"_collection":"dictionary","word":"汉语","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"tiếng Hán, tiếng Trung Quốc","rank":700,"pinyin":["hànyǔ"],"hanViet":["hán ngữ"],"explains":[{"explain":"(Danh từ) Tiếng Hán, tiếng Trung Quốc.","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary","word":"学生","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"học sinh","rank":800,"ipa":["xuésheng"],"hanViet":["học sinh"],"explains":[{"explain":"(Danh từ) Học sinh.","synonyms":[],"antonyms":[],"exampleSentences":[]},{"explain":"(Danh từ) [EN] student; pupil","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary","word":"是","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"là","rank":990,"ipa":["shì"],"hanViet":["thị"],"explains":[{"explain":"(Động từ) Là.","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary","word":"十","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"mười","rank":960,"ipa":["shí"],"hanViet":["thập"],"explains":[{"explain":"(Số từ) Mười.","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary","word":"事","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"việc","rank":950,"ipa":["shì"],"hanViet":["sự"],"explains":[{"explain":"(Danh từ) Việc, sự việc.","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary","word":"吃","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"ăn","rank":970,"ipa":["chī"],"hanViet":["ngật"],"explains":[{"explain":"(Động từ) Ăn.","synonyms":[],"antonyms":[],"exampleSentences":[{"sourceSentence":"我吃米饭。","targetTranslation":"Tôi ăn cơm."}]}]}
+    {"_collection":"dictionary","word":"女","sourceLanguage":"chinese","targetLanguage":"vietnamese","translated":"nữ, phụ nữ","rank":600,"ipa":["nǚ"],"hanViet":["nữ"],"explains":[{"explain":"(Danh từ) Nữ, phụ nữ.","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary_forms","form":"漢語","sourceLanguage":"chinese","lemmas":["汉语"]}
+    {"_collection":"dictionary_forms","form":"學生","sourceLanguage":"chinese","lemmas":["学生"]}
+    {"_collection":"dictionary_forms","form":"hàn yǔ","sourceLanguage":"chinese","lemmas":["汉语"]}
+    {"_collection":"dictionary","word":"ăn","sourceLanguage":"vietnamese","targetLanguage":"chinese","translated":"吃","rank":29738,"ipa":["/an˧˧/"],"explains":[{"explain":"(Động từ) 吃","synonyms":[],"antonyms":[],"exampleSentences":[{"sourceSentence":"Tôi ăn cơm.","targetTranslation":"我吃米饭。"}]}]}
+    {"_collection":"dictionary","word":"an","sourceLanguage":"vietnamese","targetLanguage":"chinese","translated":"平安","rank":12812,"ipa":["/an˦/"],"explains":[{"explain":"(Tính từ) 平安","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    {"_collection":"dictionary","word":"học sinh","sourceLanguage":"vietnamese","targetLanguage":"chinese","translated":"学生","rank":5000,"explains":[{"explain":"(Danh từ) 学生","synonyms":[],"antonyms":[],"exampleSentences":[]},{"explain":"(Danh từ) [EN] student","synonyms":[],"antonyms":[],"exampleSentences":[]}]}
+    """#
+
     /// Construit le monde dans un dossier temporaire et rend l'app prête.
     @MainActor
-    public func makeApp(ui: UILanguage = .vietnamese, now: (() -> Date)? = nil) throws -> AppModel {
+    public func makeApp(ui: UILanguage = .vietnamese, now: (() -> Date)? = nil, edition: Edition = .reindoo) throws -> AppModel {
         // Sans horloge fournie, chaque écriture avance d'une seconde : l'ordre
         // de l'historique ne dépend pas de la vitesse de la machine.
         var clock = Date(timeIntervalSince1970: 1_800_000_000)
@@ -55,14 +77,18 @@ public enum Fixture: String, Sendable, CaseIterable {
             .appendingPathComponent("reindoo-fixture-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let lexiconPath = directory.appendingPathComponent("lexicon.sqlite").path
-        _ = try LexiconBuilder.build(ndjson: [Self.sampleNDJSON], to: lexiconPath)
+        _ = try LexiconBuilder.build(ndjson: [edition.sampleNDJSON], to: lexiconPath)
 
         var tick = 0
         let user = try UserStore(path: ":memory:", now: now, makeID: {
             tick += 1
             return "change-\(tick)"
         })
-        if self == .returning {
+        if self == .returning, edition == .han {
+            try user.remember(WordKey(.chinese, "学生"))
+            try user.remember(WordKey(.vietnamese, "ăn"))
+            try user.remember(WordKey(.chinese, "你好"))
+        } else if self == .returning {
             try user.remember(WordKey(.french, "élève"))
             try user.remember(WordKey(.french, "venir"))
             try user.remember(WordKey(.english, "go"))
@@ -72,7 +98,7 @@ public enum Fixture: String, Sendable, CaseIterable {
         // ni « anciens » ne donnent.
         // Le tirage des surprises se répète aussi : toujours le milieu.
         return AppModel(
-            lexicon: try Lexicon(path: lexiconPath), user: user, copy: Copy(ui),
+            lexicon: try Lexicon(path: lexiconPath), user: user, copy: Copy(ui), edition: edition,
             shuffle: { words in words.sorted { Text.fold($0.key.word) < Text.fold($1.key.word) } },
             chance: { $0 / 2 }
         )

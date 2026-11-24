@@ -172,6 +172,7 @@ public final class ReviewViewModel: Introspectable {
     private let open: (String, Language) -> Void
 
     private var filter: Language?
+    private let languages: [Language]
     /// L'historique dont le reel est tiré. Tant qu'il ne change pas, le reel
     /// ne bouge pas : revenir d'une entrée ne rebat pas les cartes.
     private var dealtFrom: [SavedWord]?
@@ -183,7 +184,7 @@ public final class ReviewViewModel: Introspectable {
     private var surprises = 0
 
     init(
-        lexicon: Lexicon, user: UserStore, copy: Copy,
+        lexicon: Lexicon, user: UserStore, copy: Copy, languages: [Language],
         shuffle: @escaping ([SavedWord]) -> [SavedWord],
         chance: @escaping (Int) -> Int,
         open: @escaping (String, Language) -> Void
@@ -191,6 +192,7 @@ public final class ReviewViewModel: Introspectable {
         self.lexicon = lexicon
         self.user = user
         self.copy = copy
+        self.languages = languages
         self.shuffle = shuffle
         self.chance = chance
         self.open = open
@@ -409,7 +411,7 @@ public final class ReviewViewModel: Introspectable {
 
         state.filter = filter?.rawValue ?? "all"
         state.filters = [Option(name: "all", label: copy.allLanguages, isSelected: filter == nil)]
-            + Language.allCases.map { Option(name: $0.rawValue, label: copy.languageShort($0), isSelected: $0 == filter) }
+            + languages.map { Option(name: $0.rawValue, label: copy.languageShort($0), isSelected: $0 == filter) }
         state.sorts = Sort.allCases.map { Option(name: $0.rawValue, label: label(for: $0), isSelected: $0 == state.sort) }
         state.sortLabel = label(for: state.sort)
         state.emptyMessage = state.cards.isEmpty
@@ -619,12 +621,14 @@ public final class ReviewViewModel: Introspectable {
     public var nodeActions: [(name: String, input: String)] {
         [
             ("appear", ""), ("cycleSort", ""), ("setSort", "{name: random|newest|oldest}"),
-            ("setFilter", "{name: all|french|english|vietnamese}"), ("setPosition", "{index}"),
+            ("setFilter", "{name: all|\(names)}"), ("setPosition", "{index}"),
             ("reveal", "[{id}]"), ("unveil", "[{id}]"), ("flipDirection", ""), ("like", "[{id}]"), ("showMemo", "[{id}]"), ("hideMemo", ""), ("choose", "{index}"),
             ("open", "[{id}]"), ("restart", ""), ("setScene", "{name: word|colours|<theme>}"),
             ("answer", "{name: knew|forgot, id?}"),
         ]
     }
+
+    private var names: String { languages.map(\.rawValue).joined(separator: "|") }
 
     private struct Index: Decodable { var index: Int }
     private struct Identifier: Decodable { var id: String }
@@ -646,8 +650,8 @@ public final class ReviewViewModel: Introspectable {
             send(.setSort(sort))
         case "setFilter":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
-            guard name == "all" || Language(rawValue: name) != nil else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: all|french|english|vietnamese}")
+            guard name == "all" || Language(rawValue: name).map({ languages.contains($0) }) == true else {
+                throw IntrospectionError.badInput(action: action, expected: "{name: all|\(names)}")
             }
             send(.setFilter(Language(rawValue: name)))
         case "setPosition":

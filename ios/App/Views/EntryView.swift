@@ -84,6 +84,11 @@ struct EntryView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            if let hanViet = state.hanViet {
+                Text(hanViet)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             Text(state.translated)
                 .font(.title2.weight(.medium))
                 .foregroundStyle(.tint)

@@ -36,6 +36,7 @@ public struct Copy: Equatable, Sendable {
         case .french: pick("French", "Français", "Pháp")
         case .english: pick("English", "Anglais", "Anh")
         case .vietnamese: pick("Vietnamese", "Vietnamien", "Việt")
+        case .chinese: pick("Chinese", "Chinois", "Trung")
         }
     }
 
@@ -45,6 +46,7 @@ public struct Copy: Equatable, Sendable {
         case .french: pick("French", "français", "tiếng Pháp")
         case .english: pick("English", "anglais", "tiếng Anh")
         case .vietnamese: pick("Vietnamese", "vietnamien", "tiếng Việt")
+        case .chinese: pick("Chinese", "chinois", "tiếng Trung")
         }
     }
 
@@ -101,6 +103,11 @@ public struct Copy: Equatable, Sendable {
 
     public func matchedForm(_ form: String, _ lemma: String) -> String {
         pick("“\(form)” is a form of “\(lemma)”", "« \(form) » est une forme de « \(lemma) »", "“\(form)” là một dạng của “\(lemma)”")
+    }
+
+    /// La lecture sino-vietnamienne d'un mot chinois, sous son pinyin.
+    public func hanViet(_ readings: [String]) -> String {
+        pick("Sino-Vietnamese: ", "Hán Việt : ", "Hán Việt: ") + readings.joined(separator: " · ")
     }
 
     public var alsoFrom: String { pick("Could also be", "Peut aussi être", "Cũng có thể là") }
