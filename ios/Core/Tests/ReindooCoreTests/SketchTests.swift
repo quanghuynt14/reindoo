@@ -1,0 +1,60 @@
+import Foundation
+import Testing
+@testable import ReindooCore
+
+@Suite struct Drawing {
+    @Test func theSameSeedDrawsTheSameStrokes() {
+        let a = Sketch.jackal(.cross).plan(width: 120, height: 160)
+        let b = Sketch.jackal(.cross).plan(width: 120, height: 160)
+        let first = a.layers.flatMap(\.batches).flatMap(\.lines).prefix(200).map(\.points)
+        let second = b.layers.flatMap(\.batches).flatMap(\.lines).prefix(200).map(\.points)
+        #expect(first == second, "un dessin est le même sur tous les téléphones")
+    }
+
+    @Test func eachFrameRedrawsTheLinesSlightly() {
+        let a = Sketch.giraffe(.calm).plan(width: 120, height: 160, frame: 0)
+        let b = Sketch.giraffe(.calm).plan(width: 120, height: 160, frame: 1)
+        let ink = { (plan: SketchPlan) in plan.layers.last!.batches.flatMap(\.lines).map(\.points) }
+        #expect(ink(a) != ink(b), "le trait bout : chaque version est retracée")
+        #expect(a.layers.count == b.layers.count)
+    }
+
+    @Test func everyMoodHasItsLayersAndItsInk() {
+        let sketches: [Sketch] = Sketch.GiraffeMood.allCases.map(Sketch.giraffe) + Sketch.JackalMood.allCases.map(Sketch.jackal) + [.together]
+        for sketch in sketches {
+            let plan = sketch.plan(width: 90, height: 120)
+            #expect(plan.layers.count == 5, "\(sketch)")
+            #expect(plan.layers.allSatisfy { !$0.batches.isEmpty || $0.blend == .normal }, "\(sketch)")
+            let strokes = plan.layers.flatMap(\.batches).flatMap(\.lines)
+            #expect(strokes.count > 500, "\(sketch)")
+            #expect(strokes.allSatisfy { $0.width > 0 && $0.alpha >= 0 && $0.alpha <= 1 && $0.points.allSatisfy { $0.x.isFinite && $0.y.isFinite } })
+        }
+    }
+
+    @Test func aHeadFillsItsButton() {
+        let plan = Sketch.jackal(.soft).plan(width: 100, height: 100, head: true)
+        let outlines = plan.layers.last!.batches.flatMap(\.lines).flatMap(\.points)
+        // La tête occupe la pastille : ses traits touchent presque les bords.
+        let xs = outlines.map(\.x).filter { $0 >= 0 && $0 <= 100 }
+        #expect((xs.min() ?? 100) < 25 && (xs.max() ?? 0) > 75)
+    }
+
+    @Test func thePaperEatsALightStrokeMoreThanAHeavyOne() {
+        let tooth = Paper.tooth(width: 64, height: 64)
+        #expect(tooth.allSatisfy { $0 >= 0 && $0 <= 1 })
+        func covered(_ alpha: UInt8) -> Int {
+            var pixels = [UInt8](repeating: 0, count: 64 * 64 * 4)
+            for i in 0..<(64 * 64) { for c in 0..<4 { pixels[i * 4 + c] = alpha } }
+            pixels.withUnsafeMutableBufferPointer { Paper.bite($0, tooth: tooth, threshold: 0.3, softness: 0.3) }
+            return (0..<(64 * 64)).reduce(0) { $0 + Int(pixels[$1 * 4 + 3]) }
+        }
+        #expect(covered(60) * 255 < covered(255) * 60, "un trait léger ne marque que les sommets du grain")
+    }
+
+    @Test func pathsAreSampledFinely() {
+        let line = Shape.path("M0 0 L10 0")
+        #expect(line.count >= 10 && line.last == Pt(10, 0))
+        let closed = Shape.path("M0 0 L10 0 L10 10 Z")
+        #expect(closed.last == Pt(0, 0))
+    }
+}

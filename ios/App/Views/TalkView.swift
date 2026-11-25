@@ -235,10 +235,41 @@ private struct TalkCard: View {
             .accessibilityHidden(true)
     }
 
+    /// La girafe et le chacal sont dessinés ; les autres animaux restent des
+    /// emoji pour l'instant.
+    @ViewBuilder
+    private func portrait(_ who: Animal, size: CGFloat, delay: Double = 0) -> some View {
+        if let drawing = who.drawing {
+            head(drawing == "giraffe" ? giraffeMood : jackalMood, size: size * 1.2)
+                .offset(y: bobbing && !reduceMotion ? -4 : 0)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 1.6).repeatForever(autoreverses: true).delay(delay), value: bobbing)
+        } else {
+            animal(who.emoji, size: size, delay: delay)
+        }
+    }
+
+    /// Une tête dessinée, sur sa pastille de papier.
+    private func head(_ sketch: Sketch, size: CGFloat) -> some View {
+        SketchView(sketch: sketch, head: true)
+            .frame(width: size, height: size)
+            .clipShape(.circle)
+            .overlay(Circle().stroke(ink.opacity(0.25)))
+            .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+    }
+
+    /// L'humeur suit la réponse : la girafe se réjouit d'un bon tri, le chacal
+    /// boude d'un mauvais et se radoucit d'un bon.
+    private var giraffeMood: Sketch {
+        .giraffe(card.verdict == .right ? .happy : card.isAnswered ? .listening : .calm)
+    }
+    private var jackalMood: Sketch {
+        .jackal(card.verdict == .right ? .soft : card.verdict == .wrong ? .sulky : .cross)
+    }
+
     private var speaker: some View {
         HStack(spacing: 10) {
             if let who = card.cast.first {
-                animal(who.emoji, size: 64)
+                portrait(who, size: 64)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(who.name).font(.headline)
                     Text(who.gloss).font(.caption).opacity(0.75)
@@ -282,7 +313,7 @@ private struct TalkCard: View {
             HStack(spacing: 28) {
                 ForEach(Array(card.cast.enumerated()), id: \.offset) { index, who in
                     VStack(spacing: 4) {
-                        animal(who.emoji, size: 78, delay: Double(index) * 0.4)
+                        portrait(who, size: 78, delay: Double(index) * 0.4)
                         Text(who.name).font(.caption.weight(.semibold))
                     }
                 }
@@ -319,7 +350,10 @@ private struct TalkCard: View {
     private var stamp: some View {
         let progress = min(1, abs(swipe) / Self.threshold)
         if swipe != 0 {
-            Text(swipe < 0 ? "🐺 \(player.jackalLabel)" : "🦒 \(player.giraffeLabel)")
+            HStack(spacing: 6) {
+                head(swipe < 0 ? .jackal(.cross) : .giraffe(.calm), size: 30)
+                Text(swipe < 0 ? player.jackalLabel : player.giraffeLabel)
+            }
                 .font(.title3.weight(.heavy))
                 .padding(.horizontal, 14).padding(.vertical, 6)
                 .background(.thinMaterial, in: .capsule)
@@ -350,23 +384,24 @@ private struct TalkCard: View {
         VStack(spacing: 10) {
             if let question = card.question { Text(question).font(.headline) }
             HStack(spacing: 12) {
-                voiceButton(.jackal, "🐺", player.jackalLabel)
-                voiceButton(.giraffe, "🦒", player.giraffeLabel)
+                voiceButton(.jackal, .jackal(.cross), player.jackalLabel)
+                voiceButton(.giraffe, .giraffe(.calm), player.giraffeLabel)
             }
             Text(player.sortHint).font(.caption).opacity(0.65)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private func voiceButton(_ voice: Voice, _ emoji: String, _ label: String) -> some View {
+    private func voiceButton(_ voice: Voice, _ sketch: Sketch, _ label: String) -> some View {
         Button {
             withAnimation(.smooth(duration: 0.35)) { model.send(.sort(card.id, voice)) }
         } label: {
-            HStack(spacing: 6) {
-                Text(emoji).font(.title2)
+            HStack(spacing: 8) {
+                head(sketch, size: 40)
                 Text(label).font(.headline)
             }
-            .frame(maxWidth: .infinity, minHeight: 52)
+            .padding(.leading, 6)
+            .frame(maxWidth: .infinity, minHeight: 56)
             .background(ink.opacity(0.16), in: .capsule)
         }
         .buttonStyle(.plain)
@@ -406,7 +441,7 @@ private struct TalkCard: View {
                 ForEach(Array(card.cast.prefix(2).enumerated()), id: \.offset) { index, who in
                     HStack(alignment: .top, spacing: 8) {
                         VStack(spacing: 0) {
-                            animal(who.emoji, size: 40, delay: Double(index) * 0.4)
+                            portrait(who, size: 40, delay: Double(index) * 0.4)
                             Text(who.name).font(.caption2.weight(.semibold))
                         }
                         let line = index == 0 ? card.text : (card.reply ?? "")
@@ -417,12 +452,15 @@ private struct TalkCard: View {
             default:
                 speaker
                 HStack(alignment: .top, spacing: 8) {
-                    Text("🐺").font(.title)
+                    head(jackalMood, size: 44)
                     bubble(card.text, gloss: card.isAnswered ? card.gloss : nil)
                 }
             }
             if let question = card.question {
-                Text(card.kind == .rewrite ? "🦒 \(question)" : question).font(.headline)
+                HStack(spacing: 8) {
+                    if card.kind == .rewrite { head(giraffeMood, size: 30) }
+                    Text(question).font(.headline)
+                }
             }
             // Les choix courts (une partie du corps, un besoin) tiennent sur deux colonnes.
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: card.kind == .rewrite ? 1 : 2), spacing: 10) {
@@ -451,7 +489,7 @@ private struct TalkCard: View {
                 .overlay(alignment: .topTrailing) {
                     if card.isAnswered, choice.isRight {
                         Group {
-                            if card.kind == .rewrite { Text("🦒") } else { Image(systemName: "checkmark") }
+                            if card.kind == .rewrite { head(.giraffe(.happy), size: 24) } else { Image(systemName: "checkmark") }
                         }
                         .padding(6)
                     }
@@ -473,13 +511,12 @@ private struct TalkCard: View {
     private var report: some View {
         if let report = card.report {
             VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Text(report.title).font(.title.weight(.bold))
-                    Spacer()
-                    Text("🦒").font(.system(size: 44))
-                        .rotationEffect(.degrees(bobbing && !reduceMotion ? -6 : 6))
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: bobbing)
-                }
+                // La fin d'une histoire : la girafe et le chacal, côte à côte.
+                SketchView(sketch: .together)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 150)
+                    .clipShape(.rect(cornerRadius: 16))
+                Text(report.title).font(.title.weight(.bold))
                 pile(report.right, symbol: "checkmark.circle.fill", tint: .green)
                 pile(report.wrong, symbol: "xmark.circle.fill", tint: .orange)
                 // Ni rouge ni barré : passer n'est pas une faute.

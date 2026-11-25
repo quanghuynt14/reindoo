@@ -43,6 +43,8 @@ public struct Animal: Codable, Equatable, Sendable {
     public var name: String
     /// Son nom en vietnamien.
     public var gloss: String
+    /// `giraffe` ou `jackal` : l'animal est dessiné, pas un emoji.
+    public var drawing: String? = nil
 }
 
 /// Une proposition de reformulation.
