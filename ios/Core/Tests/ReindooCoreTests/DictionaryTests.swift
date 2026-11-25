@@ -702,7 +702,7 @@ import Testing
         let app = try Harness(.returning, ui: ui)
 
         let tabs: [[String: Any]] = try #require(try app.appState("tabs"))
-        #expect(tabs.compactMap { $0["label"] as? String } == [copy.tabSearch, copy.tabReview, copy.tabHistory])
+        #expect(tabs.compactMap { $0["label"] as? String } == [copy.tabSearch, copy.tabReview, copy.tabTalk, copy.tabHistory])
         #expect(try app.state("prompt") == copy.searchPrompt(.french))
         #expect(try app.state("recentsTitle") == copy.recents)
 
