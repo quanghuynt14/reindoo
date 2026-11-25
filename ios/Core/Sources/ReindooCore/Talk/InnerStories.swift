@@ -20,7 +20,7 @@ private func wrong(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text: t
 extension Story {
     static let voice = Story(
         id: "voice", title: "La petite voix", gloss: "Tiếng nói bên trong", scene: "night-reef",
-        cast: [Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc"), Animal(emoji: "🐺", name: "Chacal", gloss: "Chó rừng", drawing: "jackal")],
+        cast: [Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda"), Animal(emoji: "🐺", name: "Chacal", gloss: "Chó rừng", drawing: "jackal")],
         beats: [
             .narration("voice.0",
                        "Panda a oublié la réunion de 10 heures. Ses collègues l'ont attendu. Dans sa tête, une petite voix se met à parler.",
@@ -124,7 +124,7 @@ extension Story {
 
     static let needs = Story(
         id: "needs", title: "Un besoin, deux chemins", gloss: "Một nhu cầu, hai cách", scene: "paper-garden",
-        cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím")],
+        cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu", drawing: "bear"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím", drawing: "hedgehog")],
         beats: [
             .narration("needs.0",
                        "Un besoin est le même pour tout le monde. Une stratégie est une façon, parmi d'autres, d'y répondre. On se dispute souvent sur la stratégie, alors qu'on partage le besoin.",

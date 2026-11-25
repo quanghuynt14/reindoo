@@ -53,6 +53,9 @@ extension Sketch {
         case .jackal(let mood):
             let f = Figures.jackal(mood)
             return ([f], f.back, f.box, f.head, [])
+        case .animal(let species, let mood):
+            let f = Figures.animal(species, mood)
+            return ([f], f.back, f.box, f.head, [])
         case .together:
             // Le chacal d'abord : le bras de la girafe passe devant son épaule.
             let j = Figures.jackal(.together).placed(at: Pt(150, 44), scale: 0.85)

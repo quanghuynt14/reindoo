@@ -128,7 +128,7 @@ extension Story {
 
     static let late = Story(
         id: "late", title: "Encore en retard", gloss: "Lại đến muộn", scene: "halftone-dawn",
-        cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím")],
+        cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu", drawing: "bear"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím", drawing: "hedgehog")],
         beats: [
             .narration("late.0",
                        "Ours attend Hérisson au café depuis vingt minutes. C'est la troisième fois ce mois-ci.",
@@ -173,7 +173,7 @@ extension Story {
 
     static let dishes = Story(
         id: "dishes", title: "La vaisselle", gloss: "Chồng bát đĩa", scene: "paper-garden-kraft",
-        cast: [Animal(emoji: "🐰", name: "Lapine", gloss: "Thỏ"), Animal(emoji: "🦝", name: "Raton", gloss: "Gấu mèo")],
+        cast: [Animal(emoji: "🐰", name: "Lapine", gloss: "Thỏ", drawing: "rabbit"), Animal(emoji: "🦝", name: "Raton", gloss: "Gấu mèo", drawing: "raccoon")],
         beats: [
             .narration("dishes.0",
                        "Lapine rentre du travail. Dans l'évier, il y a la vaisselle de trois jours. Raton regarde la télé.",
@@ -219,7 +219,7 @@ extension Story {
 
     static let meeting = Story(
         id: "meeting", title: "La réunion", gloss: "Buổi họp", scene: "blueprint",
-        cast: [Animal(emoji: "🦉", name: "Chouette", gloss: "Cú"), Animal(emoji: "🦊", name: "Renard", gloss: "Cáo")],
+        cast: [Animal(emoji: "🦉", name: "Chouette", gloss: "Cú", drawing: "owl"), Animal(emoji: "🦊", name: "Renard", gloss: "Cáo", drawing: "fox")],
         beats: [
             .narration("meeting.0",
                        "En réunion, Renard présente le plan que Chouette a écrit. Il ne cite pas son nom. Après, elle va le voir.",
@@ -261,7 +261,7 @@ extension Story {
 
     static let neighbour = Story(
         id: "neighbour", title: "Le voisin du dessus", gloss: "Hàng xóm tầng trên", scene: "braille-stars",
-        cast: [Animal(emoji: "🐨", name: "Koala", gloss: "Gấu túi"), Animal(emoji: "🐶", name: "Chien", gloss: "Chó")],
+        cast: [Animal(emoji: "🐨", name: "Koala", gloss: "Gấu túi", drawing: "koala"), Animal(emoji: "🐶", name: "Chien", gloss: "Chó", drawing: "dog")],
         beats: [
             .narration("neighbour.0",
                        "Il est une heure du matin. Chez Chien, au-dessus, la musique fait trembler le plafond. Koala monte et frappe à sa porte.",
@@ -306,7 +306,7 @@ extension Story {
 
     static let train = Story(
         id: "train", title: "Le train annulé", gloss: "Chuyến tàu bị huỷ", scene: "departure-board",
-        cast: [Animal(emoji: "🐢", name: "Tortue", gloss: "Rùa"), Animal(emoji: "🦫", name: "Castor", gloss: "Hải ly")],
+        cast: [Animal(emoji: "🐢", name: "Tortue", gloss: "Rùa", drawing: "turtle"), Animal(emoji: "🦫", name: "Castor", gloss: "Hải ly", drawing: "beaver")],
         beats: [
             .narration("train.0",
                        "Le dernier train pour Lyon est annulé. Tortue arrive au guichet, où travaille Castor.",
@@ -348,7 +348,7 @@ extension Story {
 
     static let birthday = Story(
         id: "birthday", title: "L'anniversaire oublié", gloss: "Sinh nhật bị quên", scene: "aurora-snow",
-        cast: [Animal(emoji: "🐱", name: "Chat", gloss: "Mèo"), Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc")],
+        cast: [Animal(emoji: "🐱", name: "Chat", gloss: "Mèo", drawing: "cat"), Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda")],
         beats: [
             .narration("birthday.0",
                        "Hier, c'était l'anniversaire de Chat. Panda n'a pas appelé. Ce matin, ils se croisent.",
@@ -390,7 +390,7 @@ extension Story {
 
     static let beach = Story(
         id: "beach", title: "À la plage", gloss: "Ở bãi biển", scene: "honu-lagoon",
-        cast: [Animal(emoji: "🦭", name: "Phoque", gloss: "Hải cẩu"), Animal(emoji: "🐧", name: "Pingouin", gloss: "Chim cánh cụt")],
+        cast: [Animal(emoji: "🦭", name: "Phoque", gloss: "Hải cẩu", drawing: "seal"), Animal(emoji: "🐧", name: "Pingouin", gloss: "Chim cánh cụt", drawing: "penguin")],
         beats: [
             .narration("beach.0",
                        "Pingouin nage loin du bord. Son père, Phoque, ne le voit plus pendant une minute. Quand Pingouin revient, Phoque l'attend.",
@@ -432,7 +432,7 @@ extension Story {
 
     static let hike = Story(
         id: "hike", title: "La randonnée", gloss: "Chuyến leo núi", scene: "vector-range",
-        cast: [Animal(emoji: "🐘", name: "Éléphant", gloss: "Voi"), Animal(emoji: "🐐", name: "Chèvre", gloss: "Dê")],
+        cast: [Animal(emoji: "🐘", name: "Éléphant", gloss: "Voi", drawing: "elephant"), Animal(emoji: "🐐", name: "Chèvre", gloss: "Dê", drawing: "goat")],
         beats: [
             .narration("hike.0",
                        "Chèvre grimpe vite. Éléphant est loin derrière, et il a mal aux pieds. Au sommet, il la rejoint enfin.",

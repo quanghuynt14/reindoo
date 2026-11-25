@@ -86,6 +86,8 @@ public enum Sketch: Hashable, Sendable {
     case jackal(JackalMood)
     /// Les deux côte à côte : la dernière carte d'une histoire.
     case together
+    /// Un animal des histoires, en buste.
+    case animal(Species, AnimalMood)
 }
 
 enum Palette {

@@ -31,6 +31,25 @@ import Testing
         }
     }
 
+    @Test func everyStoryAnimalIsDrawn() {
+        for story in Story.all {
+            for who in story.cast {
+                let name = who.drawing ?? ""
+                #expect(name == "giraffe" || name == "jackal" || Species(rawValue: name) != nil, "\(story.id) : \(who.name)")
+            }
+        }
+        for species in Species.allCases {
+            for mood in Sketch.AnimalMood.allCases {
+                let plan = Sketch.animal(species, mood).plan(width: 90, height: 90, head: true)
+                let strokes = plan.layers.flatMap(\.batches).flatMap(\.lines)
+                #expect(plan.layers.count == 5 && strokes.count > 300, "\(species) \(mood)")
+                #expect(strokes.allSatisfy { $0.points.allSatisfy { $0.x.isFinite && $0.y.isFinite } })
+            }
+        }
+        // Content, on le voit : les yeux se ferment, plus de reflet dedans.
+        #expect(Sketch.animal(.bear, .happy).plan(width: 90, height: 90).glints.count < Sketch.animal(.bear, .calm).plan(width: 90, height: 90).glints.count)
+    }
+
     @Test func aHeadFillsItsButton() {
         let plan = Sketch.jackal(.soft).plan(width: 100, height: 100, head: true)
         let outlines = plan.layers.last!.batches.flatMap(\.lines).flatMap(\.points)

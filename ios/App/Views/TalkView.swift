@@ -235,12 +235,11 @@ private struct TalkCard: View {
             .accessibilityHidden(true)
     }
 
-    /// La girafe et le chacal sont dessinés ; les autres animaux restent des
-    /// emoji pour l'instant.
+    /// Chaque animal a son dessin ; l'emoji ne sert que si le dessin manque.
     @ViewBuilder
     private func portrait(_ who: Animal, size: CGFloat, delay: Double = 0) -> some View {
-        if let drawing = who.drawing {
-            head(drawing == "giraffe" ? giraffeMood : jackalMood, size: size * 1.2)
+        if let sketch = sketch(for: who) {
+            head(sketch, size: size * 1.2)
                 .offset(y: bobbing && !reduceMotion ? -4 : 0)
                 .animation(reduceMotion ? nil : .easeInOut(duration: 1.6).repeatForever(autoreverses: true).delay(delay), value: bobbing)
         } else {
@@ -255,6 +254,15 @@ private struct TalkCard: View {
             .clipShape(.circle)
             .overlay(Circle().stroke(ink.opacity(0.25)))
             .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+    }
+
+    private func sketch(for who: Animal) -> Sketch? {
+        switch who.drawing {
+        case "giraffe": giraffeMood
+        case "jackal": jackalMood
+        case let name?: Species(rawValue: name).map { .animal($0, card.verdict == .right ? .happy : .calm) }
+        case nil: nil
+        }
     }
 
     /// L'humeur suit la réponse : la girafe se réjouit d'un bon tri, le chacal
