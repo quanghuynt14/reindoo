@@ -1,0 +1,652 @@
+<title>Hươu và Sói</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap">
+<style>
+/* Layout: a sketchbook. Two sheets side by side, a wide sheet where they meet, then the heads on an app card. */
+:root {
+  --paper: #f4efe6;
+  --ink: #2a2530;
+  --muted: #6d6574;
+  --line: #ddd3c6;
+  --chip: #ebe3d7;
+  --giraffe: #b8651c;
+  --jackal: #5a59a3;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #1c1a21; --ink: #f2ede5; --muted: #a8a0ad; --line: #36323d; --chip: #2b2832;
+  --giraffe: #f2b84b; --jackal: #b4b3ef; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #1c1a21; --ink: #f2ede5; --muted: #a8a0ad; --line: #36323d; --chip: #2b2832;
+  --giraffe: #f2b84b; --jackal: #b4b3ef; color-scheme: dark }
+
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+main { max-width: 980px; margin: 0 auto; padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2rem, 6vw, 3.1rem); line-height: 1.05; }
+h2 { font-size: 1.45rem; }
+p { margin: 0; max-width: 62ch; }
+.lede { color: var(--muted); }
+header { display: grid; gap: 10px; }
+.eyebrow { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+.cast { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 24px; }
+.sheet { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.sheet h2 span { font-family: var(--body); font-size: .95rem; font-weight: 500; color: var(--muted); margin-left: 6px; }
+/* A drawing keeps its paper in both themes: it is a sheet laid on the table. */
+.drawing { width: 100%; max-width: 100%; display: block; border-radius: 6px; background: #f3ead9;
+  box-shadow: 0 1px 2px rgba(40,30,20,.18), 0 10px 30px rgba(40,30,20,.14); }
+.portrait { aspect-ratio: 3 / 4; }
+.wide { aspect-ratio: 16 / 10; }
+.moods { display: flex; flex-wrap: wrap; gap: 8px; }
+.moods button { font: 500 .9rem var(--body); color: var(--ink); background: var(--chip); border: 1px solid transparent;
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.moods button[aria-pressed="true"] { border-color: currentColor; font-weight: 600; }
+.sheet.giraffe .moods button[aria-pressed="true"] { color: var(--giraffe); }
+.sheet.jackal .moods button[aria-pressed="true"] { color: var(--jackal); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.note { font-size: .9rem; color: var(--muted); }
+
+.tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 0; margin: 0; list-style: none; }
+.tools li { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--line); min-width: 0; }
+.tools b { font-weight: 600; }
+.tools span { font-size: .9rem; color: var(--muted); }
+
+.inapp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+@media (max-width: 720px) { .inapp { grid-template-columns: 1fr; } }
+.inapp .copy { display: grid; gap: 12px; }
+
+.phone { justify-self: center; width: min(340px, 100%); max-width: 100%; border-radius: 40px;
+  background: linear-gradient(165deg, #4a3f7e 0%, #2a2c5c 55%, #1a1d3d 100%); color: #fff;
+  box-shadow: 0 0 0 8px #0e0f14, 0 24px 60px rgba(0,0,0,.25);
+  padding: 40px 18px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 560px; }
+.phone .top { display: flex; justify-content: space-between; font-size: .8rem; opacity: .75; font-weight: 600; }
+.speaker { display: flex; align-items: center; gap: 10px; }
+.speaker .emoji { font-size: 44px; line-height: 1; }
+.speaker b { display: block; }
+.speaker small { opacity: .75; }
+.bubble { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 20px;
+  padding: 16px; font-family: var(--display); font-size: 1.2rem; font-weight: 600; line-height: 1.3; }
+.verdict { background: rgba(255,255,255,.14); border-radius: 16px; padding: 12px 14px; font-size: .9rem; display: grid; gap: 4px; }
+.verdict[hidden], .ask[hidden] { display: none; }
+.phone .ask { text-align: center; font-weight: 600; margin-top: auto; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choices button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 72px; border-radius: 22px;
+  border: 0; background: rgba(255,255,255,.14); color: #fff; font: 600 .95rem var(--body); cursor: pointer; padding: 6px 12px 6px 6px; }
+.choices canvas { width: 60px; height: 60px; border-radius: 50%; flex: none; }
+.hint { text-align: center; font-size: .75rem; opacity: .65; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hop { animation: hop .7s cubic-bezier(.3,1.6,.5,1) 1; }
+  .shake { animation: shake .45s ease-in-out 1; }
+}
+@keyframes hop { 0% { transform: none } 30% { transform: translateY(-14px) scale(.98,1.03) } 60% { transform: translateY(0) scale(1.03,.97) } 100% { transform: none } }
+@keyframes shake { 0%,100% { transform: none } 25% { transform: rotate(-5deg) } 75% { transform: rotate(5deg) } }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">reindoo · Giao tiếp · sketch 3</span>
+    <h1>Hươu và Chó rừng</h1>
+    <p class="lede">Full bodies now: feelings show in the arms and the head as much as in the face. The wolf became a chacal, the word French Nonviolent Communication uses. Same three dry tools, warmer outlines, one quiet colour behind each animal.</p>
+  </header>
+
+  <section class="cast" aria-label="The two characters">
+    <article class="sheet giraffe">
+      <h2>La Girafe <span>Hươu cao cổ</span></h2>
+      <canvas class="drawing portrait" id="giraffe-canvas" role="img" aria-label="A hand-drawn giraffe, standing"></canvas>
+      <div class="moods" role="group" aria-label="Giraffe moods">
+        <button type="button" data-who="giraffe" data-mood="calm" aria-pressed="true">Calm · bình thản</button>
+        <button type="button" data-who="giraffe" data-mood="listening" aria-pressed="false">Listening · lắng nghe</button>
+        <button type="button" data-who="giraffe" data-mood="happy" aria-pressed="false">Happy · vui</button>
+      </div>
+      <p class="note">Listening: the head tilts and a hoof rests on her heart. Happy: both arms up, and she hops.</p>
+    </article>
+
+    <article class="sheet jackal">
+      <h2>Le Chacal <span>Chó rừng</span></h2>
+      <canvas class="drawing portrait" id="jackal-canvas" role="img" aria-label="A hand-drawn jackal, standing"></canvas>
+      <div class="moods" role="group" aria-label="Jackal moods">
+        <button type="button" data-who="jackal" data-mood="cross" aria-pressed="true">Cross · cáu</button>
+        <button type="button" data-who="jackal" data-mood="sulky" aria-pressed="false">Sulky · hờn</button>
+        <button type="button" data-who="jackal" data-mood="soft" aria-pressed="false">Softened · dịu lại</button>
+      </div>
+      <p class="note">Grumpy, never scary. Cross: arms folded. Sulky: head down, ears flat. Softened: he holds out a paw.</p>
+    </article>
+  </section>
+
+  <section class="sheet" aria-label="Together">
+    <h2>Ensemble <span>Cùng nhau</span></h2>
+    <canvas class="drawing wide" id="together-canvas" role="img" aria-label="The giraffe and the jackal side by side, her arm on his shoulder"></canvas>
+    <p class="note">The last card of a story: the jackal has calmed down, and the giraffe keeps him company.</p>
+  </section>
+
+  <section aria-label="Tools">
+    <ul class="tools">
+      <li><b>Sepia and plum pencil</b><span>Warm outlines, drawn twice, slightly apart. Lines hidden behind a part are left out, as a hand would.</span></li>
+      <li><b>Coloured pencil</b><span>Fills hatched right-handed, over the edges, with the paper showing through. Shadows in violet, not grey.</span></li>
+      <li><b>Soft pastel</b><span>One flat colour behind each animal, a shadow on the ground, cheeks, and a little light.</span></li>
+    </ul>
+  </section>
+
+  <section class="inapp" aria-label="In the app">
+    <div class="copy">
+      <h2>On a card</h2>
+      <p>The heads at button size. Tap Chó rừng or Hươu to answer: the giraffe hops when you're right, and the jackal shakes his head when you're not.</p>
+      <p class="note">Every stroke comes from a fixed seed, so the drawing is the same on every phone. In the app, the same rules would run in Swift.</p>
+    </div>
+
+    <div class="phone" aria-label="App card preview">
+      <div class="top"><span>Encore en retard</span><span>2/9</span></div>
+      <div class="speaker"><span class="emoji" aria-hidden="true">🐻</span><div><b>Ours</b><small>Gấu</small></div></div>
+      <div class="bubble">Tu es toujours en retard, tu te fiches de moi&nbsp;!</div>
+      <div class="verdict" id="verdict" hidden></div>
+      <p class="ask" id="ask">Hươu hay chó rừng?</p>
+      <div class="choices">
+        <button type="button" id="answer-jackal"><canvas id="jackal-head"></canvas>Chó rừng</button>
+        <button type="button" id="answer-giraffe"><canvas id="giraffe-head"></canvas>Hươu</button>
+      </div>
+      <p class="hint">← chó rừng · hươu →</p>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* ---------- Chance, with a seed: the same drawing on every device ---------- */
+function hashStr(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function h2(x, y, s) { let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function vnoise(x, y, s) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi; const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = h2(xi, yi, s), b = h2(xi + 1, yi, s), c = h2(xi, yi + 1, s), d = h2(xi + 1, yi + 1, s); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+function n1(t, s) { const i = Math.floor(t), f = t - i, u = f * f * (3 - 2 * f); const a = h2(i, 0, s), b = h2(i + 1, 0, s); return (a + (b - a) * u) * 2 - 1; }
+
+/* ---------- Shapes, in a 200 × 300 drawing space per animal ---------- */
+function parse(d) {
+  const tok = d.match(/[MLCQZ]|-?\d*\.?\d+/g); const pts = []; let i = 0, cmd = "M", cur = [0, 0], start = [0, 0];
+  const num = () => parseFloat(tok[i++]);
+  const line = (a, b) => { const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]))); for (let k = 1; k <= n; k++) pts.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); };
+  const cubic = (p0, p1, p2, p3) => { const n = Math.max(4, Math.ceil((Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) + Math.hypot(p3[0] - p2[0], p3[1] - p2[1])))); for (let k = 1; k <= n; k++) { const t = k / n, m = 1 - t; pts.push([m*m*m*p0[0] + 3*m*m*t*p1[0] + 3*m*t*t*p2[0] + t*t*t*p3[0], m*m*m*p0[1] + 3*m*m*t*p1[1] + 3*m*t*t*p2[1] + t*t*t*p3[1]]); } };
+  while (i < tok.length) {
+    if (/[MLCQZ]/.test(tok[i])) cmd = tok[i++];
+    if (cmd === "M") { cur = [num(), num()]; start = cur; pts.push(cur); cmd = "L"; }
+    else if (cmd === "L") { const p = [num(), num()]; line(cur, p); cur = p; }
+    else if (cmd === "C") { const a = [num(), num()], b = [num(), num()], p = [num(), num()]; cubic(cur, a, b, p); cur = p; }
+    else if (cmd === "Q") { const c = [num(), num()], p = [num(), num()]; cubic(cur, [cur[0] + 2/3 * (c[0] - cur[0]), cur[1] + 2/3 * (c[1] - cur[1])], [p[0] + 2/3 * (c[0] - p[0]), p[1] + 2/3 * (c[1] - p[1])], p); cur = p; }
+    else if (cmd === "Z") { line(cur, start); cur = start; }
+  }
+  return pts;
+}
+function ellipse(cx, cy, rx, ry, rot = 0, wobble = 0, seed = 1) {
+  const n = Math.max(24, Math.ceil(2 * Math.PI * Math.max(rx, ry))); const c = Math.cos(rot * Math.PI / 180), s = Math.sin(rot * Math.PI / 180); const pts = [];
+  for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2; const w = 1 + wobble * n1(a * 1.6, seed); const x = Math.cos(a) * rx * w, y = Math.sin(a) * ry * w; pts.push([cx + x * c - y * s, cy + x * s + y * c]); }
+  return pts;
+}
+function rot(pts, deg, cx, cy) { if (!deg) return pts; const c = Math.cos(deg * Math.PI / 180), s = Math.sin(deg * Math.PI / 180); return pts.map(([x, y]) => [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c]); }
+const shift = (pts, dx, dy) => pts.map(([x, y]) => [x + dx, y + dy]);
+
+/* ---------- Paper ---------- */
+const toothCache = new Map();
+function tooth(w, h) {
+  const key = w + "x" + h; if (toothCache.has(key)) return toothCache.get(key);
+  const g = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    // Cold-pressed paper: a fine tooth, a coarser undulation, and a few fibres running sideways.
+    const fine = vnoise(x / 1.7, y / 1.7, 3), mid = vnoise(x / 6, y / 6, 5), fibre = vnoise(x / 22, y / 2.2, 9);
+    g[y * w + x] = 0.55 * fine + 0.3 * mid + 0.15 * fibre;
+  }
+  toothCache.set(key, g); return g;
+}
+function paper(ctx, w, h) {
+  const img = ctx.createImageData(w, h), d = img.data, g = tooth(w, h);
+  for (let i = 0; i < w * h; i++) {
+    const t = g[i], x = i % w, y = (i / w) | 0;
+    const edge = Math.min(x, y, w - x, h - y) / Math.min(w, h);
+    const age = edge < 0.08 ? (0.08 - edge) * 0.9 : 0; // edges yellowed by handling
+    const shade = (t - 0.5) * 14;
+    d[i * 4] = 244 + shade - age * 60; d[i * 4 + 1] = 236 + shade - age * 80; d[i * 4 + 2] = 220 + shade - age * 120; d[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* ---------- Tools ---------- */
+// Every tool draws onto a scratch layer, then the paper's tooth eats into it:
+// a light stroke only marks the peaks of the grain, a heavy one fills the valleys too.
+function layer(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+function bite(c, threshold, softness) {
+  const ctx = c.getContext("2d"), img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, g = tooth(c.width, c.height);
+  for (let i = 0; i < g.length; i++) { const a = d[i * 4 + 3]; if (!a) continue; const k = Math.min(1, Math.max(0, (g[i] - threshold * (1 - a / 400)) / softness)); d[i * 4 + 3] = a * k; }
+  ctx.putImageData(img, 0, 0);
+}
+
+function makeView(w, h, box, frame) {
+  const [x0, y0, x1, y1] = box; const s = Math.min(w / (x1 - x0), h / (y1 - y0));
+  const ox = (w - (x1 - x0) * s) / 2 - x0 * s, oy = (h - (y1 - y0) * s) / 2 - y0 * s;
+  return { s, frame, P: ([x, y]) => [ox + x * s, oy + y * s] };
+}
+function pathFrom(ctx, pts, view, seed, rough) {
+  // The edge of a hatched area is never the drawn line: it wanders by a pixel or two.
+  ctx.beginPath();
+  pts.forEach((p, i) => { const [x, y] = view.P(p); const j = rough * view.s * 0.5; const dx = n1(i * 0.09, seed) * j, dy = n1(i * 0.09 + 50, seed) * j; i ? ctx.lineTo(x + dx, y + dy) : ctx.moveTo(x + dx, y + dy); });
+  ctx.closePath();
+}
+
+// Coloured pencil: parallel strokes, right-handed, a little wavy, with gaps.
+function hatch(ctx, view, shape, o) {
+  const seed = hashStr(o.seed) + view.frame * 7919, R = rng(seed);
+  ctx.save();
+  pathFrom(ctx, shape, view, seed, o.rough ?? 1.6); ctx.clip();
+  // What lies in front is left as paper: a hand does not hatch under a muzzle it will draw later.
+  for (const cut of [o.cut, ...(o.cuts ?? [])].filter(Boolean)) { ctx.beginPath(); ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height); cut.forEach((p, i) => { const [x, y] = view.P(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); ctx.clip("evenodd"); }
+  let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+  for (const p of shape) { const [x, y] = view.P(p); minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
+  const a = (o.angle ?? -55) * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), nx = -uy, ny = ux;
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, r = Math.hypot(maxX - minX, maxY - minY) / 2 + 8;
+  const gap = (o.gap ?? 2.6) * view.s / 2.6, width = (o.width ?? 1.5) * view.s / 2.6;
+  ctx.strokeStyle = o.color; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (let t = -r; t <= r; t += gap * (0.75 + R() * 0.5)) {
+    // A stroke is a flick: it starts and ends at random, so its ends do not line up.
+    const len = r * (0.5 + R() * 0.9), off = (R() - 0.5) * r;
+    ctx.globalAlpha = (o.alpha ?? 0.85) * (0.6 + R() * 0.4);
+    ctx.lineWidth = width * (0.7 + R() * 0.6);
+    ctx.beginPath();
+    const steps = Math.ceil(len * 2 / 6);
+    for (let k = 0; k <= steps; k++) {
+      const s = off - len + (2 * len) * k / steps, wob = n1(k * 0.25 + t, seed) * gap * 0.35;
+      const x = cx + ux * s + nx * (t + wob), y = cy + uy * s + ny * (t + wob);
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+    if (R() < (o.skip ?? 0.1)) t += gap; // the hand skips a row now and then
+  }
+  ctx.restore();
+}
+
+// Graphite: the line is drawn twice. Pressure swells mid-stroke and lifts at the ends.
+function pencil(ctx, view, pts, o) {
+  const seed = hashStr(o.seed) + view.frame * 104729, closed = o.closed ?? false;
+  const passes = o.passes ?? 2;
+  ctx.save();
+  for (const cut of o.cuts ?? []) { ctx.beginPath(); ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height); cut.forEach((p, i) => { const [x, y] = view.P(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); ctx.clip("evenodd"); }
+  for (let pass = 0; pass < passes; pass++) {
+    const R = rng(seed + pass * 31);
+    let list = pts;
+    if (closed) { // start somewhere along the outline and overshoot the start
+      const startAt = Math.floor(R() * pts.length), over = Math.floor(pts.length * (0.04 + R() * 0.05));
+      list = []; for (let k = 0; k < pts.length + over; k++) list.push(pts[(startAt + k) % pts.length]);
+    }
+    const n = list.length, amp = (o.wander ?? 0.9) * (pass ? 1.4 : 1);
+    ctx.strokeStyle = o.color ?? "#3b3036"; ctx.lineCap = "round";
+    let prev = null;
+    for (let k = 0; k < n; k++) {
+      const t = k / (n - 1), p = view.P(list[k]);
+      const q = view.P(list[Math.min(n - 1, k + 1)]), dx = q[0] - p[0], dy = q[1] - p[1], dl = Math.hypot(dx, dy) || 1;
+      const off = n1(k * 0.06 + pass * 9, seed) * amp * view.s * 0.5 + (pass ? (R() - 0.5) * 0.3 : 0);
+      const cur = [p[0] - dy / dl * off, p[1] + dx / dl * off];
+      if (prev) {
+        const pressure = Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, t * 1.1 - 0.05))), 0.6) * (0.75 + 0.25 * n1(k * 0.1, seed + 3));
+        ctx.globalAlpha = (o.alpha ?? 0.85) * (pass ? 0.45 : 1) * (0.35 + 0.65 * pressure);
+        ctx.lineWidth = Math.max(0.6, (o.width ?? 1.3) * view.s / 2.6 * (0.45 + 0.75 * pressure) * (pass ? 0.7 : 1));
+        ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(cur[0], cur[1]); ctx.stroke();
+      }
+      prev = cur;
+    }
+  }
+  ctx.restore();
+}
+
+// Soft pastel: short powdery dabs, and a finger smudge underneath.
+function pastel(ctx, view, shape, o) {
+  const seed = hashStr(o.seed) + view.frame * 13, R = rng(seed);
+  let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+  for (const p of shape) { const [x, y] = view.P(p); minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
+  ctx.save();
+  pathFrom(ctx, shape, view, seed, 4); ctx.clip();
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, rr = Math.max(maxX - minX, maxY - minY) / 2;
+  if (o.even) { ctx.globalAlpha = (o.alpha ?? 0.5) * 0.55; ctx.fillStyle = o.color; ctx.fillRect(minX, minY, maxX - minX, maxY - minY); }
+  else {
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    g.addColorStop(0, o.color); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = (o.alpha ?? 0.5) * 0.22; ctx.fillStyle = g; ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+  }
+  ctx.strokeStyle = o.color; ctx.lineCap = "round";
+  const count = Math.ceil((maxX - minX) * (maxY - minY) / (view.s * view.s) * (o.density ?? 0.5));
+  const a0 = (o.angle ?? 60) * Math.PI / 180;
+  for (let k = 0; k < count; k++) {
+    const x = minX + R() * (maxX - minX), y = minY + R() * (maxY - minY);
+    const fall = o.even ? 1 : 1 - Math.min(1, Math.hypot(x - cx, y - cy) / rr);
+    const len = view.s * (2 + R() * 5), a = a0 + (R() - 0.5) * 0.6;
+    ctx.globalAlpha = (o.alpha ?? 0.5) * (0.3 + 0.7 * fall) * (0.4 + R() * 0.6);
+    ctx.lineWidth = view.s * (o.width ?? 2.2) * (0.6 + R() * 0.8);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+
+/* ---------- The characters ---------- */
+const PAL = {
+  sepia: "#5e3324", plum: "#3e2c4c",
+  gGold: "#f3bd52", gApricot: "#ec944a", gSpot: "#c0613a", gCream: "#f8e0b4", gTip: "#8a4a38", gEar: "#ee8c9b", gShade: "#8463b8",
+  jFur: "#9da5dc", jFur2: "#8089c8", jLight: "#f2edf6", jShade: "#5d78c0", jDeep: "#6a529e", jEar: "#ec9ab3", jNose: "#3a2a3e", jTip: "#4f4a7a",
+  peach: "#ffc49a", lilac: "#c8bff0", rose: "#f7c3c9", gold: "#f6dc98", blush: "#ff8d9c", glow: "#fff1c9", ground: "#b9a3c9",
+};
+
+// An arm, a leg, a neck: a tube along a curve, wider at one end.
+function tube(d, w0, w1 = w0) {
+  const c = parse(d), L = [], R = [];
+  for (let i = 0; i < c.length; i++) {
+    const a = c[Math.max(0, i - 1)], b = c[Math.min(c.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    const w = (w0 + (w1 - w0) * i / (c.length - 1)) / 2;
+    L.push([c[i][0] - dy / l * w, c[i][1] + dx / l * w]); R.push([c[i][0] + dy / l * w, c[i][1] - dx / l * w]);
+  }
+  return { shape: [...L, ...R.slice().reverse()], open: [...L, ...R.slice().reverse()], end: c[c.length - 1] };
+}
+function sparkle(cx, cy, r) { return parse(`M${cx} ${cy - r} Q${cx + r * 0.18} ${cy - r * 0.18} ${cx + r} ${cy} Q${cx + r * 0.18} ${cy + r * 0.18} ${cx} ${cy + r} Q${cx - r * 0.18} ${cy + r * 0.18} ${cx - r} ${cy} Q${cx - r * 0.18} ${cy - r * 0.18} ${cx} ${cy - r} Z`); }
+function panel(x0, y0, x1, y1, r) { return parse(`M${x0 + r} ${y0} L${x1 - r} ${y0} Q${x1} ${y0} ${x1} ${y0 + r} L${x1} ${y1 - r} Q${x1} ${y1} ${x1 - r} ${y1} L${x0 + r} ${y1} Q${x0} ${y1} ${x0} ${y1 - r} L${x0} ${y0 + r} Q${x0} ${y0} ${x0 + r} ${y0} Z`); }
+
+// A part is a shape with its colours. Parts are listed back to front: each one
+// hides what lies behind it, fills and outlines alike.
+function part(shape, fills, o = {}) { return { shape, fills, ...o }; }
+
+function giraffe(mood) {
+  const tiltDeg = mood === "listening" ? -10 : mood === "together" ? 6 : 0, H = (pts) => rot(pts, tiltDeg, 100, 150);
+  const fur = (o = {}) => [{ color: PAL.gGold, angle: -58, gap: 2.4, ...o }, { color: PAL.gApricot, angle: 32, gap: 4.8, alpha: 0.45, width: 1.2 }];
+  const head = H(parse("M100 40 C134 40 146 62 146 84 C146 105 132 120 100 120 C68 120 54 105 54 84 C54 62 66 40 100 40 Z"));
+  const muzzle = H(ellipse(100, 102, 33, 19, 0, 0.03, 6));
+  const neck = parse("M82 112 C80 135 79 150 77 174 L123 174 C121 150 120 135 118 112 Z");
+  const torso = parse("M100 160 C136 160 150 196 150 228 C150 258 130 272 100 272 C70 272 50 258 50 228 C50 196 64 160 100 160 Z");
+  const belly = ellipse(100, 232, 30, 32, 0, 0.05, 7);
+  const legL = parse("M70 256 L68 288 L89 288 L91 262 Z"), legR = parse("M109 262 L111 288 L132 288 L130 256 Z");
+  const tail = tube("M146 232 Q166 236 172 256", 4, 3);
+  const arms = {
+    calm: ["M64 182 Q48 206 52 232", "M136 182 Q152 206 148 232"],
+    listening: ["M64 182 Q70 218 94 208", "M136 182 Q152 206 148 232"],
+    happy: ["M64 184 Q40 162 36 132", "M136 184 Q160 162 164 132"],
+    together: ["M64 182 Q48 206 52 232", "M136 182 Q176 166 204 194"],
+  }[mood].map((d) => tube(d, 15, 13));
+  const spots = [[90, 140, 5, 4], [110, 156, 4, 3.5], [74, 200, 9, 7], [126, 214, 8, 7], [86, 250, 7, 6], [132, 244, 6, 5], [116, 186, 6, 5]]
+    .map(([x, y, a, b], i) => ellipse(x, y, a, b, i * 23, 0.22, 20 + i));
+  const parts = [
+    part(tail.shape, [{ color: PAL.gGold, gap: 2 }], { open: tail.open }),
+    part(ellipse(tail.end[0], tail.end[1] + 3, 5, 7, -15, 0.2, 8), [{ color: PAL.gTip, gap: 1.4 }]),
+    part(H(ellipse(50, 68, 21, 10, -24, 0.04, 2)), [{ color: PAL.gGold, gap: 2.2 }]),
+    part(H(ellipse(150, 68, 21, 10, 24, 0.04, 3)), [{ color: PAL.gGold, gap: 2.2 }]),
+    part(H(ellipse(53, 68, 12, 5, -24, 0.08, 70)), [{ color: PAL.gEar, gap: 1.8 }], { line: false }),
+    part(H(ellipse(147, 68, 12, 5, 24, 0.08, 71)), [{ color: PAL.gEar, gap: 1.8 }], { line: false }),
+    part(H(parse("M82 52 L76 24 L82 24 L88 50 Z")), [{ color: PAL.gApricot, gap: 2 }], { width: 1 }),
+    part(H(parse("M118 52 L124 24 L118 24 L112 50 Z")), [{ color: PAL.gApricot, gap: 2 }], { width: 1 }),
+    part(H(ellipse(78.5, 20, 8, 7.5, 0, 0.06, 4)), [{ color: PAL.gTip, gap: 1.4 }]),
+    part(H(ellipse(121.5, 20, 8, 7.5, 0, 0.06, 5)), [{ color: PAL.gTip, gap: 1.4 }]),
+    part(legL, fur(), { shade: [9, 0] }), part(legR, fur(), { shade: [9, 0] }),
+    part(ellipse(79, 289, 13, 6, 0, 0.08, 9), [{ color: PAL.gTip, gap: 1.6 }]),
+    part(ellipse(121, 289, 13, 6, 0, 0.08, 10), [{ color: PAL.gTip, gap: 1.6 }]),
+    part(torso, fur(), { shade: [8, 8] }),
+    part(belly, [{ color: PAL.gCream, gap: 2.4 }], { width: 0.9, alpha: 0.6 }),
+    part(neck, fur(), { shade: [9, 0], line: false }),
+    ...spots.map((s) => part(s, [{ color: PAL.gSpot, gap: 1.6, angle: -50 }], { overlay: true, line: false })),
+    part(head, fur({ gap: 2.3 }), { shade: [7, 8], width: 1.5 }),
+    part(H(ellipse(74, 56, 7, 5.5, -10, 0.25, 30)), [{ color: PAL.gSpot, gap: 1.6 }], { overlay: true, line: false }),
+    part(H(ellipse(126, 52, 5.5, 4.5, 15, 0.25, 31)), [{ color: PAL.gSpot, gap: 1.6 }], { overlay: true, line: false }),
+    part(muzzle, [{ color: PAL.gCream, gap: 2.4 }], { width: 1.1, alpha: 0.7, shade: [4, 6, 0.3] }),
+    ...arms.flatMap((arm) => [
+      part(arm.shape, fur(), { open: arm.open, shade: [5, 5] }),
+      part(ellipse(arm.end[0], arm.end[1], 8, 7, 0, 0.08, 11), [{ color: PAL.gTip, gap: 1.5 }]),
+    ]),
+  ];
+  // The mane: short dashes down the back of the neck.
+  const mane = Array.from({ length: 6 }, (_, k) => ellipse(119 + k * 0.3, 114 + k * 10, 2.2, 4, 10, 0.2, 100 + k));
+  const closed = mood === "happy" || mood === "together";
+  const eyes = closed ? [] : [H(ellipse(80, 73, 5, 6.5, 0, 0.05, 40)), H(ellipse(120, 73, 5, 6.5, 0, 0.05, 41))];
+  // The neck is drawn by its two sides only: it grows out of the body without a seam.
+  const lines = [{ pts: parse("M81.6 118 C80 135 79 150 77 170"), width: 1.3 }, { pts: parse("M118.4 118 C120 135 121 150 123 170"), width: 1.3 }];
+  if (closed) lines.push({ pts: H(parse("M73 77 Q80 67 87 77")), width: 2.4 }, { pts: H(parse("M113 77 Q120 67 127 77")), width: 2.4 });
+  if (mood === "listening") lines.push({ pts: H(parse("M71 60 Q80 54 89 59")), width: 1.6 }, { pts: H(parse("M111 59 Q120 54 129 60")), width: 1.6 });
+  const mouth = mood === "happy" ? H(parse("M88 106 Q100 122 112 106 Z")) : null;
+  if (!mouth) lines.push({ pts: H(parse(mood === "together" ? "M89 106 Q100 116 111 106" : "M91 107 Q100 114 109 107")), width: 1.8 });
+  return {
+    ink: PAL.sepia, parts, lines,
+    darks: [
+      ...eyes.map((e) => ({ shape: e, color: PAL.sepia })),
+      { shape: H(ellipse(90, 97, 3, 2.2, 0, 0.1, 90)), color: PAL.sepia },
+      { shape: H(ellipse(110, 97, 3, 2.2, 0, 0.1, 91)), color: PAL.sepia },
+      ...(mouth ? [{ shape: mouth, color: "#7a2f34" }] : []),
+      ...mane.map((m) => ({ shape: m, color: PAL.gTip })),
+    ],
+    pastels: [
+      { shape: H(ellipse(66, 90, 10, 7, 0, 0.1, 80)), color: PAL.blush, alpha: 0.7, density: 1.6 },
+      { shape: H(ellipse(134, 90, 10, 7, 0, 0.1, 81)), color: PAL.blush, alpha: 0.7, density: 1.6 },
+      ...(mood === "listening" ? [{ shape: ellipse(94, 206, 14, 10, 0, 0.2, 84), color: PAL.blush, alpha: 0.35, density: 0.8 }] : []),
+    ],
+    glints: eyes.length ? [H([[82, 70.5]])[0], H([[122, 70.5]])[0]] : [],
+    sparkles: mood === "happy" ? [[30, 100, 8], [172, 96, 7], [160, 150, 5]] : [],
+    feet: [100, 290, 62],
+    back: PAL.peach, box: [-6, 6, 206, 298], head: [34, 6, 166, 126],
+  };
+}
+
+function jackal(mood) {
+  const tiltDeg = mood === "sulky" ? 7 : mood === "together" ? -8 : mood === "soft" ? -4 : 0, H = (pts) => rot(pts, tiltDeg, 100, 150);
+  const fur = (o = {}) => [{ color: PAL.jFur, angle: -58, gap: 2.3, ...o }, { color: PAL.jFur2, angle: 32, gap: 4.8, alpha: 0.45, width: 1.2 }];
+  const droop = mood === "sulky" ? 22 : mood === "cross" ? -4 : 0;
+  const earL = H(rot(parse("M62 98 C52 72 50 48 56 26 C70 38 86 56 96 74 Z"), -droop, 76, 86));
+  const earR = H(rot(parse("M138 98 C148 72 150 48 144 26 C130 38 114 56 104 74 Z"), droop, 124, 86));
+  const earLi = H(rot(parse("M66 86 C60 68 60 52 62 40 C72 50 80 60 86 72 Z"), -droop, 76, 86));
+  const earRi = H(rot(parse("M134 86 C140 68 140 52 138 40 C128 50 120 60 114 72 Z"), droop, 124, 86));
+  const head = H(parse("M100 62 C134 62 152 84 152 108 C152 120 148 128 142 134 L151 140 L139 143 L141 151 C129 158 114 162 100 162 C86 162 71 158 59 151 L61 143 L49 140 L58 134 C52 128 48 120 48 108 C48 84 66 62 100 62 Z"));
+  const snout = H(parse("M100 112 C116 112 124 124 124 134 C124 146 112 152 100 152 C88 152 76 146 76 134 C76 124 84 112 100 112 Z"));
+  const torso = parse("M100 150 C128 150 142 180 142 214 C142 248 126 266 100 266 C74 266 58 248 58 214 C58 180 72 150 100 150 Z");
+  const chest = parse("M84 158 L92 170 L100 160 L108 170 L116 158 C124 184 124 220 116 246 C106 254 94 254 84 246 C76 220 76 184 84 158 Z");
+  const legL = parse("M72 252 L70 288 L91 288 L92 258 Z"), legR = parse("M108 258 L109 288 L130 288 L128 252 Z");
+  const wag = mood === "together" ? -18 : mood === "sulky" ? 30 : 0;
+  const tail = rot(parse("M136 236 C170 238 188 214 184 184 C176 204 160 214 140 218 Z"), wag, 138, 228);
+  const tailTip = rot(parse("M184 184 C189 194 187 206 180 212 C178 202 178 194 184 184 Z"), wag, 138, 228);
+  const arms = {
+    cross: ["M70 182 Q94 216 126 200", "M130 182 Q108 222 76 206"],
+    sulky: ["M70 182 Q62 206 68 230", "M130 182 Q138 206 132 230"],
+    soft: ["M70 182 Q62 206 68 230", "M130 182 Q154 196 172 178"],
+    together: ["M70 182 Q62 206 68 230", "M130 182 Q140 210 124 226"],
+  }[mood].map((d) => tube(d, 14, 12));
+  // Arms folded: the first one goes behind the second.
+  const parts = [
+    part(tail, fur({ gap: 2.1 }), { shade: [6, 6] }),
+    part(tailTip, [{ color: PAL.jTip, gap: 1.6 }]),
+    part(earL, fur(), {}), part(earR, fur(), { shade: [6, -4] }),
+    part(earLi, [{ color: PAL.jEar, gap: 1.8 }], { line: false }), part(earRi, [{ color: PAL.jEar, gap: 1.8 }], { line: false }),
+    part(legL, fur(), { shade: [8, 0] }), part(legR, fur(), { shade: [8, 0] }),
+    part(ellipse(80, 289, 12, 6, 0, 0.08, 9), [{ color: PAL.jLight, gap: 2 }]),
+    part(ellipse(120, 289, 12, 6, 0, 0.08, 10), [{ color: PAL.jLight, gap: 2 }]),
+    part(torso, fur(), { shade: [8, 8] }),
+    part(chest, [{ color: PAL.jLight, gap: 2.6, alpha: 0.9 }], { width: 1, alpha: 0.6 }),
+    part(head, fur({ gap: 2.2 }), { shade: [7, 8], width: 1.5 }),
+    part(snout, [{ color: PAL.jLight, gap: 2.2 }], { width: 1.1, alpha: 0.7, shade: [4, 6, 0.3] }),
+    ...arms.flatMap((arm) => [
+      part(arm.shape, fur(), { open: arm.open, shade: [5, 5] }),
+      part(ellipse(arm.end[0], arm.end[1], 7.5, 6.5, 0, 0.08, 12), [{ color: PAL.jLight, gap: 2 }]),
+    ]),
+  ];
+  const lines = [{ pts: H(parse("M100 130 L100 136")), width: 1.6 }];
+  let eyes, lids = [], mouth = null, glints;
+  if (mood === "cross") {
+    eyes = [H(ellipse(82, 104, 5, 6, 0, 0.05, 40)), H(ellipse(118, 104, 5, 6, 0, 0.05, 41))];
+    lines.push({ pts: H(parse("M70 89 L92 98")), width: 3 }, { pts: H(parse("M130 89 L108 98")), width: 3 });
+    lines.push({ pts: H(parse("M92 143 Q100 137 108 143")), width: 1.8 });
+  } else if (mood === "sulky") {
+    eyes = [H(ellipse(82, 108, 5, 5.5, 0, 0.05, 40)), H(ellipse(118, 108, 5, 5.5, 0, 0.05, 41))];
+    lids = [H(parse("M75 107 C75 98 89 98 89 107 Z")), H(parse("M111 107 C111 98 125 98 125 107 Z"))];
+    lines.push({ pts: H(parse("M74 106 L90 106")), width: 1.6 }, { pts: H(parse("M110 106 L126 106")), width: 1.6 });
+    lines.push({ pts: H(parse("M72 94 L92 97")), width: 2.4 }, { pts: H(parse("M128 94 L108 97")), width: 2.4 });
+    lines.push({ pts: H(parse("M93 143 L107 143")), width: 1.8 });
+  } else if (mood === "soft") {
+    eyes = [H(ellipse(82, 104, 5.8, 7, 0, 0.05, 40)), H(ellipse(118, 104, 5.8, 7, 0, 0.05, 41))];
+    lines.push({ pts: H(parse("M72 90 Q81 84 90 88")), width: 2 }, { pts: H(parse("M128 90 Q119 84 110 88")), width: 2 });
+    lines.push({ pts: H(parse("M90 139 Q100 148 110 139")), width: 1.8 });
+  } else {
+    eyes = [];
+    lines.push({ pts: H(parse("M75 106 Q82 97 89 106")), width: 2.4 }, { pts: H(parse("M111 106 Q118 97 125 106")), width: 2.4 });
+    mouth = H(parse("M90 139 Q100 152 110 139 Z"));
+  }
+  glints = eyes.length && mood !== "sulky" ? [H([[84, 101.5]])[0], H([[120, 101.5]])[0]] : [];
+  return {
+    ink: PAL.plum, parts, lines,
+    darks: [
+      { shape: H(ellipse(100, 124, 8, 6, 0, 0.05, 7)), color: PAL.jNose },
+      ...eyes.map((e) => ({ shape: e, color: PAL.plum })),
+      ...lids.map((l) => ({ shape: l, color: PAL.jFur2 })),
+      ...(mouth ? [{ shape: mouth, color: "#7a2f4a" }] : []),
+    ],
+    pastels: [
+      ...(mood === "soft" || mood === "together" ? [
+        { shape: H(ellipse(68, 124, 8, 6, 0, 0.1, 84)), color: PAL.blush, alpha: 0.7, density: 1.6 },
+        { shape: H(ellipse(132, 124, 8, 6, 0, 0.1, 85)), color: PAL.blush, alpha: 0.7, density: 1.6 }] : []),
+    ],
+    glints: [H([[97, 122]])[0], ...glints],
+    sparkles: mood === "soft" ? [[176, 160, 6]] : [],
+    feet: [100, 290, 56],
+    back: PAL.lilac, box: [-6, 10, 206, 298], head: [40, 24, 160, 166],
+  };
+}
+
+// Move and scale a whole figure, to put two on one sheet.
+function place(fig, dx, dy, s) {
+  const f = (pts) => pts.map(([x, y]) => [dx + x * s, dy + y * s]);
+  return {
+    ...fig,
+    parts: fig.parts.map((p) => ({ ...p, shape: f(p.shape), open: p.open && f(p.open), shade: p.shade && [p.shade[0] * s, p.shade[1] * s, p.shade[2]] })),
+    lines: fig.lines.map((l) => ({ ...l, pts: f(l.pts) })),
+    darks: fig.darks.map((d) => ({ ...d, shape: f(d.shape) })),
+    pastels: fig.pastels.map((p) => ({ ...p, shape: f(p.shape) })),
+    glints: f(fig.glints), sparkles: fig.sparkles.map(([x, y, r]) => [dx + x * s, dy + y * s, r * s]),
+    feet: [dx + fig.feet[0] * s, dy + fig.feet[1] * s, fig.feet[2] * s],
+  };
+}
+
+function together() {
+  // The jackal first, so the giraffe's arm comes in front of his shoulder.
+  const j = place(jackal("together"), 150, 44, 0.85), g = place(giraffe("together"), 0, 0, 1);
+  return {
+    pieces: [j, g], back: PAL.gold, box: [-14, 0, 336, 300],
+    sparkles: [[262, 60, 7], [300, 120, 5], [18, 150, 6]],
+  };
+}
+
+/* ---------- Drawing a sheet ---------- */
+function render(canvas, scene, frame, crop) {
+  const w = canvas.width, h = canvas.height, ctx = canvas.getContext("2d");
+  const pieces = scene.pieces ?? [scene];
+  const view = makeView(w, h, crop ? scene.head : scene.box, frame);
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  paper(ctx, w, h);
+  const L = layer(w, h), lc = L.getContext("2d");
+  const pass = (draw, threshold, softness, mode) => {
+    lc.clearRect(0, 0, w, h); lc.globalAlpha = 1; draw(lc);
+    bite(L, threshold, softness);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = mode; ctx.drawImage(L, 0, 0); ctx.globalCompositeOperation = "source-over";
+  };
+  // All parts back to front, across figures. A part is hidden by every solid part after it.
+  const all = pieces.flatMap((p) => p.parts.map((q) => ({ ...q, ink: p.ink })));
+  const later = (i) => all.slice(i + 1).filter((q) => !q.overlay).map((q) => q.shape);
+  const [bx0, by0, bx1, by1] = crop ? scene.head : scene.box;
+
+  // 1. One flat colour of pastel, a rounded sheet like a page, and a shadow on the ground.
+  pass((c) => {
+    pastel(c, view, panel(bx0 + 10, by0 + 10, bx1 - 10, by1 - 8, 26), { color: scene.back, alpha: 0.6, density: 0.9, width: 3.4, even: true, seed: "panel", angle: 64 });
+    pieces.forEach((p, i) => pastel(c, view, ellipse(p.feet[0], p.feet[1] + 2, p.feet[2], p.feet[2] * 0.14, 0, 0.1, 200 + i), { color: PAL.ground, alpha: 0.7, density: 2, width: 1.8, seed: "ground" + i, angle: 4 }));
+    [...(scene.pieces ? scene.sparkles ?? [] : []), ...pieces.flatMap((p) => p.sparkles ?? [])].forEach(([x, y, r], i) => pastel(c, view, sparkle(x, y, r), { color: PAL.glow, alpha: 0.95, density: 4, width: 1.3, seed: "spark" + i, angle: 30 }));
+    c.globalCompositeOperation = "destination-out"; c.globalAlpha = 1;
+    all.filter((q) => !q.overlay).forEach((q, i) => { pathFrom(c, q.shape, view, hashStr("sil" + i), 2.5); c.fill(); });
+    c.globalCompositeOperation = "source-over";
+  }, 0.4, 0.24, "multiply");
+  // 2. Coloured pencil, light layers first.
+  pass((c) => all.forEach((q, i) => q.fills.forEach((f, k) => hatch(c, view, q.shape, { ...f, cuts: later(i), seed: `fill${i}.${k}` }))), 0.3, 0.3, "multiply");
+  // 3. Shadows away from the light, top left: violet and blue, never grey.
+  pass((c) => all.forEach((q, i) => {
+    if (!q.shade) return;
+    const [dx, dy, alpha] = q.shade, tone = q.ink === PAL.plum ? PAL.jShade : PAL.gShade;
+    hatch(c, view, q.shape, { color: tone, angle: 35, gap: 2.4, alpha: alpha ?? 0.5, cut: shift(q.shape, -dx, -dy), cuts: later(i), seed: "shade" + i });
+  }), 0.34, 0.3, "multiply");
+  // 4. Pastel cheeks and lights.
+  pass((c) => pieces.forEach((p, n) => p.pastels.forEach((s, i) => pastel(c, view, s.shape, { ...s, seed: `pastel${n}.${i}` }))), 0.38, 0.25, "source-over");
+  // 5. The warm pencil: dark accents, then outlines, each hidden behind what comes later.
+  pass((c) => {
+    pieces.forEach((p, n) => p.darks.forEach((s, i) => hatch(c, view, s.shape, { color: s.color, seed: `dark${n}.${i}`, gap: 0.9, width: 1.6, alpha: 0.95, rough: 0.6, angle: -40 })));
+    all.forEach((q, i) => {
+      if (q.line === false) return;
+      pencil(c, view, q.open ?? q.shape, { closed: !q.open, width: q.width ?? 1.3, alpha: q.alpha ?? 0.85, color: q.ink, cuts: later(i), seed: "line" + i });
+    });
+    pieces.forEach((p, n) => p.lines.forEach((l, i) => pencil(c, view, l.pts, { ...l, color: p.ink, seed: `feature${n}.${i}` })));
+  }, 0.2, 0.3, "multiply");
+  // 6. White gel pen in the eyes.
+  ctx.fillStyle = "#fffdf6";
+  pieces.flatMap((p) => p.glints).forEach(([x, y], i) => { const [px, py] = view.P([x, y]); ctx.globalAlpha = 0.95; ctx.beginPath(); ctx.arc(px + (frame % 2) * 0.3, py, view.s * (1.5 + (i % 2) * 0.2), 0, Math.PI * 2); ctx.fill(); });
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- Boiling lines: three drawings of the same pose, shown in turn ---------- */
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const FRAMES = reduce ? 1 : 3;
+const scenes = { giraffe, jackal, together };
+function sheet(canvas, cssWidth, ratio, crop) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  return { canvas, width: Math.round(cssWidth * dpr), height: Math.round(cssWidth * ratio * dpr), crop, frames: [], timer: null, token: 0 };
+}
+function show(s, who, mood) {
+  const token = ++s.token; s.frames = []; clearInterval(s.timer);
+  const scene = scenes[who](mood);
+  const draw = (f) => { const c = layer(s.width, s.height); render(c, scene, f, s.crop); return c; };
+  s.canvas.width = s.width; s.canvas.height = s.height;
+  const first = draw(0); s.frames.push(first); s.canvas.getContext("2d").drawImage(first, 0, 0);
+  let f = 1;
+  const more = () => {
+    if (token !== s.token) return;
+    if (f < FRAMES) { s.frames.push(draw(f++)); setTimeout(more, 30); return; }
+    if (FRAMES > 1) { let i = 0; s.timer = setInterval(() => { if (token !== s.token) return; i = (i + 1) % s.frames.length; s.canvas.getContext("2d").drawImage(s.frames[i], 0, 0); }, 160); }
+  };
+  setTimeout(more, 60);
+}
+
+const col = Math.min(460, Math.max(300, document.querySelector(".cast .sheet").clientWidth || 420));
+const full = Math.min(940, Math.max(320, document.querySelector("main").clientWidth || 900));
+const sheets = {
+  giraffe: sheet(document.getElementById("giraffe-canvas"), col, 4 / 3, false),
+  jackal: sheet(document.getElementById("jackal-canvas"), col, 4 / 3, false),
+  together: sheet(document.getElementById("together-canvas"), full, 10 / 16, false),
+  giraffeHead: sheet(document.getElementById("giraffe-head"), 60, 1, true),
+  jackalHead: sheet(document.getElementById("jackal-head"), 60, 1, true),
+};
+// One drawing at a time, so the page stays responsive while it fills in.
+[["giraffe", "giraffe", "calm"], ["jackal", "jackal", "cross"], ["giraffeHead", "giraffe", "calm"], ["jackalHead", "jackal", "cross"], ["together", "together"]]
+  .forEach(([key, who, mood], i) => setTimeout(() => show(sheets[key], who, mood), 40 + i * 120));
+
+document.querySelectorAll(".moods button").forEach((button) => {
+  button.addEventListener("click", () => {
+    const { who, mood } = button.dataset;
+    button.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+    show(sheets[who], who, mood);
+    const motion = who === "giraffe" && mood === "happy" ? "hop" : who === "jackal" && mood === "sulky" ? "shake" : null;
+    if (motion) { const c = sheets[who].canvas; c.classList.remove("hop", "shake"); void c.offsetWidth; c.classList.add(motion); }
+  });
+});
+
+/* ---------- The phone card ---------- */
+const verdict = document.getElementById("verdict"), ask = document.getElementById("ask");
+let answered = false;
+function answer(voice) {
+  if (answered) return; answered = true;
+  const right = voice === "jackal";
+  ask.hidden = true; verdict.hidden = false;
+  verdict.innerHTML = `<b>${right ? "Đúng rồi · Đây là chó rừng" : "Chưa đúng · Đây là chó rừng"}</b>
+    « Toujours » và « tu te fiches de moi » là phán xét, không phải điều mắt thấy.
+    <em style="opacity:.8">Lúc nào cậu cũng trễ, cậu chẳng coi tớ ra gì!</em>`;
+  const g = sheets.giraffeHead.canvas, j = sheets.jackalHead.canvas;
+  if (right) { show(sheets.giraffeHead, "giraffe", "happy"); show(sheets.jackalHead, "jackal", "soft"); g.classList.remove("hop"); void g.offsetWidth; g.classList.add("hop"); }
+  else { show(sheets.jackalHead, "jackal", "sulky"); j.classList.remove("shake"); void j.offsetWidth; j.classList.add("shake"); }
+  setTimeout(() => { answered = false; verdict.hidden = true; ask.hidden = false; show(sheets.giraffeHead, "giraffe", "calm"); show(sheets.jackalHead, "jackal", "cross"); }, 4500);
+}
+document.getElementById("answer-jackal").addEventListener("click", () => answer("jackal"));
+document.getElementById("answer-giraffe").addEventListener("click", () => answer("giraffe"));
+</script>

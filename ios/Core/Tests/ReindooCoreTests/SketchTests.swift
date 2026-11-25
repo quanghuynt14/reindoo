@@ -111,3 +111,16 @@ import Testing
         #expect(closed.last == Pt(0, 0))
     }
 }
+
+@Test func everyDrawingTheTalkTabShowsIsPaintedAhead() {
+    let names = Still.all.map(\.name)
+    #expect(Set(names).count == names.count)
+    for species in Species.allCases {
+        for mood in Sketch.AnimalMood.allCases { #expect(Still.all.contains(.head(.animal(species, mood)))) }
+    }
+    for motif in Motif.allCases {
+        #expect(Still.all.contains(.backdrop(motif)))
+        #expect(Still.all.contains(.band(motif)))
+    }
+    #expect(Still.all.contains(.scene(.together)))
+}

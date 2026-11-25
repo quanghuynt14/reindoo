@@ -114,6 +114,9 @@ jobs:
         with:
           name: lexicon
           path: ios/App/Resources
+      # Les dessins se peignent ici, une fois, pas sur le téléphone.
+      - name: Peindre les dessins
+        run: swift run --package-path ios/Core -c release sketch-stills ios/App/Resources/Sketches
       - run: brew install xcodegen
       - name: Générer et construire
         working-directory: ios
@@ -234,6 +237,9 @@ jobs:
         with:
           name: lexicon
           path: ios/App/Resources
+      # Les dessins se peignent ici, une fois, pas sur le téléphone.
+      - name: Peindre les dessins
+        run: swift run --package-path ios/Core -c release sketch-stills ios/App/Resources/Sketches
       - run: brew install xcodegen
       - name: Construire
         working-directory: ios
@@ -297,6 +303,9 @@ jobs:
         with:
           name: lexicon
           path: ios/App/Resources
+      # Les dessins se peignent ici, une fois, pas sur le téléphone.
+      - name: Peindre les dessins
+        run: swift run --package-path ios/Core -c release sketch-stills ios/App/Resources/Sketches
       - run: brew install xcodegen
       - name: Archiver et envoyer
         working-directory: ios

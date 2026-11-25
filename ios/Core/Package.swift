@@ -10,6 +10,7 @@ let package = Package(
     products: [
         .library(name: "ReindooCore", targets: ["ReindooCore"]),
         .executable(name: "reindoo-cli", targets: ["reindoo-cli"]),
+        .executable(name: "sketch-stills", targets: ["sketch-stills"]),
     ],
     targets: [
         // SQLite embarqué pour Linux seulement. Sur les plateformes Apple,
@@ -29,6 +30,8 @@ let package = Package(
             ]
         ),
         .executableTarget(name: "reindoo-cli", dependencies: ["ReindooCore"]),
+        // Peint les dessins de l'app avant sa construction. macOS seulement.
+        .executableTarget(name: "sketch-stills", dependencies: ["ReindooCore"]),
         .testTarget(name: "ReindooCoreTests", dependencies: ["ReindooCore"]),
     ]
 )

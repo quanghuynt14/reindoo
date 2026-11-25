@@ -12,8 +12,6 @@ private let wrongTint = Color(red: 0.82, green: 0.42, blue: 0.16)
 struct TalkView: View {
     let model: TalkViewModel
 
-    @Environment(\.displayScale) private var displayScale
-    @State private var screen: CGSize = .zero
 
     var body: some View {
         let state = model.state
@@ -32,20 +30,9 @@ struct TalkView: View {
             .padding(.bottom, Theme.section)
         }
         .navigationTitle(state.title)
-        .background {
-            Color.clear.ignoresSafeArea()
-                .onGeometryChange(for: CGSize.self) { $0.size } action: { screen = $0 }
-        }
-        // Les décors se peignent d'avance, pendant qu'on lit la liste : ouvrir
-        // une histoire ne montre jamais une feuille vide.
-        .task(id: screen) {
-            var seen: Set<Motif> = []
-            for motif in state.stories.map(\.motif) where seen.insert(motif).inserted {
-                guard let key = SketchView.key(.backdrop(motif), size: screen, still: true, sharpness: StoryPlayer.sharpness, displayScale: displayScale) else { return }
-                _ = await SketchCache.shared.frames(key, priority: .utility)
-                if Task.isCancelled { return }
-            }
-        }
+        // Tous les dessins de l'onglet se lisent d'avance, pendant qu'on
+        // regarde la liste : ouvrir une histoire ne décode plus rien.
+        .task { await SketchCache.shared.warm(Still.all) }
         .onAppear { model.send(.appear) }
         .fullScreenCover(isPresented: Binding(
             get: { model.state.player != nil },
@@ -65,8 +52,7 @@ private struct StoryRow: View {
             HStack(spacing: -12) {
                 ForEach(Array(row.cast.enumerated()), id: \.offset) { _, who in
                     if let sketch = who.sketch {
-                        // Dans la liste, les têtes se tiennent tranquilles : une seule version à peindre.
-                        SketchView(sketch: sketch, head: true, still: true)
+                        SketchView(.head(sketch))
                             .frame(width: 54, height: 54)
                             .clipShape(.circle)
                             .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1.5))
@@ -95,7 +81,7 @@ private struct StoryRow: View {
         .background {
             ZStack {
                 paper
-                SketchView(sketch: .backdrop(row.motif), head: true, still: true, sharpness: 1.5)
+                SketchView(.band(row.motif))
                 // Un voile de papier : le titre se lit par-dessus le décor.
                 LinearGradient(colors: [paper.opacity(0.1), paper.opacity(0.55)], startPoint: .leading, endPoint: .trailing)
             }
@@ -111,8 +97,6 @@ private struct StoryPlayer: View {
 
     @State private var drag: CGFloat = 0
     private static let pace = Animation.smooth(duration: 0.38)
-    /// Le décor se peint à 1,25 pixel par point : du pastel, pas un visage.
-    static let sharpness: CGFloat = 1.25
 
     var body: some View {
         if let player = model.state.player {
@@ -145,7 +129,7 @@ private struct StoryPlayer: View {
             .background {
                 ZStack {
                     paper
-                    SketchView(sketch: .backdrop(player.motif), still: true, sharpness: Self.sharpness)
+                    SketchView(.backdrop(player.motif))
                 }
                 .ignoresSafeArea()
             }
@@ -272,7 +256,7 @@ private struct TalkCard: View {
 
     /// Une tête dessinée, sur sa pastille de papier.
     private func head(_ sketch: Sketch, size: CGFloat) -> some View {
-        SketchView(sketch: sketch, head: true)
+        SketchView(.head(sketch))
             .frame(width: size, height: size)
             .clipShape(.circle)
             .overlay(Circle().stroke(ink.opacity(0.25)))
@@ -543,7 +527,7 @@ private struct TalkCard: View {
         if let report = card.report {
             VStack(alignment: .leading, spacing: 14) {
                 // La fin d'une histoire : la girafe et le chacal, côte à côte.
-                SketchView(sketch: .together)
+                SketchView(.scene(.together))
                     .frame(maxWidth: .infinity)
                     .frame(height: 150)
                     .clipShape(.rect(cornerRadius: 16))
