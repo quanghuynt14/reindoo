@@ -179,23 +179,25 @@ public struct Copy: Equatable, Sendable {
 
     public var talkIntro: String {
         pick(
-            "The giraffe speaks from the heart: what happened, what I feel, what I need, what I ask. The wolf speaks in judgments. Short animal stories, one line at a time.",
-            "La girafe parle avec le cœur : ce qui s'est passé, ce que je ressens, ce dont j'ai besoin, ce que je demande. Le loup parle en jugements. De courtes histoires d'animaux, une réplique à la fois.",
-            "Hươu cao cổ nói bằng trái tim: chuyện gì xảy ra, mình cảm thấy gì, cần gì, đề nghị gì. Sói nói bằng phán xét. Những câu chuyện ngắn về các con vật, từng câu một."
+            "The giraffe speaks from the heart: what happened, what I feel, what I need, what I ask. The jackal speaks in judgments. Short animal stories, one line at a time.",
+            "La girafe parle avec le cœur : ce qui s'est passé, ce que je ressens, ce dont j'ai besoin, ce que je demande. Le chacal parle en jugements. De courtes histoires d'animaux, une réplique à la fois.",
+            "Hươu cao cổ nói bằng trái tim: chuyện gì xảy ra, mình cảm thấy gì, cần gì, đề nghị gì. Chó rừng nói bằng phán xét. Những câu chuyện ngắn về các con vật, từng câu một."
         )
     }
     public var giraffe: String { pick("Giraffe", "Girafe", "Hươu") }
-    public var wolf: String { pick("Wolf", "Loup", "Sói") }
-    public var sortQuestion: String { pick("Giraffe or wolf?", "Girafe ou loup ?", "Hươu hay sói?") }
-    public var sortHint: String { pick("← wolf · giraffe →", "← loup · girafe →", "← sói · hươu →") }
+    public var jackal: String { pick("Jackal", "Chacal", "Chó rừng") }
+    public var sortQuestion: String { pick("Giraffe or jackal?", "Girafe ou chacal ?", "Hươu hay chó rừng?") }
+    public var sortHint: String { pick("← jackal · giraffe →", "← chacal · girafe →", "← chó rừng · hươu →") }
     public var rewriteQuestion: String { pick("What would the giraffe say?", "Que dirait la girafe ?", "Hươu sẽ nói thế nào?") }
+    public var bodyQuestion: String { pick("Where do you feel it?", "Où le sent-on ?", "Cảm thấy ở đâu?") }
+    public var needQuestion: String { pick("Which need do they share?", "Quel besoin partagent-ils ?", "Hai bạn chung nhu cầu nào?") }
     public var continueHint: String { pick("Swipe up to go on", "Glissez vers le haut pour continuer", "Vuốt lên để đọc tiếp") }
     public var rightAnswer: String { pick("Right", "Juste", "Đúng rồi") }
     public var wrongAnswer: String { pick("Not quite", "Pas tout à fait", "Chưa đúng") }
     public func wasVoice(_ voice: Voice) -> String {
         switch voice {
         case .giraffe: pick("It's the giraffe", "C'est la girafe", "Đây là hươu")
-        case .wolf: pick("It's the wolf", "C'est le loup", "Đây là sói")
+        case .jackal: pick("It's the jackal", "C'est le chacal", "Đây là chó rừng")
         }
     }
     public func part(_ part: Part) -> String {

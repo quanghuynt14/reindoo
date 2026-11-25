@@ -196,7 +196,7 @@ private struct TalkCard: View {
             switch card.kind {
             case .narration: narration
             case .sort: sort
-            case .rewrite: rewrite
+            case .rewrite, .body, .need: choosing
             case .report: report
             }
             Spacer(minLength: 40)
@@ -313,13 +313,13 @@ private struct TalkCard: View {
         .animation(.smooth(duration: 0.35), value: card.verdict)
     }
 
-    /// Le tampon que la carte prend pendant qu'on la pousse : loup à gauche,
+    /// Le tampon que la carte prend pendant qu'on la pousse : chacal à gauche,
     /// girafe à droite.
     @ViewBuilder
     private var stamp: some View {
         let progress = min(1, abs(swipe) / Self.threshold)
         if swipe != 0 {
-            Text(swipe < 0 ? "🐺 \(player.wolfLabel)" : "🦒 \(player.giraffeLabel)")
+            Text(swipe < 0 ? "🐺 \(player.jackalLabel)" : "🦒 \(player.giraffeLabel)")
                 .font(.title3.weight(.heavy))
                 .padding(.horizontal, 14).padding(.vertical, 6)
                 .background(.thinMaterial, in: .capsule)
@@ -338,7 +338,7 @@ private struct TalkCard: View {
             }
             .onEnded { _ in
                 guard swipe != 0 else { return }
-                let voice: Voice? = swipe <= -Self.threshold ? .wolf : swipe >= Self.threshold ? .giraffe : nil
+                let voice: Voice? = swipe <= -Self.threshold ? .jackal : swipe >= Self.threshold ? .giraffe : nil
                 withAnimation(.spring(duration: 0.35)) { swipe = 0 }
                 if let voice {
                     withAnimation(.smooth(duration: 0.35)) { model.send(.sort(card.id, voice)) }
@@ -350,7 +350,7 @@ private struct TalkCard: View {
         VStack(spacing: 10) {
             if let question = card.question { Text(question).font(.headline) }
             HStack(spacing: 12) {
-                voiceButton(.wolf, "🐺", player.wolfLabel)
+                voiceButton(.jackal, "🐺", player.jackalLabel)
                 voiceButton(.giraffe, "🦒", player.giraffeLabel)
             }
             Text(player.sortHint).font(.caption).opacity(0.65)
@@ -394,47 +394,77 @@ private struct TalkCard: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
-    private var rewrite: some View {
+    /// Les cartes où l'on choisit : reformuler, compléter une expression du
+    /// corps, trouver le besoin commun. Seul l'en-tête change.
+    private var choosing: some View {
         VStack(alignment: .leading, spacing: 16) {
-            speaker
-            HStack(alignment: .top, spacing: 8) {
-                Text("🐺").font(.title)
-                bubble(card.text, gloss: card.isAnswered ? card.gloss : nil)
-            }
-            if let question = card.question {
-                Text("🦒 \(question)").font(.headline)
-            }
-            ForEach(Array(card.choices.enumerated()), id: \.offset) { index, choice in
-                Button {
-                    withAnimation(.smooth(duration: 0.35)) { model.send(.choose(card.id, index)) }
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(choice.text).font(.body.weight(.medium))
-                            .fixedSize(horizontal: false, vertical: true)
-                        if card.isAnswered {
-                            Text(choice.gloss).font(.caption).opacity(0.8)
+            switch card.kind {
+            case .body:
+                // Le trou se remplit à la réponse : l'expression entière reste à l'écran.
+                bubble(card.isAnswered ? (card.complete ?? card.text) : card.text, gloss: card.isAnswered ? card.gloss : nil)
+            case .need:
+                ForEach(Array(card.cast.prefix(2).enumerated()), id: \.offset) { index, who in
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(spacing: 0) {
+                            animal(who.emoji, size: 40, delay: Double(index) * 0.4)
+                            Text(who.name).font(.caption2.weight(.semibold))
                         }
-                    }
-                    .multilineTextAlignment(.leading)
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(fill(choice, at: index), in: .rect(cornerRadius: 16))
-                    .overlay(alignment: .topTrailing) {
-                        if card.isAnswered, choice.isGiraffe {
-                            Text("🦒").padding(6)
-                        }
+                        let line = index == 0 ? card.text : (card.reply ?? "")
+                        let gloss = index == 0 ? card.gloss : card.replyGloss
+                        bubble(line, gloss: card.isAnswered ? gloss : nil)
                     }
                 }
-                .buttonStyle(.plain)
-                .disabled(card.isAnswered)
+            default:
+                speaker
+                HStack(alignment: .top, spacing: 8) {
+                    Text("🐺").font(.title)
+                    bubble(card.text, gloss: card.isAnswered ? card.gloss : nil)
+                }
+            }
+            if let question = card.question {
+                Text(card.kind == .rewrite ? "🦒 \(question)" : question).font(.headline)
+            }
+            // Les choix courts (une partie du corps, un besoin) tiennent sur deux colonnes.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: card.kind == .rewrite ? 1 : 2), spacing: 10) {
+                choiceButtons
             }
             if card.isAnswered { verdict }
         }
     }
 
+    private var choiceButtons: some View {
+        ForEach(Array(card.choices.enumerated()), id: \.offset) { index, choice in
+            Button {
+                withAnimation(.smooth(duration: 0.35)) { model.send(.choose(card.id, index)) }
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(choice.text).font(.body.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if card.isAnswered {
+                        Text(choice.gloss).font(.caption).opacity(0.8)
+                    }
+                }
+                .multilineTextAlignment(.leading)
+                .padding(card.kind == .rewrite ? 14 : 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(fill(choice, at: index), in: .rect(cornerRadius: 16))
+                .overlay(alignment: .topTrailing) {
+                    if card.isAnswered, choice.isRight {
+                        Group {
+                            if card.kind == .rewrite { Text("🦒") } else { Image(systemName: "checkmark") }
+                        }
+                        .padding(6)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(card.isAnswered)
+        }
+    }
+
     private func fill(_ choice: TalkViewModel.Choice, at index: Int) -> Color {
         guard card.isAnswered else { return ink.opacity(0.14) }
-        if choice.isGiraffe { return Color.green.opacity(0.35) }
+        if choice.isRight { return Color.green.opacity(0.35) }
         if card.picked == index { return Color.orange.opacity(0.35) }
         return ink.opacity(0.06)
     }

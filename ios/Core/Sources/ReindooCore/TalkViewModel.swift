@@ -2,8 +2,8 @@ import Foundation
 import Observation
 
 /// « Giao tiếp » : la liste des histoires, et l'histoire ouverte, une carte par
-/// écran comme le reel. On trie les répliques (girafe ou loup), on reformule
-/// les phrases loup, et la dernière carte fait le bilan.
+/// écran comme le reel. On trie les répliques (girafe ou chacal), on reformule
+/// les phrases chacal, et la dernière carte fait le bilan.
 ///
 /// Les réponses restent sur l'appareil, dans `setting`, comme `memory` et
 /// `recall` : le serveur n'a pas de route pour elles.
@@ -36,7 +36,7 @@ public final class TalkViewModel: Introspectable {
         public var cards: [Card]
         public var position = 0
         public var giraffeLabel: String
-        public var wolfLabel: String
+        public var jackalLabel: String
         public var sortHint: String
         public var continueHint: String
         public var closeLabel: String
@@ -44,7 +44,7 @@ public final class TalkViewModel: Introspectable {
     }
 
     public struct Card: Codable, Equatable, Sendable, Identifiable {
-        public enum Kind: String, Codable, Sendable { case narration, sort, rewrite, report }
+        public enum Kind: String, Codable, Sendable { case narration, sort, rewrite, body, need, report }
         public enum Verdict: String, Codable, Sendable { case right, wrong }
 
         public var id: String
@@ -59,6 +59,11 @@ public final class TalkViewModel: Introspectable {
         public var part: String?
         public var why: String
         public var choices: [Choice] = []
+        /// Sur une carte « besoin » : la réplique du second personnage.
+        public var reply: String? = nil
+        public var replyGloss: String? = nil
+        /// Sur une carte « corps » : l'expression entière, montrée après la réponse.
+        public var complete: String? = nil
         /// La réponse. Une fois donnée, elle reste : on ne reprend pas un tour.
         public var sorted: Voice?
         public var picked: Int?
@@ -67,13 +72,15 @@ public final class TalkViewModel: Introspectable {
         public var report: Report?
 
         public var isAnswered: Bool { verdict != nil }
-        public var asksAnswer: Bool { (kind == .sort || kind == .rewrite) && verdict == nil }
+        public var asksAnswer: Bool { kind != .narration && kind != .report && verdict == nil }
+        /// Une carte où l'on choisit parmi des propositions.
+        public var hasChoices: Bool { kind == .rewrite || kind == .body || kind == .need }
     }
 
     public struct Choice: Codable, Equatable, Sendable {
         public var text: String
         public var gloss: String
-        public var isGiraffe: Bool
+        public var isRight: Bool
     }
 
     public struct Report: Codable, Equatable, Sendable {
@@ -142,9 +149,9 @@ public final class TalkViewModel: Introspectable {
             }
         case .choose(let id, let index):
             answer(id) { card in
-                guard card.kind == .rewrite, card.choices.indices.contains(index) else { return nil }
+                guard card.hasChoices, card.choices.indices.contains(index) else { return nil }
                 card.picked = index
-                return card.choices[index].isGiraffe
+                return card.choices[index].isRight
             }
         case .replay:
             guard let id = state.player?.storyID else { return }
@@ -211,7 +218,7 @@ public final class TalkViewModel: Introspectable {
         cards.append(Card(id: "\(id).report", kind: .report, cast: [], text: copy.storyEnd, gloss: "", why: ""))
         state.player = Player(
             storyID: id, title: title, scene: scene, cards: cards,
-            giraffeLabel: copy.giraffe, wolfLabel: copy.wolf, sortHint: copy.sortHint,
+            giraffeLabel: copy.giraffe, jackalLabel: copy.jackal, sortHint: copy.sortHint,
             continueHint: copy.continueHint, closeLabel: copy.close, listenLabel: copy.listen
         )
         refreshReport()
@@ -230,10 +237,25 @@ public final class TalkViewModel: Introspectable {
         case .rewrite:
             return Card(
                 id: beat.id, kind: .rewrite, cast: speaker ?? [], text: beat.text, gloss: beat.gloss,
-                question: copy.rewriteQuestion, voice: .wolf, part: copy.part(.request), why: beat.why,
-                choices: Self.arranged(beat).map { Choice(text: $0.text, gloss: $0.gloss, isGiraffe: $0.isGiraffe) }
+                question: copy.rewriteQuestion, voice: .jackal, part: copy.part(.request), why: beat.why,
+                choices: choices(beat)
+            )
+        case .body:
+            return Card(
+                id: beat.id, kind: .body, cast: [], text: beat.text, gloss: beat.gloss,
+                question: copy.bodyQuestion, part: beat.label, why: beat.why, choices: choices(beat), complete: beat.complete
+            )
+        case .need:
+            return Card(
+                id: beat.id, kind: .need, cast: story.cast, text: beat.text, gloss: beat.gloss,
+                question: copy.needQuestion, part: copy.part(.need), why: beat.why, choices: choices(beat),
+                reply: beat.reply, replyGloss: beat.replyGloss
             )
         }
+    }
+
+    private func choices(_ beat: Beat) -> [Choice] {
+        Self.arranged(beat).map { Choice(text: $0.text, gloss: $0.gloss, isRight: $0.isRight) }
     }
 
     /// Les reformulations dans un ordre qui tient à la réplique : la bonne
@@ -247,9 +269,9 @@ public final class TalkViewModel: Introspectable {
     /// Le bilan se tient à jour à chaque réponse : il est la dernière carte.
     private func refreshReport() {
         guard var player = state.player, let last = player.cards.indices.last else { return }
-        let questions = player.cards.filter { $0.kind == .sort || $0.kind == .rewrite }
+        let questions = player.cards.filter { $0.kind != .narration && $0.kind != .report }
         let lines: (Card.Verdict?) -> [String] = { verdict in
-            questions.filter { $0.verdict == verdict }.map(\.text)
+            questions.filter { $0.verdict == verdict }.map { $0.complete ?? $0.text }
         }
         player.cards[last].report = Report(
             title: copy.storyEnd,
@@ -292,7 +314,7 @@ public final class TalkViewModel: Introspectable {
     public func nodeState() throws -> Data { try Input.encode(state) }
     public var nodeActions: [(name: String, input: String)] {
         [("open", "{name}"), ("close", ""), ("setPosition", "{index}"),
-         ("sort", "{name: giraffe|wolf}"), ("choose", "{index}"), ("replay", "")]
+         ("sort", "{name: giraffe|jackal}"), ("choose", "{index}"), ("replay", "")]
     }
     public var childNode: (any Introspectable)? { nil }
 
@@ -309,7 +331,7 @@ public final class TalkViewModel: Introspectable {
         case "sort":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let voice = Voice(rawValue: name) else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: giraffe|wolf}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: giraffe|jackal}")
             }
             send(.sort(nil, voice))
         default: return false
