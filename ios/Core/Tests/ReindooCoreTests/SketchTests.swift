@@ -17,6 +17,9 @@ import Testing
         let ink = { (plan: SketchPlan) in plan.layers.last!.batches.flatMap(\.lines).map(\.points) }
         #expect(ink(a) != ink(b), "le trait bout : chaque version est retracée")
         #expect(a.layers.count == b.layers.count)
+        // Seul le contour bout : les couleurs et le papier restent, sinon l'image clignote.
+        let under = { (plan: SketchPlan) in plan.layers.dropLast().flatMap(\.batches).flatMap(\.lines).map(\.points) }
+        #expect(under(a) == under(b))
     }
 
     @Test func everyMoodHasItsLayersAndItsInk() {

@@ -12,6 +12,9 @@ private let wrongTint = Color(red: 0.82, green: 0.42, blue: 0.16)
 struct TalkView: View {
     let model: TalkViewModel
 
+    @Environment(\.displayScale) private var displayScale
+    @State private var screen: CGSize = .zero
+
     var body: some View {
         let state = model.state
         ScrollView {
@@ -29,6 +32,20 @@ struct TalkView: View {
             .padding(.bottom, Theme.section)
         }
         .navigationTitle(state.title)
+        .background {
+            Color.clear.ignoresSafeArea()
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { screen = $0 }
+        }
+        // Les décors se peignent d'avance, pendant qu'on lit la liste : ouvrir
+        // une histoire ne montre jamais une feuille vide.
+        .task(id: screen) {
+            var seen: Set<Motif> = []
+            for motif in state.stories.map(\.motif) where seen.insert(motif).inserted {
+                guard let key = SketchView.key(.backdrop(motif), size: screen, still: true, sharpness: StoryPlayer.sharpness, displayScale: displayScale) else { return }
+                _ = await SketchCache.shared.frames(key, priority: .utility)
+                if Task.isCancelled { return }
+            }
+        }
         .onAppear { model.send(.appear) }
         .fullScreenCover(isPresented: Binding(
             get: { model.state.player != nil },
@@ -94,6 +111,8 @@ private struct StoryPlayer: View {
 
     @State private var drag: CGFloat = 0
     private static let pace = Animation.smooth(duration: 0.38)
+    /// Le décor se peint à 1,25 pixel par point : du pastel, pas un visage.
+    static let sharpness: CGFloat = 1.25
 
     var body: some View {
         if let player = model.state.player {
@@ -126,7 +145,7 @@ private struct StoryPlayer: View {
             .background {
                 ZStack {
                     paper
-                    SketchView(sketch: .backdrop(player.motif), still: true, sharpness: 1.25)
+                    SketchView(sketch: .backdrop(player.motif), still: true, sharpness: Self.sharpness)
                 }
                 .ignoresSafeArea()
             }

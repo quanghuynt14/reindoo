@@ -29,9 +29,13 @@ enum SketchPainter {
         CGColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: c.a * alpha)
     }
 
-    static func image(_ plan: SketchPlan) -> CGImage? {
-        let w = plan.width, h = plan.height
-        guard let base = context(w, h), let paper = pixels(base) else { return nil }
+    /// Les versions d'un même dessin. Seul le contour change de l'une à
+    /// l'autre : le papier, les couleurs et les ombres se peignent une fois,
+    /// puis chaque version n'y pose que son crayon.
+    static func frames(_ plans: [SketchPlan]) -> [CGImage] {
+        guard let first = plans.first else { return [] }
+        let w = first.width, h = first.height
+        guard let base = context(w, h), let paper = pixels(base) else { return [] }
         let tooth = Paper.tooth(width: w, height: h)
         Paper.sheet(tooth, width: w, height: h, into: paper)
         let full = CGRect(x: 0, y: 0, width: w, height: h)
@@ -40,56 +44,70 @@ enum SketchPainter {
         // Une même liste de formes de devant revient d'une couche à l'autre :
         // son masque se calcule une fois par dessin.
         var masks: [[[Pt]]: CGImage] = [:]
-
-        for layer in plan.layers {
-            guard let ink = context(w, h) else { continue }
-            ink.setLineCap(.round)
-            ink.setLineJoin(.round)
-            for batch in layer.batches {
-                ink.saveGState()
-                if let clip = batch.clip, !clip.cuts.isEmpty {
-                    let mask = masks[clip.cuts] ?? cutout(clip.cuts, width: w, height: h, flip: flip)
-                    masks[clip.cuts] = mask
-                    if let mask { ink.clip(to: full, mask: mask) }
-                }
-                ink.concatenate(flip)
-                if let clip = batch.clip, !clip.shape.isEmpty {
-                    ink.addPath(polygon(clip.shape))
-                    ink.clip()
-                }
-                if let wash = batch.wash {
-                    let rect = CGRect(x: wash.rect.0.x, y: wash.rect.0.y, width: wash.rect.1.x - wash.rect.0.x, height: wash.rect.1.y - wash.rect.0.y)
-                    if wash.radial, let gradient = CGGradient(colorsSpace: space, colors: [color(batch.color, wash.alpha), color(batch.color, 0)] as CFArray, locations: [0, 1]) {
-                        let center = CGPoint(x: rect.midX, y: rect.midY)
-                        ink.drawRadialGradient(gradient, startCenter: center, startRadius: 0, endCenter: center, endRadius: max(rect.width, rect.height) / 2, options: [])
-                    } else {
-                        ink.setFillColor(color(batch.color, wash.alpha))
-                        ink.fill(rect)
-                    }
-                }
-                stroke(batch.lines, color: batch.color, in: ink)
-                if !batch.erase.isEmpty {
-                    ink.setBlendMode(.clear)
-                    for shape in batch.erase { ink.addPath(polygon(shape)); ink.fillPath() }
-                    ink.setBlendMode(.normal)
-                }
-                ink.restoreGState()
-            }
-            if let layerPixels = pixels(ink) {
-                Paper.bite(layerPixels, tooth: tooth, threshold: layer.threshold, softness: layer.softness)
-            }
-            guard let painted = ink.makeImage() else { continue }
-            base.setBlendMode(layer.blend == .multiply ? .multiply : .normal)
-            base.draw(painted, in: full)
+        for layer in first.layers.dropLast() {
+            paint(layer, onto: base, tooth: tooth, flip: flip, masks: &masks)
         }
+        guard let under = base.makeImage() else { return [] }
 
-        base.setBlendMode(.normal)
-        base.concatenate(flip)
-        base.setFillColor(CGColor(srgbRed: 1, green: 0.99, blue: 0.965, alpha: 0.95))
-        for glint in plan.glints {
-            base.fillEllipse(in: CGRect(x: glint.center.x - glint.radius, y: glint.center.y - glint.radius, width: glint.radius * 2, height: glint.radius * 2))
+        var images: [CGImage] = []
+        for plan in plans {
+            guard let sheet = context(w, h) else { break }
+            sheet.draw(under, in: full)
+            if let ink = plan.layers.last { paint(ink, onto: sheet, tooth: tooth, flip: flip, masks: &masks) }
+            sheet.setBlendMode(.normal)
+            sheet.concatenate(flip)
+            sheet.setFillColor(CGColor(srgbRed: 1, green: 0.99, blue: 0.965, alpha: 0.95))
+            for glint in plan.glints {
+                sheet.fillEllipse(in: CGRect(x: glint.center.x - glint.radius, y: glint.center.y - glint.radius, width: glint.radius * 2, height: glint.radius * 2))
+            }
+            if let image = sheet.makeImage() { images.append(image) }
         }
-        return base.makeImage()
+        return images
+    }
+
+    /// Une couche : peinte à part, mangée par le grain, puis posée sur la feuille.
+    private static func paint(_ layer: SketchPlan.Layer, onto base: CGContext, tooth: [Float], flip: CGAffineTransform, masks: inout [[[Pt]]: CGImage]) {
+        let w = base.width, h = base.height
+        let full = CGRect(x: 0, y: 0, width: w, height: h)
+        guard let ink = context(w, h) else { return }
+        ink.setLineCap(.round)
+        ink.setLineJoin(.round)
+        for batch in layer.batches {
+            ink.saveGState()
+            if let clip = batch.clip, !clip.cuts.isEmpty {
+                let mask = masks[clip.cuts] ?? cutout(clip.cuts, width: w, height: h, flip: flip)
+                masks[clip.cuts] = mask
+                if let mask { ink.clip(to: full, mask: mask) }
+            }
+            ink.concatenate(flip)
+            if let clip = batch.clip, !clip.shape.isEmpty {
+                ink.addPath(polygon(clip.shape))
+                ink.clip()
+            }
+            if let wash = batch.wash {
+                let rect = CGRect(x: wash.rect.0.x, y: wash.rect.0.y, width: wash.rect.1.x - wash.rect.0.x, height: wash.rect.1.y - wash.rect.0.y)
+                if wash.radial, let gradient = CGGradient(colorsSpace: space, colors: [color(batch.color, wash.alpha), color(batch.color, 0)] as CFArray, locations: [0, 1]) {
+                    let center = CGPoint(x: rect.midX, y: rect.midY)
+                    ink.drawRadialGradient(gradient, startCenter: center, startRadius: 0, endCenter: center, endRadius: max(rect.width, rect.height) / 2, options: [])
+                } else {
+                    ink.setFillColor(color(batch.color, wash.alpha))
+                    ink.fill(rect)
+                }
+            }
+            stroke(batch.lines, color: batch.color, in: ink)
+            if !batch.erase.isEmpty {
+                ink.setBlendMode(.clear)
+                for shape in batch.erase { ink.addPath(polygon(shape)); ink.fillPath() }
+                ink.setBlendMode(.normal)
+            }
+            ink.restoreGState()
+        }
+        if let layerPixels = pixels(ink) {
+            Paper.bite(layerPixels, tooth: tooth, threshold: layer.threshold, softness: layer.softness)
+        }
+        guard let painted = ink.makeImage() else { return }
+        base.setBlendMode(layer.blend == .multiply ? .multiply : .normal)
+        base.draw(painted, in: full)
     }
 
     /// Les traits d'un lot, rangés par force et par épaisseur : un seul geste
@@ -149,15 +167,17 @@ enum Hand {
     }
 }
 
-/// Une image peinte. Elle ne change plus une fois faite : la passer d'un fil à
-/// l'autre est sans risque.
+/// Les versions peintes d'un dessin. Elles ne changent plus une fois faites :
+/// les passer d'un fil à l'autre est sans risque.
 struct Painted: @unchecked Sendable {
-    let image: CGImage
+    let images: [CGImage]
 }
 
 /// Les dessins déjà peints : peindre coûte, et une carte revient souvent.
+/// On peut y lire sans attendre : une vue qui revient à l'écran retrouve son
+/// dessin dès sa première image, sans passer par une feuille vide.
 /// Le budget se compte en octets : une tête pèse peu, un décor plein écran beaucoup.
-actor SketchCache {
+final class SketchCache: @unchecked Sendable {
     static let shared = SketchCache()
 
     struct Key: Hashable {
@@ -165,45 +185,57 @@ actor SketchCache {
         var width: Int
         var height: Int
         var head: Bool
-        var frame: Int
+        var frames: Int
     }
 
     private static let budget = 96 << 20
+    private let lock = NSLock()
     private var images: [Key: Painted] = [:]
     private var order: [Key] = []
     private var bytes = 0
     /// Deux vues qui demandent le même dessin attendent la même peinture.
-    private var running: [Key: Task<Painted?, Never>] = [:]
+    private var running: [Key: Task<Painted, Never>] = [:]
 
-    func image(_ key: Key) async -> Painted? {
-        if let image = images[key] {
+    func cached(_ key: Key) -> [CGImage]? {
+        lock.withLock {
+            guard let painted = images[key] else { return nil }
             if let i = order.firstIndex(of: key) { order.remove(at: i) }
             order.append(key)
-            return image
+            return painted.images
         }
-        if let task = running[key] { return await task.value }
-        let task = Task.detached(priority: .userInitiated) { () -> Painted? in
-            SketchPainter.image(key.sketch.plan(width: key.width, height: key.height, head: key.head, frame: key.frame)).map(Painted.init)
+    }
+
+    func frames(_ key: Key, priority: TaskPriority = .userInitiated) async -> [CGImage] {
+        if let ready = cached(key) { return ready }
+        let task = lock.withLock { () -> Task<Painted, Never> in
+            if let task = running[key] { return task }
+            let task = Task.detached(priority: priority) {
+                Painted(images: SketchPainter.frames((0..<key.frames).map {
+                    key.sketch.plan(width: key.width, height: key.height, head: key.head, frame: $0)
+                }))
+            }
+            running[key] = task
+            return task
         }
-        running[key] = task
-        let image = await task.value
-        running[key] = nil
-        if let image, images[key] == nil {
-            images[key] = image
+        let painted = await task.value
+        lock.withLock {
+            running[key] = nil
+            guard images[key] == nil, !painted.images.isEmpty else { return }
+            images[key] = painted
             order.append(key)
-            bytes += image.image.bytesPerRow * image.image.height
+            bytes += painted.images.reduce(0) { $0 + $1.bytesPerRow * $1.height }
             while bytes > Self.budget, order.count > 1 {
                 let old = order.removeFirst()
-                if let gone = images.removeValue(forKey: old) { bytes -= gone.image.bytesPerRow * gone.image.height }
+                if let gone = images.removeValue(forKey: old) { bytes -= gone.images.reduce(0) { $0 + $1.bytesPerRow * $1.height } }
             }
         }
-        return image
+        return painted.images
     }
 }
 
-/// Un dessin de la girafe ou du chacal. Le trait « bout » : trois versions du
-/// même dessin se succèdent, comme dans un dessin animé fait à la main.
-/// Immobile si l'utilisateur demande moins de mouvement.
+/// Un dessin de Core à l'écran. Le trait « bout » : trois versions du même
+/// dessin se succèdent, comme dans un dessin animé fait à la main ; seul le
+/// contour tremble. Immobile si l'utilisateur demande moins de mouvement.
 struct SketchView: View {
     let sketch: Sketch
     /// Seulement la tête, pour un bouton ou un avatar.
@@ -219,12 +251,12 @@ struct SketchView: View {
     @State private var frames: [CGImage] = []
     @State private var size: CGSize = .zero
 
-    private static let boil = 3
+    private static let beat = 0.2
 
     var body: some View {
-        // Une image seule ne change pas : rien à redessiner six fois par seconde.
-        TimelineView(.animation(minimumInterval: 0.16, paused: frames.count < 2)) { timeline in
-            let index = frames.isEmpty ? 0 : Int(timeline.date.timeIntervalSinceReferenceDate / 0.16) % frames.count
+        // Une image seule ne change pas : rien à redessiner cinq fois par seconde.
+        TimelineView(.animation(minimumInterval: Self.beat, paused: frames.count < 2)) { timeline in
+            let index = frames.isEmpty ? 0 : Int(timeline.date.timeIntervalSinceReferenceDate / Self.beat) % frames.count
             ZStack {
                 if frames.indices.contains(index) {
                     Image(decorative: frames[index], scale: min(displayScale, sharpness))
@@ -235,29 +267,33 @@ struct SketchView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
-        .task(id: Request(sketch: sketch, head: head, size: size, still: reduceMotion || still)) {
-            guard size.width > 1, size.height > 1 else { return }
-            let scale = min(displayScale, sharpness)
-            let width = Int(size.width * scale), height = Int(size.height * scale)
-            var painted: [CGImage] = []
-            for frame in 0..<(reduceMotion || still ? 1 : Self.boil) {
-                let key = SketchCache.Key(sketch: sketch, width: width, height: height, head: head, frame: frame)
-                guard let image = await SketchCache.shared.image(key) else { break }
-                if Task.isCancelled { return }
-                painted.append(image.image)
-                // La première version se montre tout de suite ; les autres suivent.
-                if frame == 0 { withAnimation(.easeOut(duration: 0.2)) { frames = painted } }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { new in
+            size = new
+            if let key = key(new), let ready = SketchCache.shared.cached(key) { frames = ready }
+        }
+        .task(id: key(size)) {
+            guard let key = key(size) else { return }
+            if let ready = SketchCache.shared.cached(key) { frames = ready; return }
+            let painted = await SketchCache.shared.frames(key)
+            if Task.isCancelled { return }
+            // Un dessin qui arrive sur une feuille vide se pose doucement ; une
+            // humeur qui change remplace l'autre sans clignoter.
+            if frames.isEmpty {
+                withAnimation(.easeOut(duration: 0.2)) { frames = painted }
+            } else {
+                frames = painted
             }
-            frames = painted
         }
         .accessibilityHidden(true)
     }
 
-    private struct Request: Equatable {
-        var sketch: Sketch
-        var head: Bool
-        var size: CGSize
-        var still: Bool
+    private func key(_ size: CGSize) -> SketchCache.Key? {
+        Self.key(sketch, size: size, head: head, still: still || reduceMotion, sharpness: sharpness, displayScale: displayScale)
+    }
+
+    static func key(_ sketch: Sketch, size: CGSize, head: Bool = false, still: Bool, sharpness: CGFloat = 2, displayScale: CGFloat) -> SketchCache.Key? {
+        guard size.width > 1, size.height > 1 else { return nil }
+        let scale = min(displayScale, sharpness)
+        return .init(sketch: sketch, width: Int(size.width * scale), height: Int(size.height * scale), head: head, frames: still ? 1 : 3)
     }
 }

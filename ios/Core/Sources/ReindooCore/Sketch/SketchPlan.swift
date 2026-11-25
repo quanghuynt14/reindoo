@@ -126,7 +126,8 @@ private struct Planner {
 
     /// Crayon de couleur : des traits parallèles, de droitier, un peu ondulés, avec des trous.
     func hatch(_ shape: [Pt], _ o: Hatch, cuts: [[Pt]], seed name: String) -> SketchPlan.Batch {
-        let seed = Int(Chance.hash(name)) &+ frame &* 7919
+        // Les couleurs ne bougent pas d'une version à l'autre : seul le contour bout.
+        let seed = Int(Chance.hash(name))
         var R = Chance.Generator(UInt32(truncatingIfNeeded: seed))
         let (lo, hi) = bounds(shape)
         let a = o.angle * .pi / 180, u = Pt(cos(a), sin(a)), n = Pt(-u.y, u.x)
@@ -185,7 +186,7 @@ private struct Planner {
 
     /// Pastel sec : de petits coups poudreux, et une trace de doigt dessous.
     func pastel(_ d: Dab, seed name: String) -> SketchPlan.Batch {
-        let seed = Int(Chance.hash(name)) &+ frame &* 13
+        let seed = Int(Chance.hash(name))
         var R = Chance.Generator(UInt32(truncatingIfNeeded: seed))
         let (lo, hi) = bounds(d.shape)
         let c = (lo + hi) / 2, rr = max(hi.x - lo.x, hi.y - lo.y) / 2
@@ -271,7 +272,7 @@ private struct Planner {
         layers.append(.init(batches: ink, threshold: 0.2, softness: 0.3, blend: .multiply))
 
         let glints = pieces.flatMap(\.glints).enumerated().map { i, g in
-            (center: P(g) + Pt(Double(frame % 2) * 0.3, 0), radius: scale * (1.5 + Double(i % 2) * 0.2))
+            (center: P(g), radius: scale * (1.5 + Double(i % 2) * 0.2))
         }
         return SketchPlan(width: width, height: height, layers: layers, glints: glints)
     }
