@@ -56,6 +56,12 @@ extension Sketch {
         case .animal(let species, let mood):
             let f = Figures.animal(species, mood)
             return ([f], f.back, f.box, f.head, [])
+        case .backdrop(let motif):
+            let f = Figures.backdrop(motif)
+            return ([f], f.back, f.box, f.head, [])
+        case .glyph(let glyph):
+            let f = Figures.glyph(glyph)
+            return ([f], f.back, f.box, f.head, [])
         case .together:
             // Le chacal d'abord : le bras de la girafe passe devant son épaule.
             let j = Figures.jackal(.together).placed(at: Pt(150, 44), scale: 0.85)
@@ -85,6 +91,7 @@ private struct Planner {
     let sparkles: [(Pt, Double)]
     let width: Int, height: Int, frame: Int
     let scale: Double, origin: Pt
+    let covers: Bool
 
     init(sketch: Sketch, width: Int, height: Int, head: Bool, frame: Int) {
         let scene = sketch.scene
@@ -93,7 +100,9 @@ private struct Planner {
         self.width = width; self.height = height; self.frame = frame
         let w = Double(width), h = Double(height)
         let bw = box.1.x - box.0.x, bh = box.1.y - box.0.y
-        scale = min(w / bw, h / bh)
+        // Un décor remplit l'image et déborde ; un animal tient entier dedans.
+        covers = sketch.covers
+        scale = covers ? max(w / bw, h / bh) : min(w / bw, h / bh)
         origin = Pt((w - bw * scale) / 2 - box.0.x * scale, (h - bh * scale) / 2 - box.0.y * scale)
     }
 
@@ -207,8 +216,11 @@ private struct Planner {
 
         var layers: [SketchPlan.Layer] = []
         // 1. Un aplat de pastel, comme une page, et une ombre au sol. Il s'arrête à l'animal.
+        // Un décor couvre toute l'image visible ; un animal a sa page, avec un bord de papier.
+        let seen = (Pt(-origin.x / scale - 6, -origin.y / scale - 6), Pt((Double(width) - origin.x) / scale + 6, (Double(height) - origin.y) / scale + 6))
+        let page = covers ? Shape.panel(seen.0.x, seen.0.y, seen.1.x, seen.1.y, 2) : Shape.panel(box.0.x + 10, box.0.y + 10, box.1.x - 10, box.1.y - 8, 26)
         var wash: [SketchPlan.Batch] = [
-            pastel(Dab(shape: Shape.panel(box.0.x + 10, box.0.y + 10, box.1.x - 10, box.1.y - 8, 26), color: back, alpha: 0.6, density: 0.35, width: 5, angle: 64, even: true), seed: "panel"),
+            pastel(Dab(shape: page, color: back, alpha: covers ? 0.75 : 0.6, density: 0.35, width: 5, angle: 64, even: true), seed: "panel"),
         ]
         for (i, f) in pieces.enumerated() {
             wash.append(pastel(Dab(shape: Shape.ellipse(f.feet.0.x, f.feet.0.y + 2, f.feet.1, f.feet.1 * 0.14, 0, 0.1, 200 + i), color: Palette.ground, alpha: 0.7, density: 2, width: 1.8, angle: 4), seed: "ground\(i)"))

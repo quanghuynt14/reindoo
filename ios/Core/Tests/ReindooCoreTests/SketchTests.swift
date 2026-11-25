@@ -50,6 +50,28 @@ import Testing
         #expect(Sketch.animal(.bear, .happy).plan(width: 90, height: 90).glints.count < Sketch.animal(.bear, .calm).plan(width: 90, height: 90).glints.count)
     }
 
+    @Test func everyStoryHasADrawnBackdropThatFillsTheScreen() {
+        for story in Story.all {
+            #expect(Motif(scene: story.scene) != .dawn || story.scene == "halftone-dawn", "\(story.id) : \(story.scene)")
+        }
+        for motif in Motif.allCases {
+            // Un téléphone plus étroit que le décor : le décor déborde, il ne laisse pas de bande vide.
+            let plan = Sketch.backdrop(motif).plan(width: 90, height: 200)
+            let page = plan.layers[0].batches[0].clip!.shape
+            #expect(page.map(\.x).min()! <= 0 && page.map(\.x).max()! >= 90, "\(motif)")
+            #expect(page.map(\.y).min()! <= 0 && page.map(\.y).max()! >= 200, "\(motif)")
+            #expect(plan.layers.flatMap(\.batches).flatMap(\.lines).count > 500, "\(motif)")
+        }
+    }
+
+    @Test func everyGlyphIsPencilOnly() {
+        for glyph in Glyph.allCases {
+            let ink = Sketch.glyph(glyph).plan(width: 60, height: 60).layers.last!.batches.flatMap(\.lines)
+            #expect(ink.count > 20, "\(glyph)")
+            #expect(ink.allSatisfy { $0.points.allSatisfy { (-4...64).contains($0.x) && (-4...64).contains($0.y) } }, "\(glyph)")
+        }
+    }
+
     @Test func aHeadFillsItsButton() {
         let plan = Sketch.jackal(.soft).plan(width: 100, height: 100, head: true)
         let outlines = plan.layers.last!.batches.flatMap(\.lines).flatMap(\.points)

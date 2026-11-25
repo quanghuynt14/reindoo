@@ -98,6 +98,39 @@ enum SketchPainter {
         }
         return base.makeImage()
     }
+
+    /// Rien que le crayon, sans papier : pour un signe que le texte teinte.
+    static func pencil(_ plan: SketchPlan) -> CGImage? {
+        guard let layer = plan.layers.last, let ink = context(plan.width, plan.height) else { return nil }
+        ink.translateBy(x: 0, y: CGFloat(plan.height))
+        ink.scaleBy(x: 1, y: -1)
+        ink.setLineCap(.round)
+        ink.setLineJoin(.round)
+        for batch in layer.batches {
+            for line in batch.lines where line.points.count > 1 {
+                ink.setStrokeColor(color(batch.color, line.alpha))
+                ink.setLineWidth(line.width)
+                ink.addLines(between: line.points.map { CGPoint(x: $0.x, y: $0.y) })
+                ink.strokePath()
+            }
+        }
+        return ink.makeImage()
+    }
+}
+
+/// Les signes tracés à la main. Petits : on les trace sur place, une fois.
+enum Hand {
+    @MainActor private static var images: [String: Image] = [:]
+
+    @MainActor static func glyph(_ glyph: Glyph, size: CGFloat = 20) -> Image {
+        let key = "\(glyph.rawValue).\(size)"
+        if let image = images[key] { return image }
+        let pixels = Int(size * 3)
+        guard let drawn = SketchPainter.pencil(Sketch.glyph(glyph).plan(width: pixels, height: pixels)) else { return Image(systemName: "circle") }
+        let image = Image(decorative: drawn, scale: 3).renderingMode(.template)
+        images[key] = image
+        return image
+    }
 }
 
 /// Une image peinte. Elle ne change plus une fois faite : la passer d'un fil à
@@ -143,6 +176,8 @@ struct SketchView: View {
     let sketch: Sketch
     /// Seulement la tête, pour un bouton ou un avatar.
     var head = false
+    /// Une seule version : un décor ne bout pas, il reste derrière.
+    var still = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
@@ -165,12 +200,12 @@ struct SketchView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
-        .task(id: Request(sketch: sketch, head: head, size: size, still: reduceMotion)) {
+        .task(id: Request(sketch: sketch, head: head, size: size, still: reduceMotion || still)) {
             guard size.width > 1, size.height > 1 else { return }
             let scale = min(displayScale, 2)
             let width = Int(size.width * scale), height = Int(size.height * scale)
             var painted: [CGImage] = []
-            for frame in 0..<(reduceMotion ? 1 : Self.boil) {
+            for frame in 0..<(reduceMotion || still ? 1 : Self.boil) {
                 let key = SketchCache.Key(sketch: sketch, width: width, height: height, head: head, frame: frame)
                 guard let image = await SketchCache.shared.image(key) else { break }
                 if Task.isCancelled { return }

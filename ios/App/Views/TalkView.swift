@@ -1,6 +1,12 @@
 import ReindooCore
 import SwiftUI
 
+/// Le papier des cartes et des bulles : tout l'onglet est dessiné à la main.
+private let paper = Color(red: 0.99, green: 0.97, blue: 0.93)
+private let pencil = Color(red: 0.2, green: 0.13, blue: 0.11)
+private let rightTint = Color(red: 0.22, green: 0.55, blue: 0.3)
+private let wrongTint = Color(red: 0.82, green: 0.42, blue: 0.16)
+
 /// « Giao tiếp » : les histoires, chacune sur son décor. En toucher une
 /// l'ouvre en plein écran, une carte à la fois, comme le reel.
 struct TalkView: View {
@@ -38,8 +44,6 @@ private struct StoryRow: View {
     let row: TalkViewModel.Row
 
     var body: some View {
-        let theme = row.scene.flatMap(SceneTheme.named)
-        let light = theme?.window == .light
         HStack(spacing: 14) {
             HStack(spacing: -12) {
                 ForEach(Array(row.cast.enumerated()), id: \.offset) { _, who in
@@ -64,16 +68,18 @@ private struct StoryRow: View {
             }
             Spacer(minLength: 0)
             if row.isDone {
-                Image(systemName: "checkmark.circle.fill").font(.title3)
+                Hand.glyph(.right, size: 26).foregroundStyle(rightTint)
             }
         }
-        .foregroundStyle(light ? Color(white: 0.11) : .white)
+        .foregroundStyle(pencil)
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
-                (theme?.glass.tint.color ?? Theme.accent)
-                LinearGradient(colors: [.white.opacity(light ? 0.35 : 0.12), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                paper
+                SketchView(sketch: .backdrop(row.motif), head: true, still: true)
+                // Un voile de papier : le titre se lit par-dessus le décor.
+                LinearGradient(colors: [paper.opacity(0.1), paper.opacity(0.55)], startPoint: .leading, endPoint: .trailing)
             }
         }
         .clipShape(.rect(cornerRadius: 20))
@@ -86,13 +92,11 @@ private struct StoryPlayer: View {
     let model: TalkViewModel
 
     @State private var drag: CGFloat = 0
-    @State private var visible = false
     private static let pace = Animation.smooth(duration: 0.38)
 
     var body: some View {
         if let player = model.state.player {
-            let theme = player.scene.flatMap(SceneTheme.named)
-            let ink: Color = theme?.window == .light ? Color(white: 0.11) : .white
+            let ink = pencil
             GeometryReader { page in
                 let height = page.size.height
                 ZStack {
@@ -119,15 +123,11 @@ private struct StoryPlayer: View {
             }
             .foregroundStyle(ink)
             .background {
-                if let theme {
-                    ZStack {
-                        SceneBackdrop(theme: theme, paused: !visible || drag != 0)
-                        SceneVeil(glass: theme.glass)
-                    }
-                    .ignoresSafeArea()
-                } else {
-                    Theme.accent.ignoresSafeArea()
+                ZStack {
+                    paper
+                    SketchView(sketch: .backdrop(player.motif), still: true)
                 }
+                .ignoresSafeArea()
             }
             .overlay(alignment: .top) {
                 HStack {
@@ -137,8 +137,7 @@ private struct StoryPlayer: View {
                         .font(.caption.monospacedDigit().weight(.semibold))
                         .opacity(0.7)
                     Button { model.send(.close) } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
+                        Hand.glyph(.cross, size: 18)
                             .frame(width: 40, height: 40)
                             .background(ink.opacity(0.16), in: .circle)
                     }
@@ -147,11 +146,7 @@ private struct StoryPlayer: View {
                 .padding(.horizontal, Theme.margin)
                 .padding(.top, 4)
             }
-            .onAppear { visible = true }
-            .onDisappear {
-                visible = false
-                Speaker.shared.stop()
-            }
+            .onDisappear { Speaker.shared.stop() }
         }
     }
 
@@ -209,7 +204,7 @@ private struct TalkCard: View {
             }
             Spacer(minLength: 40)
             if card.kind == .narration || card.isAnswered {
-                Label(player.continueHint, systemImage: "chevron.up")
+                Label { Text(player.continueHint) } icon: { Hand.glyph(.up, size: 14) }
                     .font(.caption.weight(.semibold))
                     .opacity(0.65)
             }
@@ -298,7 +293,7 @@ private struct TalkCard: View {
 
     private var listen: some View {
         Button { Speaker.shared.say(card.text, in: .french, asked: true) } label: {
-            Image(systemName: "speaker.wave.2.fill")
+            Hand.glyph(.speaker, size: 22)
                 .frame(width: 40, height: 40)
                 .background(ink.opacity(0.16), in: .circle)
         }
@@ -318,8 +313,8 @@ private struct TalkCard: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ink.opacity(0.12), in: .rect(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(ink.opacity(0.18)))
+        .background(paper.opacity(0.88), in: .rect(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22).stroke(ink.opacity(0.22)))
     }
 
     // MARK: Les cartes
@@ -372,7 +367,7 @@ private struct TalkCard: View {
             }
                 .font(.title3.weight(.heavy))
                 .padding(.horizontal, 14).padding(.vertical, 6)
-                .background(.thinMaterial, in: .capsule)
+                .background(paper, in: .capsule)
                 .rotationEffect(.degrees(swipe < 0 ? 8 : -8))
                 .opacity(progress)
                 .offset(y: -22)
@@ -427,8 +422,8 @@ private struct TalkCard: View {
     private var verdict: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: card.verdict == .right ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(card.verdict == .right ? Color.green : Color.orange)
+                Hand.glyph(card.verdict == .right ? .right : .wrong, size: 22)
+                    .foregroundStyle(card.verdict == .right ? rightTint : wrongTint)
                 Text(card.verdictLabel ?? "").font(.headline)
                 Spacer()
                 if let part = card.part {
@@ -441,7 +436,7 @@ private struct TalkCard: View {
             Text(card.why).font(.callout).fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: .rect(cornerRadius: 18))
+        .background(paper.opacity(0.92), in: .rect(cornerRadius: 18))
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
@@ -505,7 +500,7 @@ private struct TalkCard: View {
                 .overlay(alignment: .topTrailing) {
                     if card.isAnswered, choice.isRight {
                         Group {
-                            if card.kind == .rewrite { head(.giraffe(.happy), size: 24) } else { Image(systemName: "checkmark") }
+                            if card.kind == .rewrite { head(.giraffe(.happy), size: 24) } else { Hand.glyph(.check, size: 16).foregroundStyle(rightTint) }
                         }
                         .padding(6)
                     }
@@ -517,10 +512,10 @@ private struct TalkCard: View {
     }
 
     private func fill(_ choice: TalkViewModel.Choice, at index: Int) -> Color {
-        guard card.isAnswered else { return ink.opacity(0.14) }
-        if choice.isRight { return Color.green.opacity(0.35) }
-        if card.picked == index { return Color.orange.opacity(0.35) }
-        return ink.opacity(0.06)
+        guard card.isAnswered else { return paper.opacity(0.8) }
+        if choice.isRight { return rightTint.opacity(0.3) }
+        if card.picked == index { return wrongTint.opacity(0.3) }
+        return paper.opacity(0.45)
     }
 
     @ViewBuilder
@@ -533,13 +528,13 @@ private struct TalkCard: View {
                     .frame(height: 150)
                     .clipShape(.rect(cornerRadius: 16))
                 Text(report.title).font(.title.weight(.bold))
-                pile(report.right, symbol: "checkmark.circle.fill", tint: .green)
-                pile(report.wrong, symbol: "xmark.circle.fill", tint: .orange)
+                pile(report.right, glyph: .right, tint: rightTint)
+                pile(report.wrong, glyph: .wrong, tint: wrongTint)
                 // Ni rouge ni barré : passer n'est pas une faute.
-                pile(report.skipped, symbol: "arrow.down.circle", tint: ink.opacity(0.7))
+                pile(report.skipped, glyph: .skip, tint: ink.opacity(0.7))
                 Text(report.note).font(.footnote).opacity(0.8)
                 Button { withAnimation { model.send(.replay) } } label: {
-                    Label(report.playAgain, systemImage: "arrow.counterclockwise")
+                    Label { Text(report.playAgain) } icon: { Hand.glyph(.again, size: 20) }
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(ink.opacity(0.18), in: .capsule)
@@ -549,10 +544,10 @@ private struct TalkCard: View {
         }
     }
 
-    private func pile(_ pile: TalkViewModel.Report.Pile, symbol: String, tint: Color) -> some View {
+    private func pile(_ pile: TalkViewModel.Report.Pile, glyph: Glyph, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Image(systemName: symbol).foregroundStyle(tint)
+                Hand.glyph(glyph, size: 20).foregroundStyle(tint)
                 Text(pile.label).font(.headline)
                 Spacer()
                 Text("\(pile.lines.count)").font(.headline.monospacedDigit())
@@ -562,6 +557,6 @@ private struct TalkCard: View {
             }
         }
         .padding(12)
-        .background(.ultraThinMaterial, in: .rect(cornerRadius: 14))
+        .background(paper.opacity(0.88), in: .rect(cornerRadius: 14))
     }
 }

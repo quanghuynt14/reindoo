@@ -24,6 +24,8 @@ public final class TalkViewModel: Introspectable {
         public var gloss: String
         public var cast: [Animal]
         public var scene: String?
+        /// Le décor dessiné de l'histoire.
+        public var motif: Motif { Motif(scene: scene) }
         /// « 4/6 justes », ou le nombre de répliques si l'histoire est neuve.
         public var score: String
         public var isDone: Bool
@@ -33,6 +35,7 @@ public final class TalkViewModel: Introspectable {
         public var storyID: String
         public var title: String
         public var scene: String?
+        public var motif: Motif { Motif(scene: scene) }
         public var cards: [Card]
         public var position = 0
         public var giraffeLabel: String

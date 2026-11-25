@@ -88,6 +88,12 @@ public enum Sketch: Hashable, Sendable {
     case together
     /// Un animal des histoires, en buste.
     case animal(Species, AnimalMood)
+    /// Le décor d'une histoire : il remplit tout l'écran, quitte à déborder.
+    case backdrop(Motif)
+    /// Un petit signe tracé à la main.
+    case glyph(Glyph)
+
+    var covers: Bool { if case .backdrop = self { true } else { false } }
 }
 
 enum Palette {

@@ -20,8 +20,11 @@ struct RootView: View {
             Tab(label(.review), systemImage: "rectangle.stack", value: AppModel.Tab.review) {
                 stack(.review) { ReviewView(model: app.review) }
             }
-            Tab(label(.talk), systemImage: "bubble.left.and.bubble.right", value: AppModel.Tab.talk) {
+            // Parler se dessine à la main, comme tout ce qu'il y a dans l'onglet.
+            Tab(value: AppModel.Tab.talk) {
                 stack(.talk) { TalkView(model: app.talk) }
+            } label: {
+                Label { Text(label(.talk)) } icon: { Hand.glyph(.talk, size: 26) }
             }
             Tab(label(.history), systemImage: "clock", value: AppModel.Tab.history) {
                 stack(.history) { HistoryView(model: app.history) }
