@@ -337,7 +337,7 @@ extension ReviewView {
 
 /// Le voile du décor : sa teinte, posée là où le texte se lit, et rien en haut
 /// ni en bas, où le décor vit.
-private struct SceneVeil: View {
+struct SceneVeil: View {
     let glass: SceneTheme.Glass
 
     var body: some View {

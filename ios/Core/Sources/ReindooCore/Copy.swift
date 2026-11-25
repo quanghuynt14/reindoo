@@ -55,6 +55,7 @@ public struct Copy: Equatable, Sendable {
     public var tabSearch: String { pick("Dictionary", "Dictionnaire", "Từ điển") }
     public var tabReview: String { pick("Reels", "Reels", "Lướt ôn") }
     public var tabHistory: String { pick("History", "Historique", "Lịch sử") }
+    public var tabTalk: String { pick("Talk", "Parler", "Giao tiếp") }
 
     // MARK: Chercher
 
@@ -173,6 +174,64 @@ public struct Copy: Equatable, Sendable {
     public var sceneTitle: String { pick("Scene", "Décor", "Cảnh nền") }
     public var scenePerWord: String { pick("One per word", "Un par mot", "Mỗi từ một cảnh") }
     public var sceneColours: String { pick("Plain colours", "Couleurs unies", "Màu trơn") }
+
+    // MARK: Giao tiếp
+
+    public var talkIntro: String {
+        pick(
+            "The giraffe speaks from the heart: what happened, what I feel, what I need, what I ask. The wolf speaks in judgments. Short animal stories, one line at a time.",
+            "La girafe parle avec le cœur : ce qui s'est passé, ce que je ressens, ce dont j'ai besoin, ce que je demande. Le loup parle en jugements. De courtes histoires d'animaux, une réplique à la fois.",
+            "Hươu cao cổ nói bằng trái tim: chuyện gì xảy ra, mình cảm thấy gì, cần gì, đề nghị gì. Sói nói bằng phán xét. Những câu chuyện ngắn về các con vật, từng câu một."
+        )
+    }
+    public var giraffe: String { pick("Giraffe", "Girafe", "Hươu") }
+    public var wolf: String { pick("Wolf", "Loup", "Sói") }
+    public var sortQuestion: String { pick("Giraffe or wolf?", "Girafe ou loup ?", "Hươu hay sói?") }
+    public var sortHint: String { pick("← wolf · giraffe →", "← loup · girafe →", "← sói · hươu →") }
+    public var rewriteQuestion: String { pick("What would the giraffe say?", "Que dirait la girafe ?", "Hươu sẽ nói thế nào?") }
+    public var continueHint: String { pick("Swipe up to go on", "Glissez vers le haut pour continuer", "Vuốt lên để đọc tiếp") }
+    public var rightAnswer: String { pick("Right", "Juste", "Đúng rồi") }
+    public var wrongAnswer: String { pick("Not quite", "Pas tout à fait", "Chưa đúng") }
+    public func wasVoice(_ voice: Voice) -> String {
+        switch voice {
+        case .giraffe: pick("It's the giraffe", "C'est la girafe", "Đây là hươu")
+        case .wolf: pick("It's the wolf", "C'est le loup", "Đây là sói")
+        }
+    }
+    public func part(_ part: Part) -> String {
+        switch part {
+        case .observation: pick("Observation", "Observation", "Quan sát")
+        case .feeling: pick("Feeling", "Sentiment", "Cảm xúc")
+        case .need: pick("Need", "Besoin", "Nhu cầu")
+        case .request: pick("Request", "Demande", "Lời đề nghị")
+        }
+    }
+    public var storyEnd: String { pick("End of the story", "Fin de l'histoire", "Hết chuyện") }
+    public var pileRight: String { pick("Right", "Justes", "Đúng") }
+    public var pileWrong: String { pick("Missed", "Ratées", "Sai") }
+    public var pileSkipped: String { pick("Passed without answering", "Passées sans répondre", "Lướt qua chưa trả lời") }
+    public var skippedNote: String {
+        pick(
+            "A card you pass is not a mistake. But a line you avoid here is one you'll avoid when you speak.",
+            "Une carte passée n'est pas une faute. Mais une réplique évitée ici, on l'évitera aussi en parlant.",
+            "Lướt qua không phải là sai. Nhưng câu nào né ở đây thì khi nói thật cũng sẽ né."
+        )
+    }
+    public var playAgain: String { pick("Play again", "Rejouer", "Chơi lại") }
+    public var talkReview: String { pick("Lines to review", "Répliques à revoir", "Ôn lại câu sai") }
+    public func talkReviewCount(_ count: Int) -> String {
+        pick(
+            count == 1 ? "1 line you missed" : "\(count) lines you missed",
+            count == 1 ? "1 réplique ratée" : "\(count) répliques ratées",
+            "\(count) câu bạn trả lời sai"
+        )
+    }
+    public func talkScore(_ right: Int, _ total: Int) -> String {
+        pick("\(right)/\(total) right", "\(right)/\(total) justes", "Đúng \(right)/\(total)")
+    }
+    public func talkLines(_ total: Int) -> String {
+        pick("\(total) lines", "\(total) répliques", "\(total) câu")
+    }
 
     // MARK: L'app
 

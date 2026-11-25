@@ -6,7 +6,7 @@ import Observation
 @MainActor
 @Observable
 public final class AppModel: Introspectable {
-    public enum Tab: String, Codable, Sendable, CaseIterable { case search, review, history }
+    public enum Tab: String, Codable, Sendable, CaseIterable { case search, review, talk, history }
 
     public struct State: Codable, Equatable, Sendable {
         public var tab: Tab = .search
@@ -31,11 +31,12 @@ public final class AppModel: Introspectable {
     }
 
     public private(set) var state = State()
-    public private(set) var stacks: [Tab: [EntryViewModel]] = [.search: [], .review: [], .history: []]
+    public private(set) var stacks: [Tab: [EntryViewModel]] = [.search: [], .review: [], .talk: [], .history: []]
 
     @ObservationIgnored public private(set) var search: SearchViewModel!
     @ObservationIgnored public private(set) var review: ReviewViewModel!
     @ObservationIgnored public private(set) var history: HistoryViewModel!
+    @ObservationIgnored public private(set) var talk: TalkViewModel!
 
     private let lexicon: Lexicon
     public let user: UserStore
@@ -62,6 +63,7 @@ public final class AppModel: Introspectable {
         }
         search = SearchViewModel(lexicon: lexicon, user: user, copy: copy, open: looksUp)
         review = ReviewViewModel(lexicon: lexicon, user: user, copy: copy, shuffle: shuffle, chance: chance, open: revisits)
+        talk = TalkViewModel(user: user, copy: copy)
         history = HistoryViewModel(lexicon: lexicon, user: user, copy: copy, open: revisits) { [weak self] in self?.countPending() }
         refresh()
     }
@@ -109,6 +111,7 @@ public final class AppModel: Introspectable {
             switch state.tab {
             case .search: search.send(.appear)
             case .review: review.send(.appear)
+            case .talk: talk.send(.appear)
             case .history: history.send(.appear)
             }
         }
@@ -118,6 +121,7 @@ public final class AppModel: Introspectable {
         switch tab {
         case .search: copy.tabSearch
         case .review: copy.tabReview
+        case .talk: copy.tabTalk
         case .history: copy.tabHistory
         }
     }
@@ -130,13 +134,14 @@ public final class AppModel: Introspectable {
 
     public var nodeName: String { "app" }
     public func nodeState() throws -> Data { try Input.encode(state) }
-    public var nodeActions: [(name: String, input: String)] { [("selectTab", "{name: search|review|history}"), ("back", "")] }
+    public var nodeActions: [(name: String, input: String)] { [("selectTab", "{name: search|review|talk|history}"), ("back", "")] }
 
     public var childNode: (any Introspectable)? {
         if let top = stack.last { return top }
         switch state.tab {
         case .search: return search
         case .review: return review
+        case .talk: return talk
         case .history: return history
         }
     }
@@ -146,7 +151,7 @@ public final class AppModel: Introspectable {
         case "selectTab":
             let name = try Input.decode(Input.Name.self, input, action: action, expected: "{name}").name
             guard let tab = Tab(rawValue: name) else {
-                throw IntrospectionError.badInput(action: action, expected: "{name: search|review|history}")
+                throw IntrospectionError.badInput(action: action, expected: "{name: search|review|talk|history}")
             }
             send(.selectTab(tab))
         case "back": send(.back)

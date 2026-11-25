@@ -2,7 +2,7 @@ import ReindooCore
 import SwiftUI
 import UIKit
 
-/// Trois onglets, chacun avec sa pile. La vue ne décide de rien : elle lit
+/// Quatre onglets, chacun avec sa pile. La vue ne décide de rien : elle lit
 /// l'état de Core et lui renvoie des actions.
 struct RootView: View {
     let app: AppModel
@@ -19,6 +19,9 @@ struct RootView: View {
             }
             Tab(label(.review), systemImage: "rectangle.stack", value: AppModel.Tab.review) {
                 stack(.review) { ReviewView(model: app.review) }
+            }
+            Tab(label(.talk), systemImage: "bubble.left.and.bubble.right", value: AppModel.Tab.talk) {
+                stack(.talk) { TalkView(model: app.talk) }
             }
             Tab(label(.history), systemImage: "clock", value: AppModel.Tab.history) {
                 stack(.history) { HistoryView(model: app.history) }
