@@ -35,28 +35,27 @@ enum SketchPainter {
         let tooth = Paper.tooth(width: w, height: h)
         Paper.sheet(tooth, width: w, height: h, into: paper)
         let full = CGRect(x: 0, y: 0, width: w, height: h)
+        // Core compte en pixels depuis le haut ; Core Graphics depuis le bas.
+        let flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(h))
+        // Une même liste de formes de devant revient d'une couche à l'autre :
+        // son masque se calcule une fois par dessin.
+        var masks: [[[Pt]]: CGImage] = [:]
 
         for layer in plan.layers {
             guard let ink = context(w, h) else { continue }
-            // Core compte en pixels depuis le haut ; Core Graphics depuis le bas.
-            ink.translateBy(x: 0, y: CGFloat(h))
-            ink.scaleBy(x: 1, y: -1)
             ink.setLineCap(.round)
             ink.setLineJoin(.round)
             for batch in layer.batches {
                 ink.saveGState()
-                if let clip = batch.clip {
-                    if !clip.shape.isEmpty {
-                        ink.addPath(polygon(clip.shape))
-                        ink.clip()
-                    }
-                    // Chaque forme de devant se retire à son tour : deux formes
-                    // qui se chevauchent ne se réannulent pas.
-                    for cut in clip.cuts {
-                        ink.addRect(full)
-                        ink.addPath(polygon(cut))
-                        ink.clip(using: .evenOdd)
-                    }
+                if let clip = batch.clip, !clip.cuts.isEmpty {
+                    let mask = masks[clip.cuts] ?? cutout(clip.cuts, width: w, height: h, flip: flip)
+                    masks[clip.cuts] = mask
+                    if let mask { ink.clip(to: full, mask: mask) }
+                }
+                ink.concatenate(flip)
+                if let clip = batch.clip, !clip.shape.isEmpty {
+                    ink.addPath(polygon(clip.shape))
+                    ink.clip()
                 }
                 if let wash = batch.wash {
                     let rect = CGRect(x: wash.rect.0.x, y: wash.rect.0.y, width: wash.rect.1.x - wash.rect.0.x, height: wash.rect.1.y - wash.rect.0.y)
@@ -68,12 +67,7 @@ enum SketchPainter {
                         ink.fill(rect)
                     }
                 }
-                for line in batch.lines where line.points.count > 1 {
-                    ink.setStrokeColor(color(batch.color, line.alpha))
-                    ink.setLineWidth(line.width)
-                    ink.addLines(between: line.points.map { CGPoint(x: $0.x, y: $0.y) })
-                    ink.strokePath()
-                }
+                stroke(batch.lines, color: batch.color, in: ink)
                 if !batch.erase.isEmpty {
                     ink.setBlendMode(.clear)
                     for shape in batch.erase { ink.addPath(polygon(shape)); ink.fillPath() }
@@ -90,13 +84,42 @@ enum SketchPainter {
         }
 
         base.setBlendMode(.normal)
-        base.translateBy(x: 0, y: CGFloat(h))
-        base.scaleBy(x: 1, y: -1)
+        base.concatenate(flip)
         base.setFillColor(CGColor(srgbRed: 1, green: 0.99, blue: 0.965, alpha: 0.95))
         for glint in plan.glints {
             base.fillEllipse(in: CGRect(x: glint.center.x - glint.radius, y: glint.center.y - glint.radius, width: glint.radius * 2, height: glint.radius * 2))
         }
         return base.makeImage()
+    }
+
+    /// Les traits d'un lot, rangés par force et par épaisseur : un seul geste
+    /// de Core Graphics par rangée au lieu d'un par trait. Des dizaines de
+    /// milliers de traits deviennent quelques centaines de chemins.
+    private static func stroke(_ lines: [SketchPlan.Line], color c: RGBA, in ink: CGContext) {
+        var rows: [Int: CGMutablePath] = [:]
+        for line in lines where line.points.count > 1 {
+            let a = min(23, max(0, Int(line.alpha * 24))), wide = min(399, max(0, Int(line.width * 4)))
+            let path = rows[a * 400 + wide] ?? CGMutablePath()
+            path.addLines(between: line.points.map { CGPoint(x: $0.x, y: $0.y) })
+            rows[a * 400 + wide] = path
+        }
+        for (key, path) in rows {
+            ink.setStrokeColor(color(c, (Double(key / 400) + 0.5) / 24))
+            ink.setLineWidth((CGFloat(key % 400) + 0.5) / 4)
+            ink.addPath(path)
+            ink.strokePath()
+        }
+    }
+
+    /// Le masque d'une zone : blanc partout, sauf sous les formes de devant.
+    private static func cutout(_ cuts: [[Pt]], width: Int, height: Int, flip: CGAffineTransform) -> CGImage? {
+        guard let mask = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return nil }
+        mask.setFillColor(gray: 1, alpha: 1)
+        mask.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        mask.concatenate(flip)
+        mask.setFillColor(gray: 0, alpha: 1)
+        for cut in cuts { mask.addPath(polygon(cut)); mask.fillPath() }
+        return mask.makeImage()
     }
 
     /// Rien que le crayon, sans papier : pour un signe que le texte teinte.
@@ -106,14 +129,7 @@ enum SketchPainter {
         ink.scaleBy(x: 1, y: -1)
         ink.setLineCap(.round)
         ink.setLineJoin(.round)
-        for batch in layer.batches {
-            for line in batch.lines where line.points.count > 1 {
-                ink.setStrokeColor(color(batch.color, line.alpha))
-                ink.setLineWidth(line.width)
-                ink.addLines(between: line.points.map { CGPoint(x: $0.x, y: $0.y) })
-                ink.strokePath()
-            }
-        }
+        for batch in layer.batches { stroke(batch.lines, color: batch.color, in: ink) }
         return ink.makeImage()
     }
 }
@@ -140,6 +156,7 @@ struct Painted: @unchecked Sendable {
 }
 
 /// Les dessins déjà peints : peindre coûte, et une carte revient souvent.
+/// Le budget se compte en octets : une tête pèse peu, un décor plein écran beaucoup.
 actor SketchCache {
     static let shared = SketchCache()
 
@@ -151,19 +168,34 @@ actor SketchCache {
         var frame: Int
     }
 
+    private static let budget = 96 << 20
     private var images: [Key: Painted] = [:]
     private var order: [Key] = []
+    private var bytes = 0
+    /// Deux vues qui demandent le même dessin attendent la même peinture.
+    private var running: [Key: Task<Painted?, Never>] = [:]
 
     func image(_ key: Key) async -> Painted? {
-        if let image = images[key] { return image }
-        let image = await Task.detached(priority: .userInitiated) { () -> Painted? in
+        if let image = images[key] {
+            if let i = order.firstIndex(of: key) { order.remove(at: i) }
+            order.append(key)
+            return image
+        }
+        if let task = running[key] { return await task.value }
+        let task = Task.detached(priority: .userInitiated) { () -> Painted? in
             SketchPainter.image(key.sketch.plan(width: key.width, height: key.height, head: key.head, frame: key.frame)).map(Painted.init)
-        }.value
-        if let image {
+        }
+        running[key] = task
+        let image = await task.value
+        running[key] = nil
+        if let image, images[key] == nil {
             images[key] = image
             order.append(key)
-            // Une trentaine de dessins suffit à une séance ; les plus vieux partent.
-            if order.count > 36 { images[order.removeFirst()] = nil }
+            bytes += image.image.bytesPerRow * image.image.height
+            while bytes > Self.budget, order.count > 1 {
+                let old = order.removeFirst()
+                if let gone = images.removeValue(forKey: old) { bytes -= gone.image.bytesPerRow * gone.image.height }
+            }
         }
         return image
     }
@@ -178,6 +210,9 @@ struct SketchView: View {
     var head = false
     /// Une seule version : un décor ne bout pas, il reste derrière.
     var still = false
+    /// Pixels par point, au plus. Un décor flou de pastel n'a pas besoin de la
+    /// finesse d'un visage : moins de pixels, il se peint plus vite.
+    var sharpness: CGFloat = 2
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
@@ -187,11 +222,12 @@ struct SketchView: View {
     private static let boil = 3
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.16)) { timeline in
+        // Une image seule ne change pas : rien à redessiner six fois par seconde.
+        TimelineView(.animation(minimumInterval: 0.16, paused: frames.count < 2)) { timeline in
             let index = frames.isEmpty ? 0 : Int(timeline.date.timeIntervalSinceReferenceDate / 0.16) % frames.count
             ZStack {
                 if frames.indices.contains(index) {
-                    Image(decorative: frames[index], scale: min(displayScale, 2))
+                    Image(decorative: frames[index], scale: min(displayScale, sharpness))
                         .resizable()
                         .interpolation(.high)
                         .transition(.opacity)
@@ -202,7 +238,7 @@ struct SketchView: View {
         .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
         .task(id: Request(sketch: sketch, head: head, size: size, still: reduceMotion || still)) {
             guard size.width > 1, size.height > 1 else { return }
-            let scale = min(displayScale, 2)
+            let scale = min(displayScale, sharpness)
             let width = Int(size.width * scale), height = Int(size.height * scale)
             var painted: [CGImage] = []
             for frame in 0..<(reduceMotion || still ? 1 : Self.boil) {

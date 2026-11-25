@@ -48,7 +48,8 @@ private struct StoryRow: View {
             HStack(spacing: -12) {
                 ForEach(Array(row.cast.enumerated()), id: \.offset) { _, who in
                     if let sketch = who.sketch {
-                        SketchView(sketch: sketch, head: true)
+                        // Dans la liste, les têtes se tiennent tranquilles : une seule version à peindre.
+                        SketchView(sketch: sketch, head: true, still: true)
                             .frame(width: 54, height: 54)
                             .clipShape(.circle)
                             .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1.5))
@@ -77,7 +78,7 @@ private struct StoryRow: View {
         .background {
             ZStack {
                 paper
-                SketchView(sketch: .backdrop(row.motif), head: true, still: true)
+                SketchView(sketch: .backdrop(row.motif), head: true, still: true, sharpness: 1.5)
                 // Un voile de papier : le titre se lit par-dessus le décor.
                 LinearGradient(colors: [paper.opacity(0.1), paper.opacity(0.55)], startPoint: .leading, endPoint: .trailing)
             }
@@ -125,7 +126,7 @@ private struct StoryPlayer: View {
             .background {
                 ZStack {
                     paper
-                    SketchView(sketch: .backdrop(player.motif), still: true)
+                    SketchView(sketch: .backdrop(player.motif), still: true, sharpness: 1.25)
                 }
                 .ignoresSafeArea()
             }

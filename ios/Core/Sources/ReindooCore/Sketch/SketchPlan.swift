@@ -282,17 +282,48 @@ private struct Planner {
 public enum Paper {
     /// Le grain d'un papier à grain fin : une dent fine, une ondulation plus
     /// large, et quelques fibres couchées. De 0 à 1, un pixel par valeur.
+    /// Le grain est un carreau qui se raccorde à lui-même sur ses quatre bords :
+    /// calculé une fois, il se pose sur une image de n'importe quelle taille.
     public static func tooth(width: Int, height: Int) -> [Float] {
+        let t = tile, grain = Self.grain
         var g = [Float](repeating: 0, count: width * height)
-        for y in 0..<height {
-            for x in 0..<width {
-                let fine = Chance.noise(Double(x) / 1.7, Double(y) / 1.7, 3)
-                let mid = Chance.noise(Double(x) / 6, Double(y) / 6, 5)
-                let fibre = Chance.noise(Double(x) / 22, Double(y) / 2.2, 9)
-                g[y * width + x] = Float(0.55 * fine + 0.3 * mid + 0.15 * fibre)
+        g.withUnsafeMutableBufferPointer { out in
+            grain.withUnsafeBufferPointer { src in
+                for y in 0..<height {
+                    let row = (y % t) * t
+                    for x in 0..<width { out[y * width + x] = src[row + x % t] }
+                }
             }
         }
         return g
+    }
+
+    static let tile = 680
+
+    /// Chaque bruit fait un nombre entier de cases sur le carreau : 400 cases
+    /// de 1,7 pixel, 113 de 6, et des fibres de 31 × 309.
+    private static let grain: [Float] = {
+        let t = tile
+        var g = [Float](repeating: 0, count: t * t)
+        for y in 0..<t {
+            for x in 0..<t {
+                let fx = Double(x) / Double(t), fy = Double(y) / Double(t)
+                let fine = looped(fx * 400, fy * 400, 400, 400, 3)
+                let mid = looped(fx * 113, fy * 113, 113, 113, 5)
+                let fibre = looped(fx * 31, fy * 309, 31, 309, 9)
+                g[y * t + x] = Float(0.55 * fine + 0.3 * mid + 0.15 * fibre)
+            }
+        }
+        return g
+    }()
+
+    /// Le bruit doux de `Chance`, replié sur lui-même tous les `nx` × `ny`.
+    private static func looped(_ x: Double, _ y: Double, _ nx: Int, _ ny: Int, _ s: Int) -> Double {
+        let xi = Int(floor(x)), yi = Int(floor(y)), xf = x - floor(x), yf = y - floor(y)
+        let u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf)
+        let x0 = xi % nx, x1 = (xi + 1) % nx, y0 = yi % ny, y1 = (yi + 1) % ny
+        let a = Chance.cell(x0, y0, s), b = Chance.cell(x1, y0, s), c = Chance.cell(x0, y1, s), d = Chance.cell(x1, y1, s)
+        return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v
     }
 
     /// La couleur du papier, pixel par pixel, en RGBA 8 bits : crème, plus

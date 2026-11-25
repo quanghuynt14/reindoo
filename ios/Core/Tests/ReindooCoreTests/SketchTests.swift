@@ -92,6 +92,15 @@ import Testing
         #expect(covered(60) * 255 < covered(255) * 60, "un trait léger ne marque que les sommets du grain")
     }
 
+    @Test func thePaperGrainHasNoSeam() {
+        let t = Paper.tile
+        let tooth = Paper.tooth(width: t + 2, height: 3)
+        // Le carreau recommence : le pixel d'après le bord vaut celui du début,
+        // et il n'y a pas de marche entre le dernier pixel et le premier.
+        #expect(tooth[t] == tooth[0])
+        #expect(abs(tooth[t - 1] - tooth[t]) < 0.2)
+    }
+
     @Test func pathsAreSampledFinely() {
         let line = Shape.path("M0 0 L10 0")
         #expect(line.count >= 10 && line.last == Pt(10, 0))
