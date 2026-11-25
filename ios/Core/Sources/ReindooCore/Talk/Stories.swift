@@ -37,14 +37,27 @@ public enum Part: String, Codable, Sendable, CaseIterable {
     case request
 }
 
-/// Un personnage : l'emoji suffit à le dessiner.
+/// Un personnage, dessiné à la main ; l'emoji ne sert que si le dessin manque.
 public struct Animal: Codable, Equatable, Sendable {
     public var emoji: String
     public var name: String
     /// Son nom en vietnamien.
     public var gloss: String
-    /// `giraffe` ou `jackal` : l'animal est dessiné, pas un emoji.
+    /// `giraffe`, `jackal`, ou une espèce de `Species`.
     public var drawing: String? = nil
+
+    /// Son dessin au repos, avant toute réponse.
+    public var sketch: Sketch? {
+        switch drawing {
+        case "giraffe": .giraffe(.calm)
+        case "jackal": .jackal(.cross)
+        case let name?: Species(rawValue: name).map { .animal($0, .calm) }
+        case nil: nil
+        }
+    }
+
+    static let giraffe = Animal(emoji: "🦒", name: "Girafe", gloss: "Hươu", drawing: "giraffe")
+    static let jackal = Animal(emoji: "🐺", name: "Chacal", gloss: "Chó rừng", drawing: "jackal")
 }
 
 /// Une proposition de reformulation.

@@ -20,7 +20,7 @@ private func wrong(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text: t
 extension Story {
     static let voice = Story(
         id: "voice", title: "La petite voix", gloss: "Tiếng nói bên trong", scene: "night-reef",
-        cast: [Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda"), Animal(emoji: "🐺", name: "Chacal", gloss: "Chó rừng", drawing: "jackal")],
+        cast: [Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda"), .jackal],
         beats: [
             .narration("voice.0",
                        "Panda a oublié la réunion de 10 heures. Ses collègues l'ont attendu. Dans sa tête, une petite voix se met à parler.",
@@ -66,7 +66,7 @@ extension Story {
 
     static let body = Story(
         id: "body", title: "Le corps parle", gloss: "Cơ thể lên tiếng", scene: "koi-mosaic",
-        cast: [Animal(emoji: "🦒", name: "Girafe", gloss: "Hươu", drawing: "giraffe"), Animal(emoji: "🐺", name: "Chacal", gloss: "Chó rừng", drawing: "jackal")],
+        cast: [.giraffe, .jackal],
         beats: [
             .narration("body.0",
                        "Une émotion se sent dans le corps avant d'avoir un nom. Le français la place souvent quelque part : la gorge, le cœur, le ventre.",

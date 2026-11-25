@@ -22,7 +22,7 @@ public final class TalkViewModel: Introspectable {
         public var id: String
         public var title: String
         public var gloss: String
-        public var cast: [String]
+        public var cast: [Animal]
         public var scene: String?
         /// « 4/6 justes », ou le nombre de répliques si l'histoire est neuve.
         public var score: String
@@ -291,7 +291,7 @@ public final class TalkViewModel: Introspectable {
         if missed > 0 {
             rows.append(Row(
                 id: Self.reviewID, title: copy.talkReview, gloss: "",
-                cast: ["🦒", "🐺"], scene: "night-reef", score: copy.talkReviewCount(missed), isDone: false
+                cast: [.giraffe, .jackal], scene: "night-reef", score: copy.talkReviewCount(missed), isDone: false
             ))
         }
         for story in stories {
@@ -300,7 +300,7 @@ public final class TalkViewModel: Introspectable {
             let right = questions.filter { saved[$0.id] == .right }.count
             rows.append(Row(
                 id: story.id, title: story.title, gloss: story.gloss,
-                cast: story.cast.map(\.emoji), scene: story.scene,
+                cast: story.cast, scene: story.scene,
                 score: answered.isEmpty ? copy.talkLines(questions.count) : copy.talkScore(right, questions.count),
                 isDone: answered.count == questions.count
             ))

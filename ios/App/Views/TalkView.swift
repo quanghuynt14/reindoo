@@ -41,9 +41,17 @@ private struct StoryRow: View {
         let theme = row.scene.flatMap(SceneTheme.named)
         let light = theme?.window == .light
         HStack(spacing: 14) {
-            HStack(spacing: -10) {
-                ForEach(Array(row.cast.enumerated()), id: \.offset) { _, emoji in
-                    Text(emoji).font(.system(size: 40))
+            HStack(spacing: -12) {
+                ForEach(Array(row.cast.enumerated()), id: \.offset) { _, who in
+                    if let sketch = who.sketch {
+                        SketchView(sketch: sketch, head: true)
+                            .frame(width: 54, height: 54)
+                            .clipShape(.circle)
+                            .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1.5))
+                            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    } else {
+                        Text(who.emoji).font(.system(size: 40))
+                    }
                 }
             }
             .accessibilityHidden(true)
@@ -257,11 +265,11 @@ private struct TalkCard: View {
     }
 
     private func sketch(for who: Animal) -> Sketch? {
-        switch who.drawing {
-        case "giraffe": giraffeMood
-        case "jackal": jackalMood
-        case let name?: Species(rawValue: name).map { .animal($0, card.verdict == .right ? .happy : .calm) }
-        case nil: nil
+        switch who.sketch {
+        case .giraffe: giraffeMood
+        case .jackal: jackalMood
+        case .animal(let species, _): .animal(species, card.verdict == .right ? .happy : .calm)
+        case let other: other
         }
     }
 
