@@ -21,7 +21,7 @@ import Testing
         #expect(rows.count == Story.all.count + 1)
     }
 
-    @Test func theWelcomeIsReadOnceThenMovesDown() throws {
+    @Test func theWelcomeStaysOnTopOnceRead() throws {
         let app = try Harness()
         try app.do("selectTab", #"{"name":"talk"}"#)
         try app.do("open", #"{"name":"welcome"}"#)
@@ -29,9 +29,8 @@ import Testing
         #expect(cards.count == 4, "pas de bilan après l'accueil")
         #expect(try app.state("player.cards.3.done") == Harness.copy.talkWelcomeDone)
         try app.do("close")
-        #expect(try app.state("sections.0.id") == Intent.feel.rawValue)
-        let sections = try #require(try app.state("sections", as: [[String: Any]].self))
-        #expect(try app.state("sections.\(sections.count - 1).rows.0.id") == TalkViewModel.welcomeID)
+        #expect(try app.state("sections.0.rows.0.id") == TalkViewModel.welcomeID, "la liste ne bouge pas")
+        #expect(try app.state("sections.0.rows.0.isDone") == true)
     }
 
     @Test func aJackalLineShowsWhatTheGiraffeWouldSay() throws {

@@ -391,7 +391,7 @@ public final class TalkViewModel: Introspectable {
     }
 
     /// L'accueil : quatre cartes, la girafe et le chacal, et un bouton pour
-    /// aller choisir. On le lit une fois ; il reste dans la liste, en bas.
+    /// aller choisir. Une fois lu, il garde sa place en tête, coché.
     private func openWelcome() {
         let pages = copy.talkWelcome
         let casts: [[Animal]] = [[.giraffe, .jackal], [.jackal], [.giraffe], [.giraffe, .jackal]]
@@ -516,9 +516,8 @@ public final class TalkViewModel: Introspectable {
             scene: "paper-garden", detail: copy.talkWelcomeLength, isDone: welcomed
         )
 
-        var top: [Row] = []
-        // L'accueil en tête tant qu'on ne l'a pas lu ; ensuite il descend.
-        if !welcomed { top.append(welcome) }
+        // L'accueil reste en tête, lu ou non : la liste ne bouge pas sous le doigt.
+        var top: [Row] = [welcome]
         let missed = stories.flatMap(\.questions).filter { saved[$0.id] == .wrong }.count
         if missed > 0 {
             top.append(Row(
@@ -527,7 +526,7 @@ public final class TalkViewModel: Introspectable {
             ))
         }
 
-        var sections: [Section] = top.isEmpty ? [] : [Section(id: "top", title: nil, when: nil, rows: top)]
+        var sections: [Section] = [Section(id: "top", title: nil, when: nil, rows: top)]
         for intent in Intent.allCases {
             let group = group(intent)
             guard !group.isEmpty else { continue }
@@ -543,7 +542,6 @@ public final class TalkViewModel: Introspectable {
             let words = copy.intent(intent)
             sections.append(Section(id: intent.rawValue, title: words.title, when: words.when, rows: rows))
         }
-        if welcomed { sections.append(Section(id: "end", title: nil, when: nil, rows: [welcome])) }
         state.sections = sections
     }
 
