@@ -13,7 +13,7 @@ private func wrong(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text: t
 
 extension Story {
     static let move = Story(
-        id: "move", intent: .refuse, title: "Le déménagement", gloss: "Chuyển nhà", scene: "blueprint",
+        id: "move", intent: .refuse, chapters: [11], title: "Le déménagement", gloss: "Chuyển nhà", scene: "blueprint",
         cast: [Animal(emoji: "🐨", name: "Koala", gloss: "Gấu túi", drawing: "koala"), Animal(emoji: "🐧", name: "Pingouin", gloss: "Chim cánh cụt", drawing: "penguin")],
         beats: [
             .narration("move.0",
@@ -64,7 +64,7 @@ extension Story {
     )
 
     static let feedback = Story(
-        id: "feedback", intent: .criticism, title: "La remarque", gloss: "Lời nhận xét", scene: "halftone-dawn",
+        id: "feedback", intent: .criticism, chapters: [21], title: "La remarque", gloss: "Lời nhận xét", scene: "halftone-dawn",
         cast: [Animal(emoji: "🦭", name: "Phoque", gloss: "Hải cẩu", drawing: "seal"), Animal(emoji: "🦉", name: "Chouette", gloss: "Cú", drawing: "owl")],
         beats: [
             .narration("feedback.0",
@@ -111,7 +111,7 @@ extension Story {
     )
 
     static let hints = Story(
-        id: "hints", intent: .hint, title: "Ce qui n'est pas dit", gloss: "Điều không nói ra", scene: "night-reef",
+        id: "hints", intent: .hint, chapters: [16], title: "Ce qui n'est pas dit", gloss: "Điều không nói ra", scene: "night-reef",
         cast: [
             Animal(emoji: "🐱", name: "Chatte", gloss: "Mèo", drawing: "cat"),
             Animal(emoji: "🦊", name: "Renard", gloss: "Cáo", drawing: "fox"),

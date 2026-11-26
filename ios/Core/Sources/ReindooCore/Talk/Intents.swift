@@ -12,10 +12,13 @@ public enum Intent: String, Codable, Sendable, CaseIterable {
     case feel
     case reproach
     case worry
+    case ask
     case refuse
     case criticism
+    case opinion
     case repair
     case hint
+    case help
     case agree
 }
 
@@ -52,12 +55,12 @@ public struct GiraffeForm: Codable, Equatable, Sendable, Identifiable {
         GiraffeForm(
             id: "feeling", phrase: "je suis + adjectif : agacé, déçu, inquiet",
             note: "Cảm xúc là một tính từ nói về mình. Tránh « je me sens + phân từ » như trahi, méprisé, abandonné: đó là đoán điều người khác đã làm.",
-            word: "sentiment", cues: ["je suis agacé", "je suis déçu", "je suis découragée", "je suis inquiète", "je suis inquiet", "je suis énervé", "je suis vraiment épuisé", "j'ai eu peur", "je me sens seul", "je suis triste", "je suis fatigué"]
+            word: "sentiment", cues: ["je suis agacé", "je suis déçu", "je suis découragée", "je suis inquiète", "je suis inquiet", "je suis énervé", "je suis vraiment épuisé", "j'ai eu peur", "je me sens seul", "je suis triste", "je suis fatigué", "je suis découragé", "j'ai eu honte", "je suis surpris", "je suis ému", "j'étais inquiet", "je suis mal à l'aise", "j'ai peur", "j'ai un peu peur", "je suis contente"]
         ),
         GiraffeForm(
             id: "soft", phrase: "un peu, vraiment",
             note: "Những từ nhỏ giúp nói đúng mức cảm xúc, không phóng đại cũng không giấu đi.",
-            word: "peu", cues: ["un peu triste", "un peu inquiet", "et un peu", "vraiment épuisé"]
+            word: "peu", cues: ["un peu triste", "un peu inquiet", "et un peu", "vraiment épuisé", "je suis un peu", "un peu peur"]
         ),
         GiraffeForm(
             id: "need", phrase: "j'ai besoin de + nom",
@@ -77,12 +80,17 @@ public struct GiraffeForm: Codable, Equatable, Sendable, Identifiable {
         GiraffeForm(
             id: "question", phrase: "tu peux… ? est-ce que tu… ?",
             note: "Một câu hỏi, không phải mệnh lệnh: người kia có thể trả lời, có thể chọn. « Sois à l'heure » ra lệnh; « tu peux m'envoyer un message ? » đề nghị.",
-            word: "demander", cues: ["tu peux ", "vous pouvez ", "est-ce que tu", "est-ce que vous", "on peut "]
+            word: "demander", cues: ["tu peux ", "vous pouvez ", "est-ce que tu", "est-ce que vous", "on peut ", "est-ce que je peux"]
         ),
         GiraffeForm(
             id: "guess", phrase: "tu es… parce que… ? tu aimerais… ?",
             note: "Hươu đoán cảm xúc và nhu cầu của người kia rồi hỏi lại. Đoán sai cũng không sao: người kia sẽ sửa, và thấy mình được lắng nghe.",
-            word: "deviner", cues: ["parce que tu", "tu aimerais", "tu voudrais", "tu as peur", "vous avez besoin", "tu es fatigué", "tu es débordée", "tu es inquiète", "tu aurais besoin", "je t'ai manqué", "tu es triste", "tu avais peur"]
+            word: "deviner", cues: ["parce que tu", "tu aimerais", "tu voudrais", "tu as peur", "vous avez besoin", "tu es fatigué", "tu es débordée", "tu es inquiète", "tu aurais besoin", "je t'ai manqué", "tu es triste", "tu avais peur", "tu es déçu", "c'est ça ?", "tu avais besoin", "auriez besoin", "tu as besoin"]
+        ),
+        GiraffeForm(
+            id: "reflect", phrase: "si je comprends bien, tu…",
+            note: "Nhắc lại điều mình hiểu trước khi trả lời: người kia thấy mình được nghe, và hiểu lầm lộ ra sớm.",
+            word: "comprendre", cues: ["si je comprends bien"]
         ),
         GiraffeForm(
             id: "no-but", phrase: "je ne viendrai pas, mais je peux…",

@@ -19,7 +19,7 @@ private func wrong(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text: t
 
 extension Story {
     static let voice = Story(
-        id: "voice", intent: .feel, title: "La petite voix", gloss: "Tiếng nói bên trong", scene: "night-reef",
+        id: "voice", intent: .feel, chapters: [44], title: "La petite voix", gloss: "Tiếng nói bên trong", scene: "night-reef",
         cast: [Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda"), .jackal],
         beats: [
             .narration("voice.0",
@@ -65,7 +65,7 @@ extension Story {
     )
 
     static let body = Story(
-        id: "body", intent: .feel, title: "Le corps parle", gloss: "Cơ thể lên tiếng", scene: "koi-mosaic",
+        id: "body", intent: .feel, chapters: [29], title: "Le corps parle", gloss: "Cơ thể lên tiếng", scene: "koi-mosaic",
         cast: [.giraffe, .jackal],
         beats: [
             .narration("body.0",
@@ -123,7 +123,7 @@ extension Story {
     )
 
     static let needs = Story(
-        id: "needs", intent: .agree, title: "Un besoin, deux chemins", gloss: "Một nhu cầu, hai cách", scene: "paper-garden",
+        id: "needs", intent: .agree, chapters: [22], title: "Un besoin, deux chemins", gloss: "Một nhu cầu, hai cách", scene: "paper-garden",
         cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu", drawing: "bear"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím", drawing: "hedgehog")],
         beats: [
             .narration("needs.0",

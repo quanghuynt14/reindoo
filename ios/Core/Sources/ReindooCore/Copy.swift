@@ -229,6 +229,18 @@ public struct Copy: Equatable, Sendable {
             pick("Saying you're worried", "Dire son inquiétude", "Nói ra nỗi lo"),
             pick("When fear comes out as anger.", "Quand la peur sort en colère.", "Khi nỗi sợ bật ra thành cơn giận.")
         )
+        case .ask: (
+            pick("Asking for what you need", "Demander ce dont on a besoin", "Đề nghị điều mình cần"),
+            pick("When you don't dare to ask.", "Quand vous n'osez pas demander.", "Khi bạn không dám mở lời.")
+        )
+        case .opinion: (
+            pick("Giving your opinion", "Donner son avis", "Nói lên ý kiến"),
+            pick("When you disagree, or have something hard to say.", "Quand vous n'êtes pas d'accord, ou que vous avez quelque chose de difficile à dire.", "Khi bạn không đồng ý, hay có điều khó nói.")
+        )
+        case .help: (
+            pick("Being there for someone", "Être là pour quelqu'un", "Ở bên ai đó"),
+            pick("When someone is struggling and you want to help.", "Quand quelqu'un va mal et que vous voulez l'aider.", "Khi ai đó đang khó khăn và bạn muốn giúp.")
+        )
         case .refuse: (
             pick("Saying no", "Dire non", "Nói không"),
             pick("When you want to refuse without lying or feeling guilty.", "Quand vous voulez refuser sans mentir ni culpabiliser.", "Khi bạn muốn từ chối mà không phải nói dối hay áy náy.")

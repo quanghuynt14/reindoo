@@ -125,6 +125,9 @@ public struct Story: Equatable, Sendable, Identifiable {
     public var id: String
     /// Ce qu'on y apprend à faire : la section de la liste.
     public var intent: Intent
+    /// Les chapitres de la *Communication progressive du français* dont
+    /// l'histoire reprend la situation. Les répliques n'en viennent pas.
+    public var chapters: [Int]
     public var title: String
     public var gloss: String
     /// Un thème de `SceneTheme`, choisi pour le lieu.
@@ -142,12 +145,12 @@ private func jackal(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text: 
 extension Story {
     /// Les histoires, dans l'ordre où on les propose : par intention, puis
     /// dans chaque intention la plus simple d'abord.
-    public static let all: [Story] = [voice, body, late, dishes, meeting, neighbour, hike, beach, train, move, feedback, birthday, hints, needs]
+    public static let all: [Story] = [voice, body, late, dishes, meeting, neighbour, hike, beach, train, move, feedback, birthday, hints, needs] + chapterStories
 
     public static func named(_ id: String) -> Story? { all.first { $0.id == id } }
 
     static let late = Story(
-        id: "late", intent: .reproach, title: "Encore en retard", gloss: "Lại đến muộn", scene: "halftone-dawn",
+        id: "late", intent: .reproach, chapters: [24], title: "Encore en retard", gloss: "Lại đến muộn", scene: "halftone-dawn",
         cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu", drawing: "bear"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím", drawing: "hedgehog")],
         beats: [
             .narration("late.0",
@@ -192,7 +195,7 @@ extension Story {
     )
 
     static let dishes = Story(
-        id: "dishes", intent: .reproach, title: "La vaisselle", gloss: "Chồng bát đĩa", scene: "paper-garden-kraft",
+        id: "dishes", intent: .reproach, chapters: [13], title: "La vaisselle", gloss: "Chồng bát đĩa", scene: "paper-garden-kraft",
         cast: [Animal(emoji: "🐰", name: "Lapine", gloss: "Thỏ", drawing: "rabbit"), Animal(emoji: "🦝", name: "Raton", gloss: "Gấu mèo", drawing: "raccoon")],
         beats: [
             .narration("dishes.0",
@@ -238,7 +241,7 @@ extension Story {
     )
 
     static let meeting = Story(
-        id: "meeting", intent: .reproach, title: "La réunion", gloss: "Buổi họp", scene: "blueprint",
+        id: "meeting", intent: .reproach, chapters: [12], title: "La réunion", gloss: "Buổi họp", scene: "blueprint",
         cast: [Animal(emoji: "🦉", name: "Chouette", gloss: "Cú", drawing: "owl"), Animal(emoji: "🦊", name: "Renard", gloss: "Cáo", drawing: "fox")],
         beats: [
             .narration("meeting.0",
@@ -280,7 +283,7 @@ extension Story {
     )
 
     static let neighbour = Story(
-        id: "neighbour", intent: .reproach, title: "Le voisin du dessus", gloss: "Hàng xóm tầng trên", scene: "braille-stars",
+        id: "neighbour", intent: .reproach, chapters: [14], title: "Le voisin du dessus", gloss: "Hàng xóm tầng trên", scene: "braille-stars",
         cast: [Animal(emoji: "🐨", name: "Koala", gloss: "Gấu túi", drawing: "koala"), Animal(emoji: "🐶", name: "Chien", gloss: "Chó", drawing: "dog")],
         beats: [
             .narration("neighbour.0",
@@ -325,7 +328,7 @@ extension Story {
     )
 
     static let train = Story(
-        id: "train", intent: .worry, title: "Le train annulé", gloss: "Chuyến tàu bị huỷ", scene: "departure-board",
+        id: "train", intent: .worry, chapters: [28], title: "Le train annulé", gloss: "Chuyến tàu bị huỷ", scene: "departure-board",
         cast: [Animal(emoji: "🐢", name: "Tortue", gloss: "Rùa", drawing: "turtle"), Animal(emoji: "🦫", name: "Castor", gloss: "Hải ly", drawing: "beaver")],
         beats: [
             .narration("train.0",
@@ -367,7 +370,7 @@ extension Story {
     )
 
     static let birthday = Story(
-        id: "birthday", intent: .repair, title: "L'anniversaire oublié", gloss: "Sinh nhật bị quên", scene: "aurora-snow",
+        id: "birthday", intent: .repair, chapters: [23], title: "L'anniversaire oublié", gloss: "Sinh nhật bị quên", scene: "aurora-snow",
         cast: [Animal(emoji: "🐱", name: "Chat", gloss: "Mèo", drawing: "cat"), Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda")],
         beats: [
             .narration("birthday.0",
@@ -409,7 +412,7 @@ extension Story {
     )
 
     static let beach = Story(
-        id: "beach", intent: .worry, title: "À la plage", gloss: "Ở bãi biển", scene: "honu-lagoon",
+        id: "beach", intent: .worry, chapters: [28], title: "À la plage", gloss: "Ở bãi biển", scene: "honu-lagoon",
         cast: [Animal(emoji: "🦭", name: "Phoque", gloss: "Hải cẩu", drawing: "seal"), Animal(emoji: "🐧", name: "Pingouin", gloss: "Chim cánh cụt", drawing: "penguin")],
         beats: [
             .narration("beach.0",
@@ -451,7 +454,7 @@ extension Story {
     )
 
     static let hike = Story(
-        id: "hike", intent: .reproach, title: "La randonnée", gloss: "Chuyến leo núi", scene: "vector-range",
+        id: "hike", intent: .reproach, chapters: [8], title: "La randonnée", gloss: "Chuyến leo núi", scene: "vector-range",
         cast: [Animal(emoji: "🐘", name: "Éléphant", gloss: "Voi", drawing: "elephant"), Animal(emoji: "🐐", name: "Chèvre", gloss: "Dê", drawing: "goat")],
         beats: [
             .narration("hike.0",

@@ -13,8 +13,10 @@ import Testing
         #expect(sections.count == Intent.allCases.count + 1)
         #expect(try app.state("sections.1.title") == Harness.copy.intent(.feel).title)
         #expect(try app.state("sections.1.when") == Harness.copy.intent(.feel).when)
-        #expect(try app.state("sections.2.rows.0.title") == "Encore en retard")
-        #expect(try app.state("sections.2.rows.0.detail") == Harness.copy.talkLines(6))
+        // Dans une intention, l'ordre est celui des chapitres du livre.
+        let first = try #require(Story.all.filter { $0.intent == .reproach }.min { $0.chapters[0] < $1.chapters[0] })
+        #expect(try app.state("sections.2.rows.0.title") == first.title)
+        #expect(try app.state("sections.2.rows.0.detail") == Harness.copy.talkLines(first.questions.count))
         let rows = sections.flatMap { $0["rows"] as? [[String: Any]] ?? [] }
         #expect(rows.count == Story.all.count + 1)
     }
@@ -99,7 +101,8 @@ import Testing
         #expect(rows.last?["id"] as? String == "mix.worry")
         try app.do("open", #"{"name":"mix.worry"}"#)
         let ids = try #require(try app.state("player.cards", as: [[String: Any]].self)).compactMap { $0["id"] as? String }
-        #expect(ids.prefix(2).map { $0.split(separator: ".").first.map(String.init) } == ["beach", "train"], "les histoires alternent")
+        let stories = ids.prefix(3).compactMap { $0.split(separator: ".").first.map(String.init) }
+        #expect(Set(stories).count == 3, "les histoires alternent")
     }
 
     @Test func aSortedLineIsCommittedAndExplained() throws {
@@ -202,6 +205,12 @@ import Testing
         let wrong = try #require(choices.firstIndex { $0["isRight"] as? Bool == false })
         try app.do("choose", #"{"index":\#(wrong)}"#)
         #expect(try app.state("player.cards.1.verdict") == "wrong")
+    }
+
+    /// Chaque chapitre du livre a sa situation : la progression entière.
+    @Test func everyChapterOfTheBookHasAStory() {
+        #expect(Set(Story.all.flatMap(\.chapters)) == Set(1...47))
+        #expect(Set(Story.all.map(\.id)).count == Story.all.count)
     }
 
     /// Le contenu se relit à la main ; ces règles-là se vérifient seules.

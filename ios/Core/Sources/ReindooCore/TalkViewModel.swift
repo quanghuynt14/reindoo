@@ -346,7 +346,7 @@ public final class TalkViewModel: Introspectable {
             title = copy.talkReview
             scene = "night-reef"
         } else if id.hasPrefix(Self.mixPrefix), let intent = Intent(rawValue: String(id.dropFirst(Self.mixPrefix.count))) {
-            let group = stories.filter { $0.intent == intent }
+            let group = group(intent)
             beats = Self.mixed(group)
             guard !beats.isEmpty else { return }
             title = "\(copy.talkMix) · \(copy.intent(intent).title)"
@@ -366,6 +366,15 @@ public final class TalkViewModel: Introspectable {
         cards.append(Card(id: "\(id).report", kind: .report, cast: [], text: copy.storyEnd, gloss: "", why: ""))
         state.player = player(id, title: title, scene: scene, cards: cards)
         refreshReport()
+    }
+
+    /// Les histoires d'une intention, dans l'ordre des chapitres du livre :
+    /// la progression qu'il a choisie, du concret vers le nuancé.
+    func group(_ intent: Intent) -> [Story] {
+        stories.enumerated()
+            .filter { $0.element.intent == intent }
+            .sorted { ($0.element.chapters.first ?? 0, $0.offset) < ($1.element.chapters.first ?? 0, $1.offset) }
+            .map(\.element)
     }
 
     /// Les répliques d'une intention, une histoire après l'autre à tour de
@@ -520,7 +529,7 @@ public final class TalkViewModel: Introspectable {
 
         var sections: [Section] = top.isEmpty ? [] : [Section(id: "top", title: nil, when: nil, rows: top)]
         for intent in Intent.allCases {
-            let group = stories.filter { $0.intent == intent }
+            let group = group(intent)
             guard !group.isEmpty else { continue }
             var rows = group.map(row)
             // Le pêle-mêle s'ouvre quand deux histoires de l'intention sont faites.
