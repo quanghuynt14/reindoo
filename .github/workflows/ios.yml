@@ -117,6 +117,13 @@ jobs:
       # Les dessins se peignent ici, une fois, pas sur le téléphone.
       - name: Peindre les dessins
         run: swift run --package-path ios/Core -c release sketch-stills ios/App/Resources/Sketches
+      # Les mêmes dessins servent à « Parler » dans rappel, qui ne peut pas les
+      # peindre : son serveur n'a pas CoreGraphics.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sketches
+          path: ios/App/Resources/Sketches
+          retention-days: 14
       - run: brew install xcodegen
       - name: Générer et construire
         working-directory: ios
