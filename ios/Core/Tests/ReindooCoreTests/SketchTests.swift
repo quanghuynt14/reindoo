@@ -124,3 +124,10 @@ import Testing
     }
     #expect(Still.all.contains(.scene(.together)))
 }
+
+@Test func aHeadSitsOnAPlainGroundAndAWholeAnimalOnPaper() {
+    let head = Sketch.animal(.bear, .calm).plan(width: 120, height: 120, head: true)
+    #expect(head.ground != nil, "une pastille unie, sans grain blanc autour")
+    #expect(Sketch.animal(.bear, .calm).plan(width: 120, height: 120).ground == nil)
+    #expect(Sketch.backdrop(.dawn).plan(width: 120, height: 60, head: true).ground == nil, "une bande de décor reste sur papier")
+}

@@ -34,7 +34,12 @@ public enum SketchPainter {
         let w = plan.width, h = plan.height
         guard let sheet = context(w, h), let paper = pixels(sheet) else { return nil }
         let tooth = Paper.tooth(width: w, height: h)
-        Paper.sheet(tooth, width: w, height: h, into: paper)
+        if let ground = plan.ground {
+            sheet.setFillColor(color(ground, 1))
+            sheet.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        } else {
+            Paper.sheet(tooth, width: w, height: h, into: paper)
+        }
         // Core compte en pixels depuis le haut ; Core Graphics depuis le bas.
         let flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(h))
         // Une même liste de formes de devant revient d'une couche à l'autre :

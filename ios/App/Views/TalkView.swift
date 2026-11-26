@@ -65,7 +65,8 @@ private struct StoryRow: View {
                         SketchView(.head(sketch))
                             .frame(width: 54, height: 54)
                             .clipShape(.circle)
-                            .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 1.5))
+                            // Un fin trait de crayon, pas d'anneau blanc : la pastille reste unie.
+                            .overlay(Circle().stroke(pencil.opacity(0.15), lineWidth: 1))
                             .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                     } else {
                         Text(who.emoji).font(.system(size: 40))

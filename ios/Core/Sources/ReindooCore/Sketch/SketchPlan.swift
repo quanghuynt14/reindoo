@@ -42,6 +42,10 @@ public struct SketchPlan: Sendable {
     public var layers: [Layer]
     /// Une goutte de stylo-gel blanc dans les yeux : seule chose que le papier ne mange pas.
     public var glints: [(center: Pt, radius: Double)]
+    /// Un fond uni à la place du papier : la pastille d'une tête. Le pastel
+    /// laissait voir le blanc du grain autour de l'animal ; une couleur pleine
+    /// fait une pastille nette.
+    public var ground: RGBA? = nil
 }
 
 extension Sketch {
@@ -92,6 +96,8 @@ private struct Planner {
     let width: Int, height: Int, frame: Int
     let scale: Double, origin: Pt
     let covers: Bool
+    /// Une tête sur fond uni, sans page de pastel.
+    let plain: Bool
 
     init(sketch: Sketch, width: Int, height: Int, head: Bool, frame: Int) {
         let scene = sketch.scene
@@ -102,6 +108,7 @@ private struct Planner {
         let bw = box.1.x - box.0.x, bh = box.1.y - box.0.y
         // Un décor remplit l'image et déborde ; un animal tient entier dedans.
         covers = sketch.covers
+        plain = head && !sketch.covers
         scale = covers ? max(w / bw, h / bh) : min(w / bw, h / bh)
         origin = Pt((w - bw * scale) / 2 - box.0.x * scale, (h - bh * scale) / 2 - box.0.y * scale)
     }
@@ -220,10 +227,10 @@ private struct Planner {
         // Un décor couvre toute l'image visible ; un animal a sa page, avec un bord de papier.
         let seen = (Pt(-origin.x / scale - 6, -origin.y / scale - 6), Pt((Double(width) - origin.x) / scale + 6, (Double(height) - origin.y) / scale + 6))
         let page = covers ? Shape.panel(seen.0.x, seen.0.y, seen.1.x, seen.1.y, 2) : Shape.panel(box.0.x + 10, box.0.y + 10, box.1.x - 10, box.1.y - 8, 26)
-        var wash: [SketchPlan.Batch] = [
+        var wash: [SketchPlan.Batch] = plain ? [] : [
             pastel(Dab(shape: page, color: back, alpha: covers ? 0.75 : 0.6, density: 0.35, width: 5, angle: 64, even: true), seed: "panel"),
         ]
-        for (i, f) in pieces.enumerated() {
+        for (i, f) in pieces.enumerated() where !plain {
             wash.append(pastel(Dab(shape: Shape.ellipse(f.feet.0.x, f.feet.0.y + 2, f.feet.1, f.feet.1 * 0.14, 0, 0.1, 200 + i), color: Palette.ground, alpha: 0.7, density: 2, width: 1.8, angle: 4), seed: "ground\(i)"))
         }
         for (i, s) in (sparkles + pieces.flatMap(\.sparkles)).enumerated() {
@@ -274,7 +281,9 @@ private struct Planner {
         let glints = pieces.flatMap(\.glints).enumerated().map { i, g in
             (center: P(g), radius: scale * (1.5 + Double(i % 2) * 0.2))
         }
-        return SketchPlan(width: width, height: height, layers: layers, glints: glints)
+        // La teinte que la page de pastel donnait au papier, posée à plat.
+        let ground = plain ? RGBA(0.99 * (0.4 + 0.6 * back.r), 0.97 * (0.4 + 0.6 * back.g), 0.93 * (0.4 + 0.6 * back.b)) : nil
+        return SketchPlan(width: width, height: height, layers: layers, glints: glints, ground: ground)
     }
 }
 
