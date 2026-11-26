@@ -71,7 +71,7 @@ public struct Rewrite: Equatable, Sendable {
 /// chacal à reformuler, une expression du corps à compléter, ou deux
 /// stratégies dont on cherche le besoin commun.
 public struct Beat: Equatable, Sendable {
-    public enum Kind: String, Codable, Sendable { case narration, sort, rewrite, body, need }
+    public enum Kind: String, Codable, Sendable { case narration, sort, rewrite, body, need, hint }
 
     public var id: String
     public var kind: Kind
@@ -111,6 +111,11 @@ public struct Beat: Equatable, Sendable {
         Beat(id: id, kind: .need, speaker: 0, text: text, gloss: gloss, voice: nil, part: .need, why: why, choices: choices, reply: reply, replyGloss: replyGloss)
     }
 
+    /// Une remarque à double sens : on cherche ce que l'autre voudrait au fond.
+    static func hint(_ id: String, _ speaker: Int, _ text: String, _ gloss: String, why: String, _ choices: [Rewrite]) -> Beat {
+        Beat(id: id, kind: .hint, speaker: speaker, text: text, gloss: gloss, voice: nil, part: .need, why: why, choices: choices)
+    }
+
     static func rewrite(_ id: String, _ speaker: Int, _ text: String, _ gloss: String, why: String, _ choices: [Rewrite]) -> Beat {
         Beat(id: id, kind: .rewrite, speaker: speaker, text: text, gloss: gloss, voice: .jackal, part: .request, why: why, choices: choices)
     }
@@ -118,6 +123,8 @@ public struct Beat: Equatable, Sendable {
 
 public struct Story: Equatable, Sendable, Identifiable {
     public var id: String
+    /// Ce qu'on y apprend à faire : la section de la liste.
+    public var intent: Intent
     public var title: String
     public var gloss: String
     /// Un thème de `SceneTheme`, choisi pour le lieu.
@@ -133,14 +140,14 @@ private func giraffe(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text:
 private func jackal(_ text: String, _ gloss: String) -> Rewrite { Rewrite(text: text, gloss: gloss, isRight: false) }
 
 extension Story {
-    /// Les histoires, dans l'ordre où on les propose. La première pose les
-    /// quatre temps ; les suivantes changent de lieu et de relation.
-    public static let all: [Story] = [late, voice, body, dishes, needs, meeting, neighbour, train, birthday, beach, hike]
+    /// Les histoires, dans l'ordre où on les propose : par intention, puis
+    /// dans chaque intention la plus simple d'abord.
+    public static let all: [Story] = [voice, body, late, dishes, meeting, neighbour, hike, beach, train, move, feedback, birthday, hints, needs]
 
     public static func named(_ id: String) -> Story? { all.first { $0.id == id } }
 
     static let late = Story(
-        id: "late", title: "Encore en retard", gloss: "Lại đến muộn", scene: "halftone-dawn",
+        id: "late", intent: .reproach, title: "Encore en retard", gloss: "Lại đến muộn", scene: "halftone-dawn",
         cast: [Animal(emoji: "🐻", name: "Ours", gloss: "Gấu", drawing: "bear"), Animal(emoji: "🦔", name: "Hérisson", gloss: "Nhím", drawing: "hedgehog")],
         beats: [
             .narration("late.0",
@@ -185,7 +192,7 @@ extension Story {
     )
 
     static let dishes = Story(
-        id: "dishes", title: "La vaisselle", gloss: "Chồng bát đĩa", scene: "paper-garden-kraft",
+        id: "dishes", intent: .reproach, title: "La vaisselle", gloss: "Chồng bát đĩa", scene: "paper-garden-kraft",
         cast: [Animal(emoji: "🐰", name: "Lapine", gloss: "Thỏ", drawing: "rabbit"), Animal(emoji: "🦝", name: "Raton", gloss: "Gấu mèo", drawing: "raccoon")],
         beats: [
             .narration("dishes.0",
@@ -231,7 +238,7 @@ extension Story {
     )
 
     static let meeting = Story(
-        id: "meeting", title: "La réunion", gloss: "Buổi họp", scene: "blueprint",
+        id: "meeting", intent: .reproach, title: "La réunion", gloss: "Buổi họp", scene: "blueprint",
         cast: [Animal(emoji: "🦉", name: "Chouette", gloss: "Cú", drawing: "owl"), Animal(emoji: "🦊", name: "Renard", gloss: "Cáo", drawing: "fox")],
         beats: [
             .narration("meeting.0",
@@ -273,7 +280,7 @@ extension Story {
     )
 
     static let neighbour = Story(
-        id: "neighbour", title: "Le voisin du dessus", gloss: "Hàng xóm tầng trên", scene: "braille-stars",
+        id: "neighbour", intent: .reproach, title: "Le voisin du dessus", gloss: "Hàng xóm tầng trên", scene: "braille-stars",
         cast: [Animal(emoji: "🐨", name: "Koala", gloss: "Gấu túi", drawing: "koala"), Animal(emoji: "🐶", name: "Chien", gloss: "Chó", drawing: "dog")],
         beats: [
             .narration("neighbour.0",
@@ -318,7 +325,7 @@ extension Story {
     )
 
     static let train = Story(
-        id: "train", title: "Le train annulé", gloss: "Chuyến tàu bị huỷ", scene: "departure-board",
+        id: "train", intent: .worry, title: "Le train annulé", gloss: "Chuyến tàu bị huỷ", scene: "departure-board",
         cast: [Animal(emoji: "🐢", name: "Tortue", gloss: "Rùa", drawing: "turtle"), Animal(emoji: "🦫", name: "Castor", gloss: "Hải ly", drawing: "beaver")],
         beats: [
             .narration("train.0",
@@ -360,7 +367,7 @@ extension Story {
     )
 
     static let birthday = Story(
-        id: "birthday", title: "L'anniversaire oublié", gloss: "Sinh nhật bị quên", scene: "aurora-snow",
+        id: "birthday", intent: .repair, title: "L'anniversaire oublié", gloss: "Sinh nhật bị quên", scene: "aurora-snow",
         cast: [Animal(emoji: "🐱", name: "Chat", gloss: "Mèo", drawing: "cat"), Animal(emoji: "🐼", name: "Panda", gloss: "Gấu trúc", drawing: "panda")],
         beats: [
             .narration("birthday.0",
@@ -402,7 +409,7 @@ extension Story {
     )
 
     static let beach = Story(
-        id: "beach", title: "À la plage", gloss: "Ở bãi biển", scene: "honu-lagoon",
+        id: "beach", intent: .worry, title: "À la plage", gloss: "Ở bãi biển", scene: "honu-lagoon",
         cast: [Animal(emoji: "🦭", name: "Phoque", gloss: "Hải cẩu", drawing: "seal"), Animal(emoji: "🐧", name: "Pingouin", gloss: "Chim cánh cụt", drawing: "penguin")],
         beats: [
             .narration("beach.0",
@@ -444,7 +451,7 @@ extension Story {
     )
 
     static let hike = Story(
-        id: "hike", title: "La randonnée", gloss: "Chuyến leo núi", scene: "vector-range",
+        id: "hike", intent: .reproach, title: "La randonnée", gloss: "Chuyến leo núi", scene: "vector-range",
         cast: [Animal(emoji: "🐘", name: "Éléphant", gloss: "Voi", drawing: "elephant"), Animal(emoji: "🐐", name: "Chèvre", gloss: "Dê", drawing: "goat")],
         beats: [
             .narration("hike.0",

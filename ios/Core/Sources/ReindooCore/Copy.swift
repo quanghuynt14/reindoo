@@ -179,10 +179,81 @@ public struct Copy: Equatable, Sendable {
 
     public var talkIntro: String {
         pick(
-            "The giraffe speaks from the heart: what happened, what I feel, what I need, what I ask. The jackal speaks in judgments. Short animal stories, one line at a time.",
-            "La girafe parle avec le cœur : ce qui s'est passé, ce que je ressens, ce dont j'ai besoin, ce que je demande. Le chacal parle en jugements. De courtes histoires d'animaux, une réplique à la fois.",
-            "Hươu cao cổ nói bằng trái tim: chuyện gì xảy ra, mình cảm thấy gì, cần gì, đề nghị gì. Chó rừng nói bằng phán xét. Những câu chuyện ngắn về các con vật, từng câu một."
+            "Before a hard conversation, or after an argument: pick the moment that looks like yours.",
+            "Avant une conversation difficile, ou après une dispute : choisissez le moment qui ressemble au vôtre.",
+            "Trước một cuộc nói chuyện khó, hay sau một trận cãi nhau: hãy chọn khoảnh khắc giống với bạn."
         )
+    }
+
+    /// Les quatre cartes du premier passage : qui sont les deux voix, et
+    /// pourquoi personne ne sera noté.
+    public var talkWelcome: [String] {
+        [
+            pick(
+                "Everyone has two voices. The jackal judges: « Tu es toujours en retard ! » The giraffe says what is going on inside: « J'étais inquiète, je t'attendais. »",
+                "Chacun a deux voix. Le chacal juge : « Tu es toujours en retard ! » La girafe dit ce qui se passe en elle : « J'étais inquiète, je t'attendais. »",
+                "Ai cũng có hai giọng nói. Chó rừng phán xét: « Tu es toujours en retard ! » Hươu nói điều đang diễn ra bên trong: « J'étais inquiète, je t'attendais. »"
+            ),
+            pick(
+                "The jackal isn't bad. He is hurt or tired, and he shouts because something he needs is missing. Here nobody chases him away: the giraffe listens to him and finds that need.",
+                "Le chacal n'est pas méchant. Il est blessé ou fatigué, et il crie parce qu'il lui manque quelque chose. Ici, personne ne le chasse : la girafe l'écoute et trouve ce besoin.",
+                "Chó rừng không xấu. Nó bị tổn thương hoặc mệt mỏi, và nó la lên vì đang thiếu một điều nó cần. Ở đây không ai đuổi nó đi: hươu lắng nghe nó và tìm ra nhu cầu ấy."
+            ),
+            pick(
+                "There are no grades here. Each answer shows you something: what the jackal meant, and the French the giraffe uses to say it. Take your time, skip what you like.",
+                "Ici, pas de note. Chaque réponse vous montre quelque chose : ce que le chacal voulait dire, et le français que la girafe emploie pour le dire. Prenez votre temps, passez ce que vous voulez.",
+                "Ở đây không có điểm số. Mỗi câu trả lời cho bạn thấy một điều: chó rừng thật ra muốn nói gì, và tiếng Pháp mà hươu dùng để nói điều đó. Cứ thong thả, muốn bỏ qua câu nào cũng được."
+            ),
+            pick(
+                "When to come here? Before a hard conversation, after an argument, or when something keeps going round in your head. Pick the situation that looks like yours.",
+                "Quand venir ici ? Avant une conversation difficile, après une dispute, ou quand quelque chose vous tourne dans la tête. Choisissez la situation qui ressemble à la vôtre.",
+                "Khi nào thì vào đây? Trước một cuộc nói chuyện khó, sau một trận cãi nhau, hay khi có điều gì cứ lởn vởn trong đầu. Hãy chọn tình huống giống với bạn."
+            ),
+        ]
+    }
+    public var talkWelcomeTitle: String { pick("Two voices", "Les deux voix", "Hai giọng nói") }
+    public var talkWelcomeLength: String { pick("1 min, to start", "1 min, pour commencer", "1 phút, để bắt đầu") }
+    public var talkWelcomeDone: String { pick("Choose a situation", "Choisir une situation", "Chọn một tình huống") }
+
+    public func intent(_ intent: Intent) -> (title: String, when: String) {
+        switch intent {
+        case .feel: (
+            pick("Knowing what I feel", "Savoir ce que je ressens", "Hiểu mình đang cảm thấy gì"),
+            pick("When something is bothering you, before you talk about it.", "Quand quelque chose vous travaille, avant d'en parler.", "Khi có điều gì làm bạn bận lòng, trước khi nói ra.")
+        )
+        case .reproach: (
+            pick("Saying what's wrong", "Dire ce qui ne va pas", "Nói ra điều không ổn"),
+            pick("When someone annoys you and you want to say it without hurting.", "Quand quelqu'un vous agace et que vous voulez le dire sans blesser.", "Khi ai đó làm bạn bực và bạn muốn nói ra mà không làm tổn thương.")
+        )
+        case .worry: (
+            pick("Saying you're worried", "Dire son inquiétude", "Nói ra nỗi lo"),
+            pick("When fear comes out as anger.", "Quand la peur sort en colère.", "Khi nỗi sợ bật ra thành cơn giận.")
+        )
+        case .refuse: (
+            pick("Saying no", "Dire non", "Nói không"),
+            pick("When you want to refuse without lying or feeling guilty.", "Quand vous voulez refuser sans mentir ni culpabiliser.", "Khi bạn muốn từ chối mà không phải nói dối hay áy náy.")
+        )
+        case .criticism: (
+            pick("Hearing a criticism", "Recevoir une critique", "Đón nhận lời chê"),
+            pick("When a remark stings.", "Quand une remarque vous pique.", "Khi một lời nhận xét làm bạn nhói lòng.")
+        )
+        case .repair: (
+            pick("Making amends", "Réparer", "Hàn gắn"),
+            pick("When you've hurt someone without meaning to.", "Quand vous avez blessé quelqu'un sans le vouloir.", "Khi bạn vô tình làm ai đó tổn thương.")
+        )
+        case .hint: (
+            pick("Hearing what isn't said", "Entendre ce qui n'est pas dit", "Nghe ra điều không nói"),
+            pick("When a remark has a second meaning.", "Quand une remarque a un double sens.", "Khi một câu nói có ẩn ý.")
+        )
+        case .agree: (
+            pick("Getting out of a disagreement", "Sortir d'un désaccord", "Thoát khỏi bất đồng"),
+            pick("When you each want something different.", "Quand vous voulez chacun autre chose.", "Khi mỗi người muốn một điều khác nhau.")
+        )
+        }
+    }
+    public var talkMix: String { pick("Mixed replay", "Pêle-mêle", "Ôn trộn") }
+    public func talkMixLines(_ count: Int) -> String {
+        pick("\(count) lines from these stories", "\(count) répliques de ces histoires", "\(count) câu từ các chuyện này")
     }
     public var giraffe: String { pick("Giraffe", "Girafe", "Hươu") }
     public var jackal: String { pick("Jackal", "Chacal", "Chó rừng") }
@@ -191,9 +262,33 @@ public struct Copy: Equatable, Sendable {
     public var rewriteQuestion: String { pick("What would the giraffe say?", "Que dirait la girafe ?", "Hươu sẽ nói thế nào?") }
     public var bodyQuestion: String { pick("Where do you feel it?", "Où le sent-on ?", "Cảm thấy ở đâu?") }
     public var needQuestion: String { pick("Which need do they share?", "Quel besoin partagent-ils ?", "Hai bạn chung nhu cầu nào?") }
+    public var hintQuestion: String { pick("What's behind it?", "Qu'y a-t-il derrière ?", "Đằng sau câu này là gì?") }
     public var continueHint: String { pick("Swipe up to go on", "Glissez vers le haut pour continuer", "Vuốt lên để đọc tiếp") }
-    public var rightAnswer: String { pick("Right", "Juste", "Đúng rồi") }
-    public var wrongAnswer: String { pick("Not quite", "Pas tout à fait", "Chưa đúng") }
+    public var heard: String { pick("Heard", "Bien entendu", "Nghe ra rồi") }
+    /// Une réponse à côté n'est pas une faute : on montre ce qu'il fallait entendre.
+    public func otherWay(_ kind: Beat.Kind) -> String {
+        switch kind {
+        case .body: pick("Here's the expression", "Voici l'expression", "Đây là thành ngữ")
+        case .need: pick("Here's the need they share", "Voici le besoin commun", "Đây là nhu cầu chung")
+        case .hint: pick("Here's what the giraffe hears", "Voici ce qu'entend la girafe", "Đây là điều hươu nghe thấy")
+        default: pick("Here's how the giraffe would say it", "Voici comment la girafe le dirait", "Hươu sẽ nói thế này")
+        }
+    }
+    public var giraffeWouldSay: String { pick("The giraffe would say", "La girafe dirait", "Hươu sẽ nói") }
+    public var giraffeFrench: String { pick("The giraffe's French", "Le français de la girafe", "Tiếng Pháp của hươu") }
+    public var lookUp: String { pick("Look it up", "Voir dans le dictionnaire", "Tra từ điển") }
+    public var writeOwn: String { pick("And you, how would you say it?", "Et vous, comment le diriez-vous ?", "Còn bạn, bạn sẽ nói thế nào?") }
+    public var writePlaceholder: String { pick("Your line, in French", "Votre phrase, en français", "Câu của bạn, bằng tiếng Pháp") }
+    public var keep: String { pick("Keep", "Garder", "Lưu") }
+    public var rereadOwn: String { pick("Read your line again:", "Relisez votre phrase :", "Đọc lại câu của bạn:") }
+    public func check(_ part: Part) -> String {
+        switch part {
+        case .observation: pick("I said what happened, without judging", "J'ai dit ce qui s'est passé, sans juger", "Mình đã nói chuyện gì xảy ra, không phán xét")
+        case .feeling: pick("I said what I feel", "J'ai dit ce que je ressens", "Mình đã nói mình cảm thấy gì")
+        case .need: pick("I said what I need", "J'ai dit ce dont j'ai besoin", "Mình đã nói mình cần gì")
+        case .request: pick("I asked for something they can do, or refuse", "J'ai demandé quelque chose de faisable, qu'on peut refuser", "Mình đã đề nghị một việc làm được, và người kia có thể từ chối")
+        }
+    }
     public func wasVoice(_ voice: Voice) -> String {
         switch voice {
         case .giraffe: pick("It's the giraffe", "C'est la girafe", "Đây là hươu")
@@ -209,27 +304,20 @@ public struct Copy: Equatable, Sendable {
         }
     }
     public var storyEnd: String { pick("End of the story", "Fin de l'histoire", "Hết chuyện") }
-    public var pileRight: String { pick("Right", "Justes", "Đúng") }
-    public var pileWrong: String { pick("Missed", "Ratées", "Sai") }
-    public var pileSkipped: String { pick("Passed without answering", "Passées sans répondre", "Lướt qua chưa trả lời") }
-    public var skippedNote: String {
-        pick(
-            "A card you pass is not a mistake. But a line you avoid here is one you'll avoid when you speak.",
-            "Une carte passée n'est pas une faute. Mais une réplique évitée ici, on l'évitera aussi en parlant.",
-            "Lướt qua không phải là sai. Nhưng câu nào né ở đây thì khi nói thật cũng sẽ né."
-        )
-    }
+    public var pileRight: String { pick("Heard", "Bien entendues", "Đã nghe ra") }
+    public var pileWrong: String { pick("To hear again", "À réentendre", "Nghe lại") }
+    /// Ni faute ni reproche : une carte passée attend, voilà tout.
+    public var pileSkipped: String { pick("Not yet", "Pas encore", "Chưa đến") }
+    public var pileOwn: String { pick("In your words", "Avec vos mots", "Bằng lời của bạn") }
+    public var formsTitle: String { pick("The giraffe's French in this story", "Le français de la girafe dans cette histoire", "Tiếng Pháp của hươu trong chuyện này") }
     public var playAgain: String { pick("Play again", "Rejouer", "Chơi lại") }
-    public var talkReview: String { pick("Lines to review", "Répliques à revoir", "Ôn lại câu sai") }
+    public var talkReview: String { pick("Lines to hear again", "Répliques à réentendre", "Nghe lại các câu") }
     public func talkReviewCount(_ count: Int) -> String {
         pick(
-            count == 1 ? "1 line you missed" : "\(count) lines you missed",
-            count == 1 ? "1 réplique ratée" : "\(count) répliques ratées",
-            "\(count) câu bạn trả lời sai"
+            count == 1 ? "1 line" : "\(count) lines",
+            count == 1 ? "1 réplique" : "\(count) répliques",
+            "\(count) câu"
         )
-    }
-    public func talkScore(_ right: Int, _ total: Int) -> String {
-        pick("\(right)/\(total) right", "\(right)/\(total) justes", "Đúng \(right)/\(total)")
     }
     public func talkLines(_ total: Int) -> String {
         pick("\(total) lines", "\(total) répliques", "\(total) câu")

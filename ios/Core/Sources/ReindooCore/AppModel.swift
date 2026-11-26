@@ -63,7 +63,15 @@ public final class AppModel: Introspectable {
         }
         search = SearchViewModel(lexicon: lexicon, user: user, copy: copy, open: looksUp)
         review = ReviewViewModel(lexicon: lexicon, user: user, copy: copy, shuffle: shuffle, chance: chance, open: revisits)
-        talk = TalkViewModel(user: user, copy: copy)
+        // Un mot ouvert depuis une histoire s'affiche par-dessus elle : on ne
+        // quitte pas l'histoire pour un mot. Un renvoi suivi depuis cette
+        // entrée la remplace.
+        talk = TalkViewModel(user: user, copy: copy) { [weak self] word in
+            EntryViewModel(
+                query: word, language: .french, lexicon: lexicon, user: user, copy: copy, remembers: false,
+                open: { word, _ in self?.talk.send(.lookUp(word)) }
+            )
+        }
         history = HistoryViewModel(lexicon: lexicon, user: user, copy: copy, open: revisits) { [weak self] in self?.countPending() }
         refresh()
     }

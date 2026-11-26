@@ -5,13 +5,11 @@ import SwiftUI
 private let paper = Color(red: 0.99, green: 0.97, blue: 0.93)
 private let pencil = Color(red: 0.2, green: 0.13, blue: 0.11)
 private let rightTint = Color(red: 0.22, green: 0.55, blue: 0.3)
-private let wrongTint = Color(red: 0.82, green: 0.42, blue: 0.16)
 
-/// « Giao tiếp » : les histoires, chacune sur son décor. En toucher une
-/// l'ouvre en plein écran, une carte à la fois, comme le reel.
+/// « Giao tiếp » : les histoires rangées par intention, chacune sur son décor.
+/// En toucher une l'ouvre en plein écran, une carte à la fois, comme le reel.
 struct TalkView: View {
     let model: TalkViewModel
-
 
     var body: some View {
         let state = model.state
@@ -20,10 +18,22 @@ struct TalkView: View {
                 Text(state.intro)
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .padding(.bottom, 4)
-                ForEach(state.stories) { row in
-                    Button { model.send(.open(row.id)) } label: { StoryRow(row: row) }
-                        .buttonStyle(.plain)
+                ForEach(state.sections) { section in
+                    VStack(alignment: .leading, spacing: 10) {
+                        if let title = section.title {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(title).font(.title3.weight(.bold))
+                                if let when = section.when {
+                                    Text(when).font(.subheadline).foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.top, 10)
+                        }
+                        ForEach(section.rows) { row in
+                            Button { model.send(.open(row.id)) } label: { StoryRow(row: row) }
+                                .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, Theme.margin)
@@ -50,7 +60,7 @@ private struct StoryRow: View {
     var body: some View {
         HStack(spacing: 14) {
             HStack(spacing: -12) {
-                ForEach(Array(row.cast.enumerated()), id: \.offset) { _, who in
+                ForEach(Array(row.cast.prefix(4).enumerated()), id: \.offset) { _, who in
                     if let sketch = who.sketch {
                         SketchView(.head(sketch))
                             .frame(width: 54, height: 54)
@@ -68,7 +78,7 @@ private struct StoryRow: View {
                 if !row.gloss.isEmpty {
                     Text(row.gloss).font(.subheadline).opacity(0.8)
                 }
-                Text(row.score).font(.caption.weight(.semibold)).opacity(0.75)
+                Text(row.detail).font(.caption.weight(.semibold)).opacity(0.75)
             }
             Spacer(minLength: 0)
             if row.isDone {
@@ -107,7 +117,7 @@ private struct StoryPlayer: View {
                     ForEach(Array(player.cards.enumerated()), id: \.element.id) { index, card in
                         // Seules la carte à l'écran et ses voisines existent.
                         if abs(index - player.position) <= 1 {
-                            TalkCard(card: card, player: player, isCurrent: index == player.position, ink: ink, model: model)
+                            TalkCard(card: card, player: player, ink: ink, model: model)
                                 .frame(width: page.size.width, height: height)
                                 .offset(y: CGFloat(index - player.position) * height + drag)
                                 .accessibilityHidden(index != player.position)
@@ -115,6 +125,9 @@ private struct StoryPlayer: View {
                     }
                 }
                 .frame(width: page.size.width, height: height, alignment: .top)
+                // Les cartes voisines s'arrêtent au bord : leur bas ne vient
+                // plus se glisser sous le titre.
+                .clipped()
                 .contentShape(.rect)
                 .simultaneousGesture(turnGesture(player, height: height))
                 .accessibilityScrollAction { edge in
@@ -134,21 +147,35 @@ private struct StoryPlayer: View {
                 .ignoresSafeArea()
             }
             .overlay(alignment: .top) {
-                HStack {
-                    Text(player.title).font(.headline)
-                    Spacer()
+                HStack(spacing: 10) {
+                    Text(player.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(paper.opacity(0.85), in: .capsule)
+                    Spacer(minLength: 0)
                     Text("\(player.position + 1)/\(player.cards.count)")
                         .font(.caption.monospacedDigit().weight(.semibold))
-                        .opacity(0.7)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(paper.opacity(0.85), in: .capsule)
                     Button { model.send(.close) } label: {
                         Hand.glyph(.cross, size: 18)
                             .frame(width: 40, height: 40)
-                            .background(ink.opacity(0.16), in: .circle)
+                            .background(paper.opacity(0.85), in: .circle)
                     }
                     .accessibilityLabel(player.closeLabel)
                 }
                 .padding(.horizontal, Theme.margin)
                 .padding(.top, 4)
+            }
+            // Un mot du français de la girafe, ouvert sans quitter l'histoire.
+            .sheet(isPresented: Binding(
+                get: { model.state.lookingUp != nil },
+                set: { if !$0 { model.send(.closeLookUp) } }
+            )) {
+                if let entry = model.entry {
+                    NavigationStack { EntryView(model: entry) }
+                }
             }
             .onDisappear { Speaker.shared.stop() }
         }
@@ -187,27 +214,33 @@ private struct StoryPlayer: View {
 private struct TalkCard: View {
     let card: TalkViewModel.Card
     let player: TalkViewModel.Player
-    let isCurrent: Bool
     let ink: Color
     let model: TalkViewModel
 
     @State private var swipe: CGFloat = 0
     @State private var bobbing = false
+    /// La forme girafe dont on lit l'explication.
+    @State private var form: GiraffeForm?
+    /// Le mot à ouvrir une fois l'explication refermée : deux feuilles ne
+    /// montent pas en même temps.
+    @State private var pendingWord: String?
+    @State private var writing = false
+    @State private var draft = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let threshold: CGFloat = 90
 
     var body: some View {
-        VStack(spacing: 22) {
-            Spacer(minLength: 60)
+        VStack(spacing: 18) {
+            Spacer(minLength: 56)
             switch card.kind {
             case .narration: narration
             case .sort: sort
-            case .rewrite, .body, .need: choosing
+            case .rewrite, .body, .need, .hint: choosing
             case .report: report
             }
-            Spacer(minLength: 40)
-            if card.kind == .narration || card.isAnswered {
+            Spacer(minLength: 32)
+            if card.done == nil, card.kind == .narration || card.isAnswered {
                 Label { Text(player.continueHint) } icon: { Hand.glyph(.up, size: 14) }
                     .font(.caption.weight(.semibold))
                     .opacity(0.65)
@@ -216,13 +249,23 @@ private struct TalkCard: View {
         .padding(.horizontal, Theme.margin)
         .padding(.bottom, 24)
         .onAppear { bobbing = true }
+        // Une réponse à côté ne vibre pas comme une erreur : un simple toucher.
         .sensoryFeedback(trigger: card.verdict) { _, verdict in
             switch verdict {
             case .right: .success
-            case .wrong: .error
+            case .wrong: .impact(weight: .light)
             case nil: nil
             }
         }
+        .sheet(item: $form, onDismiss: {
+            if let word = pendingWord {
+                pendingWord = nil
+                model.send(.lookUp(word))
+            }
+        }) { form in
+            formSheet(form)
+        }
+        .sheet(isPresented: $writing) { writeSheet }
     }
 
     // MARK: Les personnages
@@ -272,19 +315,19 @@ private struct TalkCard: View {
         }
     }
 
-    /// L'humeur suit la réponse : la girafe se réjouit d'un bon tri, le chacal
-    /// boude d'un mauvais et se radoucit d'un bon.
+    /// L'humeur suit la réponse. Le chacal ne boude plus d'une réponse à
+    /// côté : quand on l'a entendu, il se radoucit, quelle que soit la réponse.
     private var giraffeMood: Sketch {
         .giraffe(card.verdict == .right ? .happy : card.isAnswered ? .listening : .calm)
     }
     private var jackalMood: Sketch {
-        .jackal(card.verdict == .right ? .soft : card.verdict == .wrong ? .sulky : .cross)
+        .jackal(card.isAnswered ? .soft : .cross)
     }
 
     private var speaker: some View {
         HStack(spacing: 10) {
             if let who = card.cast.first {
-                portrait(who, size: 64)
+                portrait(who, size: 60)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(who.name).font(.headline)
                     Text(who.gloss).font(.caption).opacity(0.75)
@@ -324,11 +367,11 @@ private struct TalkCard: View {
     // MARK: Les cartes
 
     private var narration: some View {
-        VStack(spacing: 26) {
+        VStack(spacing: 24) {
             HStack(spacing: 28) {
-                ForEach(Array(card.cast.enumerated()), id: \.offset) { index, who in
+                ForEach(Array(card.cast.prefix(4).enumerated()), id: \.offset) { index, who in
                     VStack(spacing: 4) {
-                        portrait(who, size: 78, delay: Double(index) * 0.4)
+                        portrait(who, size: card.cast.count > 2 ? 54 : 78, delay: Double(index) * 0.4)
                         Text(who.name).font(.caption.weight(.semibold))
                     }
                 }
@@ -336,15 +379,29 @@ private struct TalkCard: View {
             Text(card.text)
                 .font(.system(.title3, design: .serif))
                 .multilineTextAlignment(.center)
-            Text(card.gloss)
-                .font(.callout)
-                .multilineTextAlignment(.center)
-                .opacity(0.75)
+                .padding(16)
+                .background(paper.opacity(0.8), in: .rect(cornerRadius: 18))
+            if !card.gloss.isEmpty {
+                Text(card.gloss)
+                    .font(.callout)
+                    .multilineTextAlignment(.center)
+                    .opacity(0.75)
+            }
+            if let done = card.done {
+                Button { model.send(.close) } label: {
+                    Text(done)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .background(paper.opacity(0.9), in: .capsule)
+                        .overlay(Capsule().stroke(ink.opacity(0.25)))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
     private var sort: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 16) {
             speaker
             ZStack(alignment: .top) {
                 // Le français d'abord : la traduction vient avec la réponse.
@@ -417,37 +474,189 @@ private struct TalkCard: View {
             }
             .padding(.leading, 6)
             .frame(maxWidth: .infinity, minHeight: 56)
-            .background(ink.opacity(0.16), in: .capsule)
+            .background(paper.opacity(0.8), in: .capsule)
+            .overlay(Capsule().stroke(ink.opacity(0.2)))
         }
         .buttonStyle(.plain)
     }
 
-    /// Le verdict, le temps de la phrase, et pourquoi.
+    /// Après la réponse : qui parlait, pourquoi, comment la girafe le dirait,
+    /// et le français qui fait parler girafe. Rien de rouge, rien de barré.
     private var verdict: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Hand.glyph(card.verdict == .right ? .right : .wrong, size: 22)
-                    .foregroundStyle(card.verdict == .right ? rightTint : wrongTint)
+                if card.verdict == .right {
+                    Hand.glyph(.right, size: 22).foregroundStyle(rightTint)
+                } else {
+                    head(card.voice == .jackal ? .jackal(.soft) : .giraffe(.listening), size: 26)
+                }
                 Text(card.verdictLabel ?? "").font(.headline)
                 Spacer()
                 if let part = card.part {
                     Text(part)
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(ink.opacity(0.16), in: .capsule)
+                        .background(ink.opacity(0.12), in: .capsule)
                 }
             }
             Text(card.why).font(.callout).fixedSize(horizontal: false, vertical: true)
+            if let translation = card.translation {
+                HStack(alignment: .top, spacing: 8) {
+                    head(.giraffe(.happy), size: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(player.giraffeWouldSay).font(.caption.weight(.bold)).opacity(0.7)
+                        Text(translation)
+                            .font(.system(.callout, design: .serif).weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(rightTint.opacity(0.12), in: .rect(cornerRadius: 14))
+            }
+            if !card.forms.isEmpty { formChips(card.forms) }
+            if card.canWrite { ownLine }
         }
-        .padding(16)
+        .padding(14)
         .background(paper.opacity(0.92), in: .rect(cornerRadius: 18))
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
+    private func chip(_ item: GiraffeForm) -> some View {
+        Button { form = item } label: {
+            Text(item.phrase)
+                .font(.system(.footnote, design: .serif).weight(.semibold))
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(rightTint.opacity(0.14), in: .capsule)
+                .overlay(Capsule().stroke(rightTint.opacity(0.35)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Les formes girafe, en pastilles : on touche pour lire pourquoi.
+    private func formChips(_ forms: [GiraffeForm]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(player.giraffeFrench).font(.caption.weight(.bold)).opacity(0.7)
+            FlowLayout(spacing: 6) {
+                ForEach(forms) { chip($0) }
+            }
+        }
+    }
+
+    private func formSheet(_ form: GiraffeForm) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                head(.giraffe(.happy), size: 40)
+                Text(player.giraffeFrench).font(.headline)
+            }
+            Text(form.phrase).font(.system(.title2, design: .serif).weight(.semibold))
+            Text(form.note).font(.body).fixedSize(horizontal: false, vertical: true)
+            Button {
+                pendingWord = form.word
+                self.form = nil
+            } label: {
+                Text("\(player.lookUpLabel) · \(form.word)")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(ink.opacity(0.1), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 0)
+        }
+        .padding(Theme.margin)
+        .foregroundStyle(ink)
+        .presentationDetents([.medium])
+        .presentationBackground(paper)
+    }
+
+    /// Sa propre phrase : on l'écrit, puis on la relit soi-même. Personne ne
+    /// la corrige ; les quatre questions aident à l'entendre.
+    private var ownLine: some View {
+        Button {
+            draft = card.written ?? ""
+            writing = true
+        } label: {
+            HStack(spacing: 8) {
+                Hand.glyph(.talk, size: 18)
+                Text(card.written.map { "« \($0) »" } ?? player.writeLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .background(ink.opacity(0.06), in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(ink.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var writeSheet: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(player.writeLabel).font(.title3.weight(.bold))
+                HStack(alignment: .top, spacing: 8) {
+                    head(.jackal(.soft), size: 32)
+                    Text(card.text).font(.system(.callout, design: .serif)).opacity(0.8)
+                }
+                TextField(player.writePlaceholder, text: $draft, axis: .vertical)
+                    .lineLimit(3...6)
+                    .font(.system(.title3, design: .serif))
+                    .padding(12)
+                    .background(.white.opacity(0.7), in: .rect(cornerRadius: 14))
+                    .textInputAutocapitalization(.sentences)
+                Button {
+                    model.send(.write(card.id, draft))
+                } label: {
+                    Text(player.keepLabel)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(ink.opacity(0.12), in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                if card.written != nil {
+                    Text(player.rereadLabel).font(.headline).padding(.top, 6)
+                    ForEach(player.checks, id: \.part) { check in
+                        Button { model.send(.check(card.id, check.part)) } label: {
+                            HStack(spacing: 10) {
+                                Group {
+                                    if card.checked.contains(check.part) {
+                                        Hand.glyph(.check, size: 20).foregroundStyle(rightTint)
+                                    } else {
+                                        Circle().stroke(ink.opacity(0.4), lineWidth: 1.5).frame(width: 20, height: 20)
+                                    }
+                                }
+                                .frame(width: 24)
+                                Text(check.label).font(.callout).multilineTextAlignment(.leading)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if let giraffe = card.choices.first(where: \.isRight) {
+                        HStack(alignment: .top, spacing: 8) {
+                            head(.giraffe(.happy), size: 32)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(player.giraffeWouldSay).font(.caption.weight(.bold)).opacity(0.7)
+                                Text(giraffe.text).font(.system(.callout, design: .serif).weight(.semibold))
+                            }
+                        }
+                        .padding(.top, 6)
+                    }
+                }
+            }
+            .padding(Theme.margin)
+        }
+        .foregroundStyle(ink)
+        .presentationDetents([.medium, .large])
+        .presentationBackground(paper)
+    }
+
     /// Les cartes où l'on choisit : reformuler, compléter une expression du
-    /// corps, trouver le besoin commun. Seul l'en-tête change.
+    /// corps, trouver le besoin commun, entendre un sous-entendu.
     private var choosing: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             switch card.kind {
             case .body:
                 // Le trou se remplit à la réponse : l'expression entière reste à l'écran.
@@ -464,103 +673,138 @@ private struct TalkCard: View {
                         bubble(line, gloss: card.isAnswered ? gloss : nil)
                     }
                 }
-            default:
+            case .rewrite:
                 speaker
                 HStack(alignment: .top, spacing: 8) {
                     head(jackalMood, size: 44)
                     bubble(card.text, gloss: card.isAnswered ? card.gloss : nil)
                 }
+            default:
+                speaker
+                bubble(card.text, gloss: card.isAnswered ? card.gloss : nil)
             }
-            if let question = card.question {
+            if let question = card.question, !card.isAnswered {
                 HStack(spacing: 8) {
-                    if card.kind == .rewrite { head(giraffeMood, size: 30) }
+                    if card.kind == .rewrite || card.kind == .hint { head(giraffeMood, size: 30) }
                     Text(question).font(.headline)
                 }
             }
             // Les choix courts (une partie du corps, un besoin) tiennent sur deux colonnes.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: card.kind == .rewrite ? 1 : 2), spacing: 10) {
-                choiceButtons
+            let wide = card.kind == .rewrite || card.kind == .hint
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: wide ? 1 : 2), spacing: 8) {
+                choiceButtons(wide: wide)
             }
             if card.isAnswered { verdict }
         }
+        .animation(.smooth(duration: 0.35), value: card.verdict)
     }
 
-    private var choiceButtons: some View {
+    /// Une fois la réponse donnée, seules restent la proposition girafe et
+    /// celle qu'on avait choisie : la carte tient dans l'écran.
+    private func choiceButtons(wide: Bool) -> some View {
         ForEach(Array(card.choices.enumerated()), id: \.offset) { index, choice in
-            Button {
-                withAnimation(.smooth(duration: 0.35)) { model.send(.choose(card.id, index)) }
-            } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(choice.text).font(.body.weight(.medium))
-                        .fixedSize(horizontal: false, vertical: true)
-                    if card.isAnswered {
-                        Text(choice.gloss).font(.caption).opacity(0.8)
-                    }
-                }
-                .multilineTextAlignment(.leading)
-                .padding(card.kind == .rewrite ? 14 : 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(fill(choice, at: index), in: .rect(cornerRadius: 16))
-                .overlay(alignment: .topTrailing) {
-                    if card.isAnswered, choice.isRight {
-                        Group {
-                            if card.kind == .rewrite { head(.giraffe(.happy), size: 24) } else { Hand.glyph(.check, size: 16).foregroundStyle(rightTint) }
+            if !card.isAnswered || choice.isRight || card.picked == index {
+                Button {
+                    withAnimation(.smooth(duration: 0.35)) { model.send(.choose(card.id, index)) }
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(choice.text).font(.body.weight(.medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                        if card.isAnswered {
+                            Text(choice.gloss).font(.caption).opacity(0.8)
                         }
-                        .padding(6)
+                    }
+                    .multilineTextAlignment(.leading)
+                    .padding(wide ? 12 : 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(fill(choice), in: .rect(cornerRadius: 16))
+                    .overlay {
+                        // Le choix à côté reste lisible, en pointillé : ni rouge ni barré.
+                        if card.isAnswered, !choice.isRight {
+                            RoundedRectangle(cornerRadius: 16).stroke(ink.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if card.isAnswered, choice.isRight {
+                            Group {
+                                if wide { head(.giraffe(.happy), size: 24) } else { Hand.glyph(.check, size: 16).foregroundStyle(rightTint) }
+                            }
+                            .padding(6)
+                        }
                     }
                 }
+                .buttonStyle(.plain)
+                .disabled(card.isAnswered)
             }
-            .buttonStyle(.plain)
-            .disabled(card.isAnswered)
         }
     }
 
-    private func fill(_ choice: TalkViewModel.Choice, at index: Int) -> Color {
-        guard card.isAnswered else { return paper.opacity(0.8) }
-        if choice.isRight { return rightTint.opacity(0.3) }
-        if card.picked == index { return wrongTint.opacity(0.3) }
-        return paper.opacity(0.45)
+    private func fill(_ choice: TalkViewModel.Choice) -> Color {
+        guard card.isAnswered else { return paper.opacity(0.85) }
+        return choice.isRight ? rightTint.opacity(0.22) : paper.opacity(0.6)
     }
 
     @ViewBuilder
     private var report: some View {
         if let report = card.report {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 // La fin d'une histoire : la girafe et le chacal, côte à côte.
                 SketchView(.scene(.together))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 150)
+                    .frame(width: 128, height: 110)
                     .clipShape(.rect(cornerRadius: 16))
-                Text(report.title).font(.title.weight(.bold))
-                pile(report.right, glyph: .right, tint: rightTint)
-                pile(report.wrong, glyph: .wrong, tint: wrongTint)
-                // Ni rouge ni barré : passer n'est pas une faute.
-                pile(report.skipped, glyph: .skip, tint: ink.opacity(0.7))
-                Text(report.note).font(.footnote).opacity(0.8)
+                    .frame(maxWidth: .infinity)
+                Text(report.title).font(.title2.weight(.bold))
+                HStack(spacing: 8) {
+                    tally(report.right, glyph: .right, tint: rightTint)
+                    tally(report.wrong, glyph: .again, tint: ink.opacity(0.7))
+                    // Ni rouge ni barré : passer n'est pas une faute.
+                    tally(report.skipped, glyph: .skip, tint: ink.opacity(0.5))
+                }
+                if !report.own.lines.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(report.own.label).font(.headline)
+                        ForEach(Array(report.own.lines.prefix(2).enumerated()), id: \.offset) { _, line in
+                            Text("« \(line) »").font(.system(.callout, design: .serif)).lineLimit(2)
+                        }
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(paper.opacity(0.88), in: .rect(cornerRadius: 14))
+                }
+                if !report.forms.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(report.formsTitle).font(.headline)
+                        FlowLayout(spacing: 6) {
+                            ForEach(report.forms) { chip($0) }
+                        }
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(paper.opacity(0.88), in: .rect(cornerRadius: 14))
+                }
                 Button { withAnimation { model.send(.replay) } } label: {
                     Label { Text(report.playAgain) } icon: { Hand.glyph(.again, size: 20) }
                         .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                        .background(ink.opacity(0.18), in: .capsule)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(paper.opacity(0.9), in: .capsule)
+                        .overlay(Capsule().stroke(ink.opacity(0.25)))
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 
-    private func pile(_ pile: TalkViewModel.Report.Pile, glyph: Glyph, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Hand.glyph(glyph, size: 20).foregroundStyle(tint)
-                Text(pile.label).font(.headline)
-                Spacer()
-                Text("\(pile.lines.count)").font(.headline.monospacedDigit())
+    /// Un compte, sans jugement : combien, pas « bien » ou « mal ».
+    private func tally(_ pile: TalkViewModel.Report.Pile, glyph: Glyph, tint: Color) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Hand.glyph(glyph, size: 16).foregroundStyle(tint)
+                Text("\(pile.lines.count)").font(.title3.monospacedDigit().weight(.bold))
             }
-            ForEach(Array(pile.lines.prefix(3).enumerated()), id: \.offset) { _, line in
-                Text(line).font(.caption).lineLimit(1).opacity(0.75)
-            }
+            Text(pile.label).font(.caption2.weight(.semibold)).multilineTextAlignment(.center).lineLimit(2)
         }
-        .padding(12)
+        .padding(.vertical, 10).padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
         .background(paper.opacity(0.88), in: .rect(cornerRadius: 14))
     }
 }

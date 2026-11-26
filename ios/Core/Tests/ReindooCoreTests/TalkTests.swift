@@ -4,14 +4,102 @@ import Testing
 
 @MainActor
 @Suite struct Talk {
-    @Test func theTabListsEveryStoryUnplayed() throws {
+    @Test func theTabOpensOnTheWelcomeThenSectionsByIntent() throws {
         let app = try Harness()
         try app.do("selectTab", #"{"name":"talk"}"#)
         #expect(try app.screen == "talk")
-        let rows = try #require(try app.state("stories", as: [[String: Any]].self))
-        #expect(rows.count == Story.all.count, "pas de « à revoir » avant la première faute")
-        #expect(rows.first?["title"] as? String == "Encore en retard")
-        #expect(rows.first?["score"] as? String == Harness.copy.talkLines(6))
+        #expect(try app.state("sections.0.rows.0.id") == TalkViewModel.welcomeID, "l'accueil en tête, pas imposé")
+        let sections = try #require(try app.state("sections", as: [[String: Any]].self))
+        #expect(sections.count == Intent.allCases.count + 1)
+        #expect(try app.state("sections.1.title") == Harness.copy.intent(.feel).title)
+        #expect(try app.state("sections.1.when") == Harness.copy.intent(.feel).when)
+        #expect(try app.state("sections.2.rows.0.title") == "Encore en retard")
+        #expect(try app.state("sections.2.rows.0.detail") == Harness.copy.talkLines(6))
+        let rows = sections.flatMap { $0["rows"] as? [[String: Any]] ?? [] }
+        #expect(rows.count == Story.all.count + 1)
+    }
+
+    @Test func theWelcomeIsReadOnceThenMovesDown() throws {
+        let app = try Harness()
+        try app.do("selectTab", #"{"name":"talk"}"#)
+        try app.do("open", #"{"name":"welcome"}"#)
+        let cards = try #require(try app.state("player.cards", as: [[String: Any]].self))
+        #expect(cards.count == 4, "pas de bilan après l'accueil")
+        #expect(try app.state("player.cards.3.done") == Harness.copy.talkWelcomeDone)
+        try app.do("close")
+        #expect(try app.state("sections.0.id") == Intent.feel.rawValue)
+        let sections = try #require(try app.state("sections", as: [[String: Any]].self))
+        #expect(try app.state("sections.\(sections.count - 1).rows.0.id") == TalkViewModel.welcomeID)
+    }
+
+    @Test func aJackalLineShowsWhatTheGiraffeWouldSay() throws {
+        let app = try Harness()
+        try app.do("selectTab", #"{"name":"talk"}"#)
+        try app.do("open", #"{"name":"late"}"#)
+        try app.do("setPosition", #"{"index":1}"#)
+        #expect(try app.state("player.cards.1.translation") == "Je t'attends depuis vingt minutes, et c'est la troisième fois ce mois-ci.")
+        try app.do("sort", #"{"name":"giraffe"}"#)
+        // Pas de « faux » : on dit qui parlait.
+        #expect(try app.state("player.cards.1.verdictLabel") == Harness.copy.wasVoice(.jackal))
+        let forms = try #require(try app.state("player.cards.1.forms", as: [[String: Any]].self))
+        #expect(forms.contains { $0["id"] as? String == "facts" })
+    }
+
+    @Test func aWordOpensInTheDictionaryOverTheStory() throws {
+        let app = try Harness()
+        try app.do("selectTab", #"{"name":"talk"}"#)
+        try app.do("lookUp", #"{"word":"besoin"}"#)
+        #expect(try app.screen == "talk", "rien à ouvrir hors d'une histoire")
+        try app.do("open", #"{"name":"late"}"#)
+        try app.do("lookUp", #"{"word":"besoin"}"#)
+        #expect(try app.screen == "entry", "l'entrée est par-dessus l'histoire")
+        try app.do("closeLookUp")
+        #expect(try app.screen == "story")
+        #expect(try app.state("player.storyID") == "late", "l'histoire est restée ouverte")
+    }
+
+    @Test func aRewriteTakesYourOwnLineAndYourChecks() throws {
+        let app = try Harness()
+        try app.do("selectTab", #"{"name":"talk"}"#)
+        try app.do("open", #"{"name":"late"}"#)
+        try app.do("setPosition", #"{"index":6}"#)
+        #expect(try app.state("player.cards.6.kind") == "rewrite")
+        try app.do("write", #"{"text":"  J'aimerais que tu me préviennes.  "}"#)
+        #expect(try app.state("player.cards.6.written") == "J'aimerais que tu me préviennes.")
+        try app.do("check", #"{"name":"request"}"#)
+        try app.do("check", #"{"name":"feeling"}"#)
+        try app.do("check", #"{"name":"request"}"#)
+        #expect(try app.state("player.cards.6.checked", as: [String].self) == ["feeling"])
+        let last = try #require(try app.state("player.cards", as: [[String: Any]].self)).count - 1
+        #expect(try app.state("player.cards.\(last).report.own.lines", as: [String].self) == ["J'aimerais que tu me préviennes."])
+        // On la retrouve en rejouant.
+        try app.do("replay")
+        #expect(try app.state("player.cards.6.written") == "J'aimerais que tu me préviennes.")
+    }
+
+    @Test func aMixOpensOnceTwoStoriesOfAnIntentAreDone() throws {
+        let app = try Harness()
+        try app.do("selectTab", #"{"name":"talk"}"#)
+        for id in ["beach", "train"] {
+            try app.do("open", #"{"name":"\#(id)"}"#)
+            let cards = try #require(try app.state("player.cards", as: [[String: Any]].self))
+            for (index, card) in cards.enumerated() {
+                try app.do("setPosition", #"{"index":\#(index)}"#)
+                switch card["kind"] as? String {
+                case "sort": try app.do("sort", #"{"name":"jackal"}"#)
+                case "rewrite": try app.do("choose", #"{"index":0}"#)
+                default: break
+                }
+            }
+            try app.do("close")
+        }
+        let sections = try #require(try app.state("sections", as: [[String: Any]].self))
+        let worry = try #require(sections.first { $0["id"] as? String == "worry" })
+        let rows = try #require(worry["rows"] as? [[String: Any]])
+        #expect(rows.last?["id"] as? String == "mix.worry")
+        try app.do("open", #"{"name":"mix.worry"}"#)
+        let ids = try #require(try app.state("player.cards", as: [[String: Any]].self)).compactMap { $0["id"] as? String }
+        #expect(ids.prefix(2).map { $0.split(separator: ".").first.map(String.init) } == ["beach", "train"], "les histoires alternent")
     }
 
     @Test func aSortedLineIsCommittedAndExplained() throws {
@@ -62,8 +150,7 @@ import Testing
         try app.do("sort", #"{"name":"giraffe"}"#)
         try app.do("close")
 
-        #expect(try app.state("stories.0.id") == TalkViewModel.reviewID)
-        #expect(try app.state("stories.1.score") == Harness.copy.talkScore(0, 6))
+        #expect(try app.state("sections.0.rows.1.id") == TalkViewModel.reviewID)
         #expect(try app.app.user.pendingCount() == queued, "les réponses restent sur l'appareil")
 
         try app.do("open", #"{"name":"review"}"#)
@@ -71,7 +158,7 @@ import Testing
         #expect(try app.state("player.cards.0.verdict", as: String.self) == nil, "on la rejoue de zéro")
         try app.do("sort", #"{"name":"jackal"}"#)
         try app.do("close")
-        #expect(try app.state("stories.0.id") == "late", "plus rien à revoir")
+        #expect(try app.state("sections.0.rows", as: [[String: Any]].self)?.count == 1, "plus rien à revoir")
     }
 
     @Test func aRewriteIsRightOnlyForTheGiraffe() throws {
@@ -131,7 +218,7 @@ import Testing
                 switch beat.kind {
                 case .narration: #expect(beat.speaker == nil)
                 case .sort: #expect(beat.voice != nil && beat.part != nil && !beat.why.isEmpty)
-                case .rewrite, .body, .need:
+                case .rewrite, .body, .need, .hint:
                     #expect(beat.choices.filter(\.isRight).count == 1, "\(beat.id) : une seule bonne réponse")
                     #expect(beat.choices.allSatisfy { !$0.text.isEmpty && !$0.gloss.isEmpty })
                     #expect(!beat.why.isEmpty)
@@ -148,6 +235,13 @@ import Testing
             // suffit de toujours répondre pareil.
             let voices = Set(story.beats.filter { $0.kind == .sort }.compactMap(\.voice))
             #expect(voices.isEmpty || voices == [.giraffe, .jackal], "\(story.id)")
+        }
+        // Chaque histoire montre du français de girafe, sauf celle du corps,
+        // qui n'a pas de phrase girafe.
+        let model = TalkViewModel(user: try! UserStore(path: ":memory:"), copy: Harness.copy)
+        for story in Story.all where story.id != "body" {
+            let forms = story.beats.flatMap { model.card($0, in: story).forms }
+            #expect(!forms.isEmpty, "\(story.id) : aucune forme girafe")
         }
         // La bonne reformulation ne tombe pas toujours au même rang.
         let places = Set(Story.all.flatMap(\.beats).filter { $0.kind == .rewrite }.compactMap {

@@ -28,10 +28,11 @@ public struct Still: Hashable, Sendable {
     /// En pixels. Une tête s'affiche jusqu'à 80 points sur un écran 3× ; un
     /// décor de pastel flou se contente de 1,25 pixel par point sur le plus
     /// grand iPhone, une bande de 1,5 pour une ligne de 370 × 100 points.
+    /// Une scène garde les proportions de son dessin : rien autour à combler.
     public var size: (width: Int, height: Int) {
         switch use {
         case .head: (240, 240)
-        case .scene: (960, 400)
+        case .scene: (700, 600)
         case .backdrop: (550, 1196)
         case .band: (556, 150)
         }
