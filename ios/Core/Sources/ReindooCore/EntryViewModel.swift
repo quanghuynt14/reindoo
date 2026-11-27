@@ -199,13 +199,18 @@ public final class EntryViewModel: Introspectable, Identifiable {
         let own = parts.filter(\.own).compactMap(\.sense.en)
         let wiki = parts.filter { !$0.own && $0.language == third }.map { part in
             // « calm; peaceful; at ease » : le premier mot suffit en tête.
-            String(Text.bareSense(part.explain).split(separator: ";").first ?? "")
-                .trimmingCharacters(in: .whitespaces)
+            // « Maison. Note d'usage : … » : la première phrase aussi.
+            let bare = Text.bareSense(part.explain)
+            let first = bare.components(separatedBy: ". ").first ?? bare
+            return String(first.split(separator: ";").first ?? "").trimmingCharacters(in: .whitespaces)
         }
         for line in (own.isEmpty ? wiki : own) {
             let short = line.replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
                 .trimmingCharacters(in: CharacterSet(charactersIn: " ,;."))
-            if !short.isEmpty, !lines.contains(short) { lines.append(short) }
+            // « Maison » deux fois, l'une avec un point : une seule ligne.
+            if !short.isEmpty, !lines.contains(where: { $0.caseInsensitiveCompare(short) == .orderedSame }) {
+                lines.append(short)
+            }
             if lines.count == 3 { break }
         }
         guard !lines.isEmpty else { return (senses, home, nil) }
