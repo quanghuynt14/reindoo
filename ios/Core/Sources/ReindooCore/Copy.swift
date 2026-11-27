@@ -111,6 +111,19 @@ public struct Copy: Equatable, Sendable {
     /// Au-dessus des sens écrits pour l'app, puis de ceux du Wiktionnaire.
     public var ownSenses: String { "Reindoo" }
     public var wiktionarySenses: String { pick("From Wiktionary", "Du Wiktionnaire", "Từ Wiktionary") }
+    /// Quand l'entrée mêle deux langues de glose, chaque partie dit la sienne.
+    public func wiktionarySenses(in language: Language) -> String {
+        "\(wiktionarySenses) · \(languageInline(language))"
+    }
+    /// L'étiquette courte devant une ligne de glose : « EN », « FR », « VI ».
+    /// Un code, pas un mot : il se lit pareil dans les trois interfaces.
+    public func languageTag(_ language: Language) -> String {
+        switch language {
+        case .french: "FR"
+        case .english: "EN"
+        case .vietnamese: "VI"
+        }
+    }
 
     // MARK: Historique
 

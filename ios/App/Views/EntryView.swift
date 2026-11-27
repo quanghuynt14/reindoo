@@ -84,10 +84,23 @@ struct EntryView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-            Text(state.translated)
-                .font(.title2.weight(.medium))
-                .foregroundStyle(.tint)
-                .padding(.top, 6)
+            // Les deux autres langues, l'une sous l'autre, chacune étiquetée.
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if let tag = state.translatedTag { LanguageTag(tag) }
+                Text(state.translated)
+                    .font(.title2.weight(.medium))
+                    .foregroundStyle(.tint)
+            }
+            .padding(.top, 6)
+            if let also = state.alsoTranslated, let tag = state.alsoTranslatedTag {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    LanguageTag(tag)
+                    Text(also)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityIdentifier("entry.alsoTranslated")
+            }
         }
 
         if state.matchedNote != nil || !state.alsoFrom.isEmpty {
@@ -119,9 +132,20 @@ struct EntryView: View {
                             .font(.subheadline.weight(.semibold).monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
-                    Text(sense.explain)
-                        .font(Theme.entryBody)
-                        .textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(sense.explain)
+                            .font(Theme.entryBody)
+                            .textSelection(.enabled)
+                        if let english = sense.english {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                LanguageTag(sense.englishTag)
+                                Text(english)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
                 }
                 ForEach(sense.examples, id: \.sourceSentence) { example in
                     VStack(alignment: .leading, spacing: 2) {
@@ -258,5 +282,22 @@ struct FlowLayout: Layout {
             widest = max(widest, x - spacing)
         }
         return (CGSize(width: widest, height: y + rowHeight), origins)
+    }
+}
+
+/// « EN », « VI » : la langue d'une ligne, en petit, devant elle.
+private struct LanguageTag: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.bold).monospaced())
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(.tertiary, lineWidth: 1))
+            .accessibilityHidden(true)
     }
 }

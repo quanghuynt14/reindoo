@@ -66,6 +66,7 @@ struct PackedSense: Codable {
     var x: [[String]]?   // exemples : [phrase, traduction]
     var o: String?       // note
     var r: Bool?         // vrai : entrée reindoo
+    var g: String?       // le même sens en anglais (entrées reindoo)
 
     init(_ sense: Sense) {
         e = sense.explain
@@ -74,6 +75,7 @@ struct PackedSense: Codable {
         x = sense.exampleSentences.isEmpty ? nil : sense.exampleSentences.map { [$0.sourceSentence, $0.targetTranslation] }
         o = sense.note?.isEmpty == false ? sense.note : nil
         r = sense.isOwn ? true : nil
+        g = sense.en?.isEmpty == false ? sense.en : nil
     }
 
     var sense: Sense {
@@ -82,7 +84,7 @@ struct PackedSense: Codable {
             exampleSentences: (x ?? []).compactMap { pair in
                 pair.count == 2 ? Example(sourceSentence: pair[0], targetTranslation: pair[1]) : nil
             },
-            note: o, source: r == true ? Sense.own : nil
+            note: o, source: r == true ? Sense.own : nil, en: g
         )
     }
 }

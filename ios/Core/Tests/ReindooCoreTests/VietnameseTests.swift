@@ -45,17 +45,42 @@ import Testing
         #expect(try app.state("senses.1.heading", as: String.self) == nil)
         #expect(try app.state("senses.1.explain") == "(Adjectif) [familier] bon, réussi")
         // Le Wiktionnaire suit, tel quel, et ses numéros repartent de 1.
-        #expect(try app.state("senses.2.heading") == Harness.copy.wiktionarySenses)
+        #expect(try app.state("senses.2.heading") == Harness.copy.wiktionarySenses(in: .french))
         #expect(try app.state("senses.2.number") == 1)
         #expect(try app.state("senses.2.explain") == "(Adjectif) Beau.")
         #expect(try app.state("senses.2.note", as: String.self) == nil)
     }
 
-    @Test func anEntryWithoutReindooSensesHasNoTitles() throws {
+    @Test func anEntryInOneLanguageHasNoTitles() throws {
         let app = try vietnamese()
-        try app.search("tham nhũng")
+        try app.search("ăn")
         #expect(try app.state("senses.0.heading", as: String.self) == nil)
         #expect(try app.state("senses.2.number") == 3)
+        #expect(try app.state("alsoTranslated", as: String.self) == nil)
+        #expect(try app.state("translatedTag", as: String.self) == nil)
+    }
+
+    @Test func aReindooSenseCarriesItsEnglishAndTheTopShowsBothLanguages() throws {
+        let app = try vietnamese()
+        try app.search("đẹp")
+        #expect(try app.state("senses.0.english") == "beautiful, pretty")
+        #expect(try app.state("senses.0.englishTag") == "EN")
+        #expect(try app.state("senses.1.english", as: String.self) == nil)
+        #expect(try app.state("translatedTag") == "FR")
+        // L'anglais des sens reindoo passe avant celui du Wiktionnaire.
+        #expect(try app.state("alsoTranslated") == "beautiful, pretty")
+        #expect(try app.state("alsoTranslatedTag") == "EN")
+        // Les deux sens anglais du Wiktionnaire ferment la marche, sous leur titre.
+        #expect(try app.state("senses.3.heading") == Harness.copy.wiktionarySenses(in: .english))
+        #expect(try app.state("senses.3.language") == "english")
+    }
+
+    @Test func anEnglishOnlyWordHasOneLineAndNoTags() throws {
+        let app = try vietnamese()
+        try app.search("nợ")
+        #expect(try app.state("senses.0.explain") == "(Nom) debt")
+        #expect(try app.state("senses.0.heading", as: String.self) == nil)
+        #expect(try app.state("alsoTranslated", as: String.self) == nil)
     }
 
     @Test func dIsFoldedLikeAnAccent() throws {
@@ -89,7 +114,12 @@ import Testing
         #expect(try app.state("word") == "tham nhũng")
         #expect(try app.state("translated") == "Tracassier et cupide")
         #expect(try app.state("senses.0.explain") == "(Verbe) Tracassier et cupide.")
-        #expect(try app.state("senses.1.explain") == "(Verbe) [EN] to be corrupt, to engage in corrupt practices")
+        // La marque [EN] devient une langue, et un titre au-dessus de la partie.
+        #expect(try app.state("senses.1.explain") == "(Verbe) to be corrupt, to engage in corrupt practices")
+        #expect(try app.state("senses.1.language") == "english")
+        #expect(try app.state("senses.1.heading") == Harness.copy.wiktionarySenses(in: .english))
+        #expect(try app.state("senses.1.number") == 1)
+        #expect(try app.state("alsoTranslated") == "to be corrupt, to engage in corrupt practices / corruption")
         #expect(try app.state("senses.2.examples.0.targetTranslation") == "to fight corruption")
         #expect(try app.state("wiki") == "https://fr.wiktionary.org/wiki/tham_nh%C5%A9ng#Vietnamien")
     }

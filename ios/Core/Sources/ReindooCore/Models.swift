@@ -45,13 +45,16 @@ public struct Sense: Codable, Equatable, Sendable {
     /// « reindoo » pour les entrées écrites pour l'app ; rien pour un sens
     /// du Wiktionnaire.
     public var source: String?
+    /// Le même sens en anglais, à côté du français. Seules les entrées
+    /// reindoo Việt–Pháp en ont : qui apprend les trois langues lit les deux.
+    public var en: String?
 
     public var isOwn: Bool { source == Self.own }
     public static let own = "reindoo"
 
     public init(
         explain: String, synonyms: [String] = [], antonyms: [String] = [], exampleSentences: [Example] = [],
-        note: String? = nil, source: String? = nil
+        note: String? = nil, source: String? = nil, en: String? = nil
     ) {
         self.explain = explain
         self.synonyms = synonyms
@@ -59,6 +62,7 @@ public struct Sense: Codable, Equatable, Sendable {
         self.exampleSentences = exampleSentences
         self.note = note
         self.source = source
+        self.en = en
     }
 
     // Le lexique compilé omet les listes vides.
@@ -70,6 +74,7 @@ public struct Sense: Codable, Equatable, Sendable {
         exampleSentences = try container.decodeIfPresent([Example].self, forKey: .exampleSentences) ?? []
         note = try container.decodeIfPresent(String.self, forKey: .note)
         source = try container.decodeIfPresent(String.self, forKey: .source)
+        en = try container.decodeIfPresent(String.self, forKey: .en)
     }
 }
 

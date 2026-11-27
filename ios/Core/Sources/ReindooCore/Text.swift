@@ -40,6 +40,24 @@ enum Text {
         return text.trimmingCharacters(in: CharacterSet(charactersIn: " .;:,"))
     }
 
+    /// La langue d'un sens du Wiktionnaire, quand ce n'est pas celle du
+    /// dictionnaire : « (Verbe) [EN] to owe » est anglais et se lit
+    /// « (Verbe) to owe ». La marque suit la catégorie, jamais ailleurs :
+    /// un [familier] au même endroit reste une étiquette.
+    static func foreignMark(_ explain: String) -> (language: Language, explain: String)? {
+        var rest = Substring(explain)
+        var head = ""
+        while rest.first == "(", let close = rest.firstIndex(of: ")") {
+            let after = rest.index(after: close)
+            head += String(rest[..<after]) + " "
+            rest = rest[after...].drop { $0 == " " }
+        }
+        let marks: [(String, Language)] = [("[EN]", .english), ("[FR]", .french)]
+        guard let (mark, language) = marks.first(where: { rest.hasPrefix($0.0) }) else { return nil }
+        let gloss = rest.dropFirst(mark.count).drop { $0 == " " }
+        return (language, head + String(gloss))
+    }
+
     /// Un résumé tiré du premier sens lisible, quand la source n'en donne pas.
     static func summary(from senses: [Sense]) -> String {
         guard let bare = senses.lazy.map({ bareSense($0.explain) }).first(where: { !$0.isEmpty }) else { return "" }

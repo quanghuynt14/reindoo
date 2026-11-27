@@ -40,6 +40,27 @@ import Testing
         #expect(try app.state("senses.0.synonymsTitle") == Harness.copy.synonyms)
     }
 
+    @Test func aFrenchWordShowsItsVietnameseThenItsEnglish() throws {
+        let app = try Harness()
+        try app.search("aller")
+        #expect(try app.state("translated") == "đi")
+        #expect(try app.state("translatedTag") == "VI")
+        #expect(try app.state("alsoTranslated") == "to go / to be")
+        #expect(try app.state("alsoTranslatedTag") == "EN")
+        #expect(try app.state("senses.0.heading") == Harness.copy.wiktionarySenses(in: .vietnamese))
+        #expect(try app.state("senses.2.heading") == Harness.copy.wiktionarySenses(in: .english))
+        #expect(try app.state("senses.2.explain") == "(Động từ) to go; to move")
+        #expect(try app.state("senses.2.number") == 1)
+        #expect(try app.state("senses.2.examples.0.targetTranslation") == "I'm going to Paris.")
+    }
+
+    @Test func aMarkIsReadOnlyRightAfterTheCategory() {
+        #expect(Text.foreignMark("(Nom) [EN] debt")?.explain == "(Nom) debt")
+        #expect(Text.foreignMark("[FR] maison")?.language == .french)
+        #expect(Text.foreignMark("(Adjectif) [familier] bon")?.explain == nil)
+        #expect(Text.foreignMark("une [EN] au milieu")?.explain == nil)
+    }
+
     @Test func inflectedFormResolvesToTheMostFrequentLemma() throws {
         let app = try Harness()
         try app.search("allions")

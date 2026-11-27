@@ -16,6 +16,10 @@ on:
         description: Capturer les écrans de l'App Store (iPhone 6,9 pouces)
         type: boolean
         default: false
+      dictionnaire:
+        description: Branche de dictionnaire pour le lexique (essayer une branche avant qu'elle rejoigne main)
+        type: string
+        default: main
 
 jobs:
   # Rapide et bon marché : tourne à chaque push.
@@ -42,12 +46,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: dictionnaire, main
+        env:
+          BRANCH: ${{ inputs.dictionnaire || 'main' }}
         run: |
           set -euo pipefail
-          sha=$(git ls-remote https://github.com/quanghuynt14/dictionnaire.git refs/heads/main | cut -f1)
+          sha=$(git ls-remote https://github.com/quanghuynt14/dictionnaire.git "refs/heads/$BRANCH" | cut -f1)
           test -n "$sha"
           echo "DICTIONNAIRE_REF=$sha" >> "$GITHUB_ENV"
-          echo "dictionnaire @ $sha" >> "$GITHUB_STEP_SUMMARY"
+          echo "dictionnaire @ $BRANCH $sha" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
       - id: cache
         uses: actions/cache@v4

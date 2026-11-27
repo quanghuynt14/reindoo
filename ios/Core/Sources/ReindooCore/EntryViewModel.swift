@@ -17,6 +17,11 @@ public final class EntryViewModel: Introspectable, Identifiable {
         public var word = ""
         public var ipa = ""
         public var translated = ""
+        /// Les deux autres langues en tête : la ligne du dessus, puis celle-ci,
+        /// chacune avec son étiquette. Sans seconde langue, pas d'étiquette.
+        public var translatedTag: String?
+        public var alsoTranslated: String?
+        public var alsoTranslatedTag: String?
         /// « allions » est une forme de « aller ».
         public var matchedNote: String?
         public var alsoFromTitle = ""
@@ -58,7 +63,13 @@ public final class EntryViewModel: Introspectable, Identifiable {
         /// Le titre à poser au-dessus de ce sens, quand une partie commence :
         /// les sens reindoo d'abord, ceux du Wiktionnaire ensuite.
         public var heading: String?
+        /// La langue de la glose : la marque [EN] ou [FR] est ôtée du texte
+        /// et passe ici.
+        public var language: Language
         public var explain: String
+        /// Le même sens en anglais, sous le français (entrées reindoo).
+        public var english: String?
+        public var englishTag: String
         public var note: String?
         public var examples: [Example]
         public var synonymsTitle: String
@@ -111,19 +122,12 @@ public final class EntryViewModel: Introspectable, Identifiable {
             state.translated = entry.translated
             state.matchedNote = matchedForm.map { copy.matchedForm($0, entry.word) }
             state.alsoFrom = alsoFrom
-            // Sans entrée reindoo, rien ne change : pas de titre, une seule suite.
-            let hasOwn = entry.explains.contains(where: \.isOwn)
-            var number = 0
-            state.senses = entry.explains.enumerated().map { index, sense in
-                let starts = index == 0 || entry.explains[index - 1].isOwn != sense.isOwn
-                number = starts ? 1 : number + 1
-                return SenseState(
-                    index: index, number: number,
-                    heading: hasOwn && starts ? (sense.isOwn ? copy.ownSenses : copy.wiktionarySenses) : nil,
-                    explain: sense.explain, note: sense.note, examples: sense.exampleSentences,
-                    synonymsTitle: copy.synonyms, synonyms: sense.synonyms,
-                    antonymsTitle: copy.antonyms, antonyms: sense.antonyms
-                )
+            let glosses = Self.glosses(of: entry, copy: copy)
+            state.senses = glosses.senses
+            if let also = glosses.also {
+                state.translatedTag = copy.languageTag(glosses.top)
+                state.alsoTranslated = also.text
+                state.alsoTranslatedTag = copy.languageTag(also.language)
             }
             state.derived = entry.derived
             state.wiki = entry.wiki
@@ -147,6 +151,65 @@ public final class EntryViewModel: Introspectable, Identifiable {
                 state.hint = copy.notFoundNoHint
             }
         }
+    }
+
+    /// Les sens, rangés par partie : reindoo, puis le Wiktionnaire dans la
+    /// langue du dictionnaire, puis dans la troisième langue. Huy apprend
+    /// les trois ensemble : « maison » se lit en vietnamien, puis en anglais.
+    /// Une entrée d'une seule partie n'a pas de titre, comme avant.
+    static func glosses(of entry: Entry, copy: Copy)
+        -> (senses: [SenseState], top: Language, also: (language: Language, text: String)?)
+    {
+        let home: Language = entry.language == .vietnamese ? .french : .vietnamese
+        let third = Language.allCases.first { $0 != entry.language && $0 != home }!
+        typealias Part = (own: Bool, language: Language, sense: Sense, explain: String)
+        let parts: [Part] = entry.explains.map { sense in
+            if !sense.isOwn, let mark = Text.foreignMark(sense.explain) {
+                return (false, mark.language, sense, mark.explain)
+            }
+            return (sense.isOwn, home, sense, sense.explain)
+        }
+        func order(_ part: Part) -> Int { part.own ? 0 : part.language == home ? 1 : 2 }
+        // Tri stable : l'ordre des sens dans une partie ne bouge pas.
+        let sorted = parts.enumerated().sorted { (order($0.element), $0.offset) < (order($1.element), $1.offset) }.map(\.element)
+        let many = Set(sorted.map(order)).count > 1
+
+        var number = 0
+        let senses = sorted.enumerated().map { index, part in
+            let starts = index == 0 || order(sorted[index - 1]) != order(part)
+            number = starts ? 1 : number + 1
+            let heading = part.own ? copy.ownSenses : copy.wiktionarySenses(in: part.language)
+            return SenseState(
+                index: index, number: number,
+                heading: many && starts ? heading : nil,
+                language: part.language, explain: part.explain,
+                english: part.sense.en?.isEmpty == false ? part.sense.en : nil,
+                englishTag: copy.languageTag(.english),
+                note: part.sense.note, examples: part.sense.exampleSentences,
+                synonymsTitle: copy.synonyms, synonyms: part.sense.synonyms,
+                antonymsTitle: copy.antonyms, antonyms: part.sense.antonyms
+            )
+        }
+
+        // La ligne du haut est dans la langue du dictionnaire s'il y en a un
+        // sens ; sinon elle a été tirée de l'anglais, et rien ne la double.
+        let hasHome = parts.contains { $0.language == home }
+        guard hasHome else { return (senses, third, nil) }
+        var lines: [String] = []
+        let own = parts.filter(\.own).compactMap(\.sense.en)
+        let wiki = parts.filter { !$0.own && $0.language == third }.map { part in
+            // « calm; peaceful; at ease » : le premier mot suffit en tête.
+            String(Text.bareSense(part.explain).split(separator: ";").first ?? "")
+                .trimmingCharacters(in: .whitespaces)
+        }
+        for line in (own.isEmpty ? wiki : own) {
+            let short = line.replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
+                .trimmingCharacters(in: CharacterSet(charactersIn: " ,;."))
+            if !short.isEmpty, !lines.contains(short) { lines.append(short) }
+            if lines.count == 3 { break }
+        }
+        guard !lines.isEmpty else { return (senses, home, nil) }
+        return (senses, home, (third, lines.joined(separator: " / ")))
     }
 
     public func send(_ action: Action) {
